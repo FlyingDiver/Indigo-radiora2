@@ -1,0 +1,12 @@
+<?xml version="1.0"?>
+<MenuItems>
+	<MenuItem id="separator1" />
+	<MenuItem id="toggleDebug">
+		<Name>Toggle Debugging</Name>
+		<CallbackMethod>toggleDebugEnabled</CallbackMethod>
+	</MenuItem>
+	<MenuItem id="queryAll">
+		<Name>Query All Devices Now</Name>
+		<CallbackMethod>queryAllDevices</CallbackMethod>
+	</MenuItem>
+</MenuItems>
