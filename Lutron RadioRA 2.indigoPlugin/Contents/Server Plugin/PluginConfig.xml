@@ -14,10 +14,13 @@
 			<Option value="true">Caséta</Option>
 		</List>
 	</Field>
-	<Field type="checkbox" id="IP" defaultValue="true" >
+	<Field type="checkbox" id="IP" defaultValue="false">
 		<Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
 	</Field>
-	<Field id="ip_address" type="textfield" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
+	<Field id="space1" type="label">
+		<Label/>
+	</Field>
+	<Field id="ip_address" type="textfield"  defaultValue="192.168.0.100" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
 		<Label>IP Address or Hostname:</Label>
 	</Field>
 	<Field id="ip_port" type="textfield" defaultValue="23" hidden="true" >
@@ -28,9 +31,6 @@
 	<Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
 		<Label>Password:</Label>
 	</Field>
-	
-	<Field  id="devicePort" type="serialport" visibleBindingId="IP" visibleBindingValue="false" /> 
-	
     <Field id="simpleSeparator2" type="separator"/>
 	<Field type="checkbox" id="debugEnabled" defaultValue="false">
 		<Label>Enable debugging:</Label>
@@ -39,4 +39,5 @@
 		<Label>Send status request for all devices at startup:</Label>
 	</Field>
     <Field id="simpleSeparator3" type="separator"/>
+	<Field type="serialport" id="devicePort"/>
 </PluginConfig>

@@ -451,8 +451,9 @@ class Plugin(indigo.PluginBase):
 
 	def dispatchMsg(self, msg):
 		try:
+			msg = msg.rstrip()
 			if len(msg) > 0:
-				self.debugLog(" Message received: %s" % msg.rstrip())
+#				self.debugLog(" Message received: %s" % msg)
 				# RadioRA 2 messages are always terminated with CRLF
 				if "~OUTPUT" in msg:
 					self._cmdOutputChange(msg)
@@ -460,15 +461,17 @@ class Plugin(indigo.PluginBase):
 					self._cmdDeviceChange(msg)
 				elif "~HVAC" in msg:
 					self._cmdHvacChange(msg)
+				elif "~TIMECLOCK" in msg:
+					self._cmdTimeClock(msg)
 				elif "~MONITORING" in msg:
 					self.debugLog(u" Main repeater serial interface configured" + msg)
 				elif "~GROUP" in msg:
-					self.debugLog(u" Activity in Area detected " + msg)
+					self._cmdGroup(msg)
 				elif 'GNET' in msg:
 					#command prompt is ready					
 					self.debugLog(" Command prompt received. Device is ready.")
 				elif msg != "!":
-					self.debugLog(u" Unrecognized command: " + msg)
+					self.errorLog(u" Unrecognized command: " + msg)
 		except self.StopThread:
 			pass
 
@@ -496,6 +499,10 @@ class Plugin(indigo.PluginBase):
 			self._cmdDeviceChange(cmd)
 		elif "~HVAC" in cmd:
 			self._cmdHvacChange(cmd)
+		elif "~TIMECLOCK" in cmd:
+			self._cmdTimeClock(cmd)
+		elif "~GROUP" in cmd:
+			self._cmdGroup(cmd)
 		elif "~MONITORING" in cmd:
 			self.debugLog(u" Main repeater serial interface configured" + cmd)
 		elif cmd != "!":
@@ -588,27 +595,6 @@ class Plugin(indigo.PluginBase):
 			cmd = cmd.rstrip() # IP strings are terminated with \n -JL
 
 		cmdArray = cmd.split(',')
-
-#		if self.IP:	# Added by vic13
-#			# IP routiens
-#			id = cmdArray[1]
-#			action = cmdArray[2]
-#			status = None  # Added by Ramias due to UnboundLocalError
-#			if action == '2': # this is a motion sensor
-#				if cmdArray[3] == '3':
-#					status = '1'
-#				elif cmdArray[3] == '4':
-#					status = '0'
-#			elif action == '3':
-#				status = '1'
-#			elif action == '4':
-#				status = '0'
-#			else:
-#				status = cmdArray[3]
-#			self.debugLog("[" + cmdArray[1] + "]" + "[" + cmdArray[2] + "]" + "[" + cmdArray[3] + "]")
-#	
-#		else:	# Added by vic13
-#			# Serial I/O routines
 		id = cmdArray[2]
 		action = cmdArray[3]
 		if action == '2': # this is a motion sensor
@@ -639,27 +625,16 @@ class Plugin(indigo.PluginBase):
 			self.debugLog(u" Received a keypad button/LED status message: " + cmd)
 			dev = self.keypads[keypadid]
 			keypad = self.keypads[keypadid]
-#			if self.IP:	# Add by vic13
-#				status = cmdArray[3] # added by Ramias
-#				# This check gets overwritten if the LED is configured for the keypad button
-#				self.debugLog(u" Sttus variable is currently " + status)
-#				if int(status) == 3:  # changed from 0 by Ramias
-#					keypad.updateStateOnServer("onOffState", True)
-#					self.debugLog(u" Status variable is " + status)		
-#				elif int(status) == 4: # changed from 1 by Ramias
-#					keypad.updateStateOnServer("onOffState", False)
-#					self.debugLog(u" Status variable is " + status)
-#			else:	#added by vic13
 			if status == '0':
 				keypad.updateStateOnServer("onOffState", False)
 			elif status == '1':
 				keypad.updateStateOnServer("onOffState", True)
 		
 			if dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]: # Also display this LED state on its corresponding button
+				self.debugLog(keypadid)
 				keypadid = keypadid[0:len(keypadid)-2] + keypadid[len(keypadid)-1] # Convert LED ID to button ID
+				self.debugLog(keypadid)
 				if keypadid in self.keypads:
-#					if self.IP:	# Added by vic13
-#						status = cmdArray[4] # added by Ramias
 					keypad = self.keypads[keypadid]
 					self.debugLog(u" Updating button status with state of LED for keypadID " + keypadid)
 					if int(status) == 0:
@@ -668,7 +643,7 @@ class Plugin(indigo.PluginBase):
 						keypad.updateStateOnServer("onOffState", True)
 						self.debugLog(u" Set status to True on Server.")
 				else:
-					indigo.server.log("WARNING: Invalid ID specified for LED.  Must be in range 81-87.  Please correct and reload the plugin.", isError=True)
+					indigo.server.log("WARNING: Invalid ID (%s) specified for LED.  Must be in range 81-87.  Please correct and reload the plugin." % keypadid, isError=True)
 					self.debugLog(keypadid)
 
 
@@ -680,7 +655,7 @@ class Plugin(indigo.PluginBase):
 			elif status == '1':
 				but.updateStateOnServer("onOffState", True)
 
-
+					
 		if keypadid in self.ccis:
 			self.debugLog(u" Received a CCI status message: " + cmd)
 			cci = self.ccis[keypadid]
@@ -735,12 +710,34 @@ class Plugin(indigo.PluginBase):
 				elif fanmode == '2':
 					thermo.updateStateOnServer("hvacFanMode", indigo.kFanMode.AlwaysOn)
 
+	def _cmdTimeClock(self,cmd):
+		self.debugLog(u" Received a TimeClock message: " + cmd)
+		cmdArray = cmd.split(',')
+		id = cmdArray[1]
+		action = cmdArray[2]
+		event = cmdArray[3]
+		indigo.server.log(u"Received: TimeClock Event # %s" % event)
+
+	def _cmdGroup(self,cmd):
+		self.debugLog(u" Received a Group message  " + cmd)
+		cmdArray = cmd.split(',')
+		id = cmdArray[1]
+		action = cmdArray[2]
+		status = cmdArray[3]
+		if status == "3":
+			indigo.server.log(u"Received: Occupancy Area %s is occupied" % id)
+		elif status == "4":
+			indigo.server.log(u"Received: Occupancy Area %s is vacant" % id)
+		elif status == "255":
+			self.debugLog(u"Received: Occupancy Area %s is unknown" % id)
+
+
 	##########################################
 	# Toggle debug without restarting plugin
 	##########################################
 	def toggleDebugEnabled(self):
 		self.debug = not self.debug
-		self.pluginPrefs["showDebugInfo"] = self.debug
+		self.pluginPrefs["debugEnabled"] = self.debug
 		indigo.server.log("Debug set to " + str(self.debug) + " by user")
 
 
@@ -834,7 +831,7 @@ class Plugin(indigo.PluginBase):
 					sendCmd = ("#OUTPUT," + cco + ",6")
 				else:
 					sendCmd = ("#OUTPUT," + cco + ",1,0")
-			indigo.server.log(u"sent \"%s\" %s" % (dev.name, "off"))
+			indigo.server.log(u"sending \"%s\" %s" % (dev.name, "off"))
 
 		###### TOGGLE ######
 		elif action.deviceAction == indigo.kDeviceAction.Toggle:
@@ -891,7 +888,7 @@ class Plugin(indigo.PluginBase):
 						sendCmd = ("#OUTPUT," + cco + ",1,0")
 					else:
 						sendCmd = ("#OUTPUT," + cco + ",1,1")
-			indigo.server.log(u"sent \"%s\" %s" % (dev.name, "toggle"))
+			indigo.server.log(u"sending \"%s\" %s" % (dev.name, "toggle"))
 
 		###### SET BRIGHTNESS ######
 		elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
@@ -899,12 +896,12 @@ class Plugin(indigo.PluginBase):
 				newBrightness = action.actionValue
 				zone = dev.pluginProps[PROP_ZONE]
 				sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
-				indigo.server.log(u"sent \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
+				indigo.server.log(u"sending \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
 			elif dev.deviceTypeId == RA_SHADE:
 				newBrightness = action.actionValue
 				shade = dev.pluginProps[PROP_SHADE]
 				sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
-				indigo.server.log(u"sent \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
+				indigo.server.log(u"sending \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
 		###### STATUS REQUEST ######
 		elif action.deviceAction == indigo.kDeviceAction.RequestStatus:
@@ -939,7 +936,7 @@ class Plugin(indigo.PluginBase):
 
 				
 		self._sendCommand(sendCmd)					
-		indigo.server.log(u"sent \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
+		self.debugLog(u"sent \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
 
 	######################
 	# Sensor Action callback
