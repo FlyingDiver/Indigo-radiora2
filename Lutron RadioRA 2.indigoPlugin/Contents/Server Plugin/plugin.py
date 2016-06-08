@@ -903,6 +903,36 @@ class Plugin(indigo.PluginBase):
 				sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
 				indigo.server.log(u"sending \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
+		###### BRIGHTEN BY ######
+		elif action.deviceAction == indigo.kDimmerRelayAction.BrightenBy:
+			newBrightness = dev.brightness + action.actionValue
+			if newBrightness > 100:
+				newBrightness = 100
+				
+			if dev.deviceTypeId == RA_DIMMER:
+				zone = dev.pluginProps[PROP_ZONE]
+				sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
+				indigo.server.log(u"sending \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
+			elif dev.deviceTypeId == RA_SHADE:
+				shade = dev.pluginProps[PROP_SHADE]
+				sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
+				indigo.server.log(u"sending \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
+
+		###### DIM BY ######
+		elif action.deviceAction == indigo.kDimmerRelayAction.DimBy:
+			newBrightness = dev.brightness - action.actionValue
+			if newBrightness < 0:
+				newBrightness = 0
+
+			if dev.deviceTypeId == RA_DIMMER:
+				zone = dev.pluginProps[PROP_ZONE]
+				sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
+				indigo.server.log(u"sending \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
+			elif dev.deviceTypeId == RA_SHADE:
+				shade = dev.pluginProps[PROP_SHADE]
+				sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
+				indigo.server.log(u"sending \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
+
 		###### STATUS REQUEST ######
 		elif action.deviceAction == indigo.kDeviceAction.RequestStatus:
 			if dev.deviceTypeId == RA_PHANTOM_BUTTON:

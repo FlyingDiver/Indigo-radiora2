@@ -6,6 +6,9 @@
     <Field id="infoLabel2" type="label">
         <Label>IP connectivity portions by Sylvain Beaudry and vic13.</Label>
     </Field>
+    <Field id="infoLabel3" type="label">
+        <Label>Enhancements by Joe Keenan (FlyingDiver).</Label>
+    </Field>
     <Field id="simpleSeparator1" type="separator"/>
 	<Field type="menu" id="caseta" defaultValue="false">
 		<Label>Lutron Gateway Type:</Label>
