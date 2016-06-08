@@ -1,0 +1,13 @@
+<?xml version="1.0"?>
+<Events>
+	<Event id="timeClockEvent">
+        <Name>Time Clock Event</Name>
+ 		<ConfigUI>
+			<Field id="eventNumber" type="textfield">
+				<Label>Event Number:</Label>
+			</Field>
+ 		</ConfigUI>
+   </Event>
+</Events>
+
+

@@ -115,6 +115,7 @@ class Plugin(indigo.PluginBase):
 		self.IP = False		# Default to serial I/O, not IP -vic13
 		self.caseta = False	# Default to RadioRA 2, not Caséta -vic13
 		self.portEnabled = False
+		self.triggers = { }
 
 		
 	def __del__(self):
@@ -137,6 +138,39 @@ class Plugin(indigo.PluginBase):
 		except KeyError:
 			self.errorLog("Plugin not configured. Delaying startup until configuration is saved")
 
+	####################
+
+	def triggerStartProcessing(self, trigger):
+		self.debugLog(" Adding Trigger %s (%d) - %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+		assert trigger.id not in self.triggers
+		self.triggers[trigger.id] = trigger
+ 
+	def triggerStopProcessing(self, trigger):
+		self.debugLog(" Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+		assert trigger.id in self.triggers
+		del self.triggers[trigger.id] 
+		
+	def triggerCheck(self, eventType, info):
+
+		for triggerId, trigger in sorted(self.triggers.iteritems()):
+			type = trigger.pluginTypeId
+			event = trigger.pluginProps["eventNumber"]
+			self.debugLog(" Checking Trigger %s (%s), Type: %s, Event: %s" % (trigger.name, trigger.id, type, event))
+			
+			if type != eventType:
+				self.debugLog("\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, eventType))
+				return
+				
+			if event != info:
+				self.debugLog("\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
+				return
+				
+			self.debugLog("\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
+			indigo.trigger.execute(trigger)
+			
+	####################
+	
+			
 
 	def	update_device_property ( self, dev, propertyname, new_value = ""):
 		newProps = dev.pluginProps
@@ -717,6 +751,7 @@ class Plugin(indigo.PluginBase):
 		action = cmdArray[2]
 		event = cmdArray[3]
 		indigo.server.log(u"Received: TimeClock Event # %s" % event)
+		self.triggerCheck("timeClockEvent", event)
 
 	def _cmdGroup(self,cmd):
 		self.debugLog(u" Received a Group message  " + cmd)
