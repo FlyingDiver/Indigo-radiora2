@@ -1,12 +1,25 @@
 <?xml version="1.0"?>
 <MenuItems>
-	<MenuItem id="separator1" />
 	<MenuItem id="toggleDebug">
 		<Name>Toggle Debugging</Name>
 		<CallbackMethod>toggleDebugEnabled</CallbackMethod>
 	</MenuItem>
+	<MenuItem id="separator1" />
 	<MenuItem id="queryAll">
 		<Name>Query All Devices Now</Name>
 		<CallbackMethod>queryAllDevices</CallbackMethod>
 	</MenuItem>
+	<MenuItem id="titleSeparator2" type="separator" />
+    <MenuItem id="checkForUpdates">
+    	<Name>Check for Updates</Name>
+    	<CallbackMethod>checkForUpdates</CallbackMethod>
+    </MenuItem>
+    <MenuItem id="updatePlugin">
+    	<Name>Update Plugin</Name>
+    	<CallbackMethod>updatePlugin</CallbackMethod>
+    </MenuItem>
+    <MenuItem id="forceUpdate">
+        <Name>Force Update</Name>
+        <CallbackMethod>forceUpdate</CallbackMethod>
+    </MenuItem>
 </MenuItems>
