@@ -8,6 +8,22 @@
 			</Field>
  		</ConfigUI>
    </Event>
+	<Event id="groupEvent">
+        <Name>Group Event</Name>
+ 		<ConfigUI>
+			<Field id="groupNumber" type="textfield">
+				<Label>Group (Room) Number:</Label>
+			</Field>
+			<Field type="menu" id="occupancyPopUp" defaultValue="occupied">
+				<Label>Becomes:</Label>
+				<List>
+					<Option value="3">Occupied</Option>
+					<Option value="4">Vacant (Unoccupied)</Option>
+					<Option value="255">Unknown</Option>
+				</List>
+			</Field>			
+ 		</ConfigUI>
+   </Event>
 </Events>
 
 

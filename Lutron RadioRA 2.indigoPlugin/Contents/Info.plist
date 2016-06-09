@@ -9,7 +9,7 @@
 	<key>IwsApiVersion</key>
 	<string>1.0.0</string>
 	<key>CFBundleDisplayName</key>
-	<string>Lutron RadioRA 2 / Caséta</string>
+	<string>Lutron RadioRA2/Caséta</string>
 	<key>CFBundleIdentifier</key>
 	<string>com.jimandnoreen.indigoplugin.lutron-radiora2</string>
 	<key>CFBundleVersion</key>

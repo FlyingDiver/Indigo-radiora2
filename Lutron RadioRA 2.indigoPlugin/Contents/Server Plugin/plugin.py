@@ -32,7 +32,7 @@
 # 1.2.5 ignore actions that are not explicitly defined like undocumented "action 29" and "action 30" (thanks FlyingDiver)
 # 1.2.6 added explicit support for motorized shades, CCO and CCI devices (thanks rapamatic!!) and improved device/output logging
 # 2.0.0 added Caséta support by mathys and IP connectivity contributed by Sb08 and vic13.  Added menu option to query all devices
-# 2.1.0 added Pico device type.  Changed CCI device type from relay to sensor.  Restrict query all devices to this plugin's devices.
+# 2.0.3 added Pico device type.  Changed CCI device type from relay to sensor.  Restrict query all devices to this plugin's devices.
 
 from __future__ import with_statement
 
@@ -122,50 +122,72 @@ class Plugin(indigo.PluginBase):
 		indigo.PluginBase.__del__(self)
 
 	def startup(self):
-		self.debugLog(u" startup called")
+		self.debugLog(u"startup called")
 		
 		# Call IP startup routine, but only run them if the IP box is checked -vic13
 		try:
 			self.IPstartup()
 			self.runstartup = False
 		except KeyError:
-			self.errorLog("Plugin not configured. Delaying startup until configuration is saved")
+			self.errorLog(u"Plugin not configured. Delaying startup until configuration is saved")
 
 		# When not doing IP communications, run original serial setup routines	-vic13		
 		try:
 			self.serialStartup()
 			self.runstartup = False
 		except KeyError:
-			self.errorLog("Plugin not configured. Delaying startup until configuration is saved")
+			self.errorLog(u"Plugin not configured. Delaying startup until configuration is saved")
+
+	def shutdown(self):
+		self.debugLog(u"shutdown called")
+
 
 	####################
 
 	def triggerStartProcessing(self, trigger):
-		self.debugLog(" Adding Trigger %s (%d) - %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+		self.debugLog(u"Adding Trigger %s (%d) - %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
 		assert trigger.id not in self.triggers
 		self.triggers[trigger.id] = trigger
  
 	def triggerStopProcessing(self, trigger):
-		self.debugLog(" Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+		self.debugLog(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
 		assert trigger.id in self.triggers
 		del self.triggers[trigger.id] 
 		
-	def triggerCheck(self, eventType, info):
+	def clockTriggerCheck(self, info):
 
 		for triggerId, trigger in sorted(self.triggers.iteritems()):
 			type = trigger.pluginTypeId
-			event = trigger.pluginProps["eventNumber"]
-			self.debugLog(" Checking Trigger %s (%s), Type: %s, Event: %s" % (trigger.name, trigger.id, type, event))
+			eventNumber = trigger.pluginProps["eventNumber"]
+			self.debugLog(u"Checking Trigger %s (%s), Type: %s, Event: %s" % (trigger.name, trigger.id, type, eventNumber))
 			
-			if type != eventType:
-				self.debugLog("\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, eventType))
+			if "timeClockEvent" != type:
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
 				return
 				
-			if event != info:
-				self.debugLog("\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
+			if eventNumber != info:
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
 				return
 				
-			self.debugLog("\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
+			self.debugLog(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
+			indigo.trigger.execute(trigger)
+			
+	def groupTriggerCheck(self, info):
+
+		for triggerId, trigger in sorted(self.triggers.iteritems()):
+			type = trigger.pluginTypeId
+			groupNumber = trigger.pluginProps["groupNumber"]
+			self.debugLog(u"Checking Trigger %s (%s), Type: %s, Group: %s" % (trigger.name, trigger.id, type, groupNumber))
+			
+			if "groupEvent" != type:
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+				return
+				
+			if groupNumber != info:
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
+				return
+				
+			self.debugLog(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
 			indigo.trigger.execute(trigger)
 			
 	####################
@@ -183,44 +205,44 @@ class Plugin(indigo.PluginBase):
 		if dev.deviceTypeId == RA_PHANTOM_BUTTON:
 			self.phantomButtons[dev.pluginProps[PROP_BUTTON]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_BUTTON] )
-			self.debugLog(u" Watching phantom button: " + dev.pluginProps[PROP_BUTTON])
+			self.debugLog(u"Watching phantom button: " + dev.pluginProps[PROP_BUTTON])
 		elif dev.deviceTypeId == RA_DIMMER:
 			self.zones[dev.pluginProps[PROP_ZONE]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_ZONE] )
-			self.debugLog(u" Watching dimmer: " + dev.pluginProps[PROP_ZONE])
+			self.debugLog(u"Watching dimmer: " + dev.pluginProps[PROP_ZONE])
 		elif dev.deviceTypeId == RA_SHADE:
 			self.shades[dev.pluginProps[PROP_SHADE]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SHADE] )
 			dev.updateStateImageOnServer( indigo.kStateImageSel.None )
-			self.debugLog(u" Watching shade: " + dev.pluginProps[PROP_SHADE])
+			self.debugLog(u"Watching shade: " + dev.pluginProps[PROP_SHADE])
 		elif dev.deviceTypeId == RA_SWITCH:
 			self.switches[dev.pluginProps[PROP_SWITCH]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SWITCH] )
-			self.debugLog(u" Watching switch: " + dev.pluginProps[PROP_SWITCH])
+			self.debugLog(u"Watching switch: " + dev.pluginProps[PROP_SWITCH])
 		elif dev.deviceTypeId == RA_FAN:
 			self.fans[dev.pluginProps[PROP_FAN]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_FAN] )
-			self.debugLog(u" Watching fan: " + dev.pluginProps[PROP_FAN])
+			self.debugLog(u"Watching fan: " + dev.pluginProps[PROP_FAN])
 		elif dev.deviceTypeId == RA_THERMO:
 			self.thermos[dev.pluginProps[PROP_THERMO]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_THERMO] )
-			self.debugLog(u" Watching thermostat: " + dev.pluginProps[PROP_THERMO])
+			self.debugLog(u"Watching thermostat: " + dev.pluginProps[PROP_THERMO])
 		elif dev.deviceTypeId == RA_KEYPAD:
 			self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT])
 			if dev.pluginProps[PROP_KEYPADBUT] > 80:
 				self.update_device_property ( dev, "keypadButtonDisplayLEDState", new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE] )
-				self.debugLog(u" Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " LED: " + dev.pluginProps[PROP_KEYPADBUT])
+				self.debugLog(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " LED: " + dev.pluginProps[PROP_KEYPADBUT])
 			else:
-				self.debugLog(u" Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " button: " + dev.pluginProps[PROP_KEYPADBUT])
+				self.debugLog(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " button: " + dev.pluginProps[PROP_KEYPADBUT])
 		elif dev.deviceTypeId == RA_SENSOR:
 			self.sensors[dev.pluginProps[PROP_SENSOR]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SENSOR] )
-			self.debugLog(u" Watching sensor: " + dev.pluginProps[PROP_SENSOR])
+			self.debugLog(u"Watching sensor: " + dev.pluginProps[PROP_SENSOR])
 		elif dev.deviceTypeId == RA_CCI:
 			self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT])
-			self.debugLog(u" Watching CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID] + " input: " + dev.pluginProps[PROP_COMPONENT])
+			self.debugLog(u"Watching CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID] + " input: " + dev.pluginProps[PROP_COMPONENT])
 		elif dev.deviceTypeId == RA_CCO:
 			self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_CCO_INTEGRATION_ID] )
@@ -229,57 +251,57 @@ class Plugin(indigo.PluginBase):
 				dev.updateStateOnServer("onOffState", False)
 			# To do - set SupportsStatusRequest to true if it is a sustained contact CCO
 			#         haven't figured out a way to do that without hanging the UI when a new CCO is added
-			self.debugLog(u" Watching CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+			self.debugLog(u"Watching CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
 		elif dev.deviceTypeId == RA_PICO:
 			self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]] = dev
 			self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON])
-			self.debugLog(u" Watching Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID] + " button: " + dev.pluginProps[PROP_PICOBUTTON])
+			self.debugLog(u"Watching Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID] + " button: " + dev.pluginProps[PROP_PICOBUTTON])
 
 	def deviceStopComm(self, dev):
 		if dev.deviceTypeId == RA_PHANTOM_BUTTON:
 			del self.phantomButtons[dev.pluginProps[PROP_BUTTON]]
-			self.debugLog(u" Deleted phantom button: " + dev.pluginProps[PROP_BUTTON])
+			self.debugLog(u"Deleted phantom button: " + dev.pluginProps[PROP_BUTTON])
 		elif dev.deviceTypeId == RA_DIMMER:
 			del self.zones[dev.pluginProps[PROP_ZONE]]
-			self.debugLog(u" Deleted dimmer: " + dev.pluginProps[PROP_ZONE])
+			self.debugLog(u"Deleted dimmer: " + dev.pluginProps[PROP_ZONE])
 		elif dev.deviceTypeId == RA_SHADE:
 			del self.shades[dev.pluginProps[PROP_SHADE]]
-			self.debugLog(u" Deleted shade: " + dev.pluginProps[PROP_SHADE])
+			self.debugLog(u"Deleted shade: " + dev.pluginProps[PROP_SHADE])
 		elif dev.deviceTypeId == RA_SWITCH:
 			del self.switches[dev.pluginProps[PROP_SWITCH]]
-			self.debugLog(u" Deleted switch: " + dev.pluginProps[PROP_SWITCH])
+			self.debugLog(u"Deleted switch: " + dev.pluginProps[PROP_SWITCH])
 		elif dev.deviceTypeId == RA_KEYPAD:
 			del self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]] 
-			self.debugLog(u" Deleted keypad: " + dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT])
+			self.debugLog(u"Deleted keypad: " + dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT])
 		elif dev.deviceTypeId == RA_FAN:
 			del self.fans[dev.pluginProps[PROP_FAN]]
-			self.debugLog(u" Deleted fan: " + dev.pluginProps[PROP_FAN])
+			self.debugLog(u"Deleted fan: " + dev.pluginProps[PROP_FAN])
 		elif dev.deviceTypeId == RA_THERMO:
 			del self.thermos[dev.pluginProps[PROP_THERMO]]
-			self.debugLog(u" Deleted thermostat: " + dev.pluginProps[PROP_THERMO])
+			self.debugLog(u"Deleted thermostat: " + dev.pluginProps[PROP_THERMO])
 		elif dev.deviceTypeId == RA_SENSOR:
 			del self.sensors[dev.pluginProps[PROP_SENSOR]]
-			self.debugLog(u" Deleted sensor: " + dev.pluginProps[PROP_SENSOR])
+			self.debugLog(u"Deleted sensor: " + dev.pluginProps[PROP_SENSOR])
 		elif dev.deviceTypeId == RA_CCI:
 			del self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]]
-			self.debugLog(u" Deleted CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT])
+			self.debugLog(u"Deleted CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT])
 		elif dev.deviceTypeId == RA_CCO:
 			del self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]]
-			self.debugLog(u" Deleted CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+			self.debugLog(u"Deleted CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
 		elif dev.deviceTypeId == RA_PICO:
 			del self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]]
-			self.debugLog(u" Deleted Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON])
+			self.debugLog(u"Deleted Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON])
 
 	def runConcurrentThread(self):
 	# Select threads based on IP or serial communications - vic13
 		if self.IP:
-			self.debugLog(u" Starting IP monitor thread")
+			self.debugLog(u"Starting IP monitor thread")
 			try:
 				while True:
 					self.sleep(.1)
 					try:
 						if self.runstartup:
-							self.debugLog(u" Calling IP Startup")
+							self.debugLog(u"Calling IP Startup")
 							self.IPstartup()
 							self.runstartup = False
 
@@ -287,23 +309,23 @@ class Plugin(indigo.PluginBase):
 #						else:
 #							pass
 					except EOFError, e:
-						self.errorLog("EOFError: %s" % e.message)
+						self.errorLog(u"EOFError: %s" % e.message)
 						if ('telnet connection closed' in e.message):
 							self.runstartup = True
 							self.sleep(10)
 					except AttributeError, e:
-						self.debugLog(" AttributeError: %s" % e.message)
+						self.debugLog(u"AttributeError: %s" % e.message)
 					except select.error, e:
-						self.debugLog(" Disconnected while listening: %s" % e.message)
+						self.debugLog(u"Disconnected while listening: %s" % e.message)
 	#				except:
-	#					self.errorLog("Unknown Error: %s" % sys.exc_info()[0])
+	#					self.errorLog(u"Unknown Error: %s" % sys.exc_info()[0])
 			except self.StopThread:
 				pass
 		else:	# Added by vic13
 
 
 			
-			self.debugLog(u" Starting serial monitor thread")
+			self.debugLog(u"Starting serial monitor thread")
 
 			while not self.portEnabled:
 				self.sleep(.1)
@@ -311,13 +333,13 @@ class Plugin(indigo.PluginBase):
 			try:
 				while True:
 					if self.runstartup:
-						self.debugLog(u" Calling Serial Startup")
+						self.debugLog(u"Calling Serial Startup")
 						self.serialStartup()
 						self.runstartup = False
 
 					s = self.conn.read()
 					if self.stopThread:
-						self.debugLog(u" Ending serial monitor thread")
+						self.debugLog(u"Ending serial monitor thread")
 						return
 					else:
 						if len(s) > 0:
@@ -336,17 +358,17 @@ class Plugin(indigo.PluginBase):
 			try:
 				if 'debugEnabled' in self.pluginPrefs:
 					self.debug = self.pluginPrefs['debugEnabled']
-					self.debugLog(" Debug logging enabled.")
+					self.debugLog(u"Debug logging enabled.")
 				else:
 					self.debug = False
 			except KeyError:
-				self.errorLog("Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
+				self.errorLog(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
 				return
 
 			self.portEnabled = False
 			
 			serialUrl = self.getSerialPortUrl(self.pluginPrefs, u"devicePort")
-			self.debugLog(u" Serial Port URL is: " + serialUrl)
+			self.debugLog(u"Serial Port URL is: " + serialUrl)
 			
 			self.conn = self.openSerial(u"Lutron RadioRA", serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
 			if self.conn is None:
@@ -377,48 +399,48 @@ class Plugin(indigo.PluginBase):
 			try:
 				if 'debugEnabled' in self.pluginPrefs:
 					self.debug = self.pluginPrefs['debugEnabled']
-					self.debugLog(" Debug logging enabled.")
+					self.debugLog(u"Debug logging enabled.")
 				else:
 					self.debug = False
 			except KeyError:
-				self.errorLog("Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
+				self.errorLog(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
 				return
 			
 			if 1 == 1:
-				self.debugLog(" Creating instance of class Lutron.")
+				self.debugLog(u"Creating instance of class Lutron.")
 				host = self.pluginPrefs["ip_address"]
 				port = self.pluginPrefs["ip_port"]
 				self.ePanel = Lutron(host, port, 1)
-				self.debugLog(" Lutron class instance %s created." % repr(self.ePanel))
-				self.debugLog(" Initiating connection to Lutron gateway.")
+				self.debugLog(u"Lutron class instance %s created." % repr(self.ePanel))
+				self.debugLog(u"Initiating connection to Lutron gateway.")
 
 				try:
 					self.ePanel.connect()
-					self.debugLog(" Connecting...")
+					self.debugLog(u"Connecting...")
 				
 					a = self.ePanel.readData()
-					self.debugLog(" %s" % a)
+					self.debugLog(u"%s" % a)
 				
 					if 'login' in a:
 						self.ePanel.sendCmd(str(self.pluginPrefs["ip_username"]))
-						self.debugLog(" Connected to panel, sending username.")
+						self.debugLog(u"Connected to panel, sending username.")
 					
 						a = self.ePanel.readData()
-						self.debugLog(" %s" % a)
+						self.debugLog(u"%s" % a)
 						if 'password' in a:
 							self.ePanel.sendCmd(str(self.pluginPrefs["ip_password"]))
-							self.debugLog(" sending password.")
+							self.debugLog(u"sending password.")
 						else:
-							self.debugLog(" password failure.")
+							self.debugLog(u"password failure.")
 					else:
-						self.debugLog(" username failure.")
+						self.debugLog(u"username failure.")
 #					indigo.devices[self.panelId].updateStateOnServer("conn_state", "On")
-					self.debugLog(" end of connection process.")
+					self.debugLog(u"end of connection process.")
 				
 				
 
 				except socket.error, e:
-					self.errorLog("Unable to connect to Lutron gateway. %s" % e.message)
+					self.errorLog(u"Unable to connect to Lutron gateway. %s" % e.message)
 #					indigo.devices[self.panelId].updateStateOnServer("conn_state", "Off")
 
 
@@ -467,18 +489,18 @@ class Plugin(indigo.PluginBase):
 				self.runstartup = False
 			else:
 				if ipOK and rtn:
-					self.debugLog(" Setting configDone to True")
+					self.debugLog(u"Setting configDone to True")
 					valuesDict["configDone"] = True
-					self.debugLog(" Setting flag to run startup")
+					self.debugLog(u"Setting flag to run startup")
 					self.runstartup = True
 		except KeyError:
 			if ipOK and rtn:
-				self.debugLog(" Setting configDone to True")
+				self.debugLog(u"Setting configDone to True")
 				valuesDict["configDone"] = True
-				self.debugLog(" Setting flag to run startup")
+				self.debugLog(u"Setting flag to run startup")
 				self.runstartup = True
 		self.IP = valuesDict["IP"]
-		self.debugLog(" %s, %s, %s" % (str(rtn), str(ipOK), str(self.IP)))
+		self.debugLog(u"%s, %s, %s" % (str(rtn), str(ipOK), str(self.IP)))
 		return rtn
 
 	
@@ -487,7 +509,7 @@ class Plugin(indigo.PluginBase):
 		try:
 			msg = msg.rstrip()
 			if len(msg) > 0:
-#				self.debugLog(" Message received: %s" % msg)
+#				self.debugLog(u"Message received: %s" % msg)
 				# RadioRA 2 messages are always terminated with CRLF
 				if "~OUTPUT" in msg:
 					self._cmdOutputChange(msg)
@@ -498,31 +520,28 @@ class Plugin(indigo.PluginBase):
 				elif "~TIMECLOCK" in msg:
 					self._cmdTimeClock(msg)
 				elif "~MONITORING" in msg:
-					self.debugLog(u" Main repeater serial interface configured" + msg)
+					self.debugLog(u"Main repeater serial interface configured" + msg)
 				elif "~GROUP" in msg:
 					self._cmdGroup(msg)
 				elif 'GNET' in msg:
 					#command prompt is ready					
-					self.debugLog(" Command prompt received. Device is ready.")
+					self.debugLog(u"Command prompt received. Device is ready.")
 				elif msg != "!":
 					self.errorLog(u" Unrecognized command: " + msg)
 		except self.StopThread:
 			pass
 
-	def shutdown(self):
-		self.debugLog(u" shutdown called")
-
 	def _sendCommand(self, cmd):
         # Choose IP or serial routines - vic13
 		# Need to add the \n for Caseta here in the IP section
 		if self.IP:
-			self.debugLog(u" Sending network command: " + cmd)
+			self.debugLog(u"Sending network command: " + cmd)
 			# Caseta needs "\n" appended
 			if self.caseta:
 				cmd = cmd + "\n"
 			self.ePanel.sendCmd(cmd)
 		else:
-			self.debugLog(u" Sending serial command: " + cmd)	
+			self.debugLog(u"Sending serial command: " + cmd)	
 			self.conn.write(cmd + "\r") # \r needed for serial -vic13
 
 	# IP communications use dispatchMsg() instead. -vic13
@@ -538,13 +557,13 @@ class Plugin(indigo.PluginBase):
 		elif "~GROUP" in cmd:
 			self._cmdGroup(cmd)
 		elif "~MONITORING" in cmd:
-			self.debugLog(u" Main repeater serial interface configured" + cmd)
+			self.debugLog(u"Main repeater serial interface configured" + cmd)
 		elif cmd != "!":
-			self.debugLog(u" Unrecognized command: " + cmd)
+			self.debugLog(u"Unrecognized command: " + cmd)
 
 
 	def _cmdOutputChange(self,cmd):
-		self.debugLog(u" Received an Output message: " + cmd)
+		self.debugLog(u"Received an Output message: " + cmd)
 		cmdArray = cmd.split(',')
 		id = cmdArray[1]
 		action = cmdArray[2]
@@ -623,7 +642,7 @@ class Plugin(indigo.PluginBase):
 		return
 		
 	def _cmdDeviceChange(self,cmd):
-		self.debugLog(u" Received a Device message: " + cmd)
+		self.debugLog(u"Received a Device message: " + cmd)
 
 		if self.IP:
 			cmd = cmd.rstrip() # IP strings are terminated with \n -JL
@@ -644,7 +663,7 @@ class Plugin(indigo.PluginBase):
 			status = cmdArray[4]
 
 		if id in self.phantomButtons:
-			self.debugLog(u" Received a phantom button status message: " + cmd)
+			self.debugLog(u"Received a phantom button status message: " + cmd)
 			but = self.phantomButtons[id]
 			if status == '0':
 				but.updateStateOnServer("onOffState", False)
@@ -656,7 +675,7 @@ class Plugin(indigo.PluginBase):
 		keypadid = id+button
 
 		if keypadid in self.keypads:
-			self.debugLog(u" Received a keypad button/LED status message: " + cmd)
+			self.debugLog(u"Received a keypad button/LED status message: " + cmd)
 			dev = self.keypads[keypadid]
 			keypad = self.keypads[keypadid]
 			if status == '0':
@@ -670,19 +689,19 @@ class Plugin(indigo.PluginBase):
 				self.debugLog(keypadid)
 				if keypadid in self.keypads:
 					keypad = self.keypads[keypadid]
-					self.debugLog(u" Updating button status with state of LED for keypadID " + keypadid)
+					self.debugLog(u"Updating button status with state of LED for keypadID " + keypadid)
 					if int(status) == 0:
 						keypad.updateStateOnServer("onOffState", False)
 					elif int(status) == 1:
 						keypad.updateStateOnServer("onOffState", True)
-						self.debugLog(u" Set status to True on Server.")
+						self.debugLog(u"Set status to True on Server.")
 				else:
 					indigo.server.log("WARNING: Invalid ID (%s) specified for LED.  Must be in range 81-87.  Please correct and reload the plugin." % keypadid, isError=True)
 					self.debugLog(keypadid)
 
 
 		if keypadid in self.picos:
-			self.debugLog(u" Received a pico button status message: " + cmd)
+			self.debugLog(u"Received a pico button status message: " + cmd)
 			but = self.picos[keypadid]
 			if status == '0':
 				but.updateStateOnServer("onOffState", False)
@@ -691,7 +710,7 @@ class Plugin(indigo.PluginBase):
 
 					
 		if keypadid in self.ccis:
-			self.debugLog(u" Received a CCI status message: " + cmd)
+			self.debugLog(u"Received a CCI status message: " + cmd)
 			cci = self.ccis[keypadid]
 			if status == '0':
 				cci.updateStateOnServer("onOffState", False)
@@ -701,9 +720,9 @@ class Plugin(indigo.PluginBase):
 				indigo.server.log(u"Received: CCI %s %s" % (cci.name, "Closed"))
 
 		if id in self.sensors:
-			self.debugLog(u" Received a sensor status message: " + cmd)
+			self.debugLog(u"Received a sensor status message: " + cmd)
 			but = self.sensors[id]
-			# self.debugLog(u" Variable But: " + but)
+			# self.debugLog(u"Variable But: " + but)
 			if status == '0':
 				but.updateStateOnServer("onOffState", False)
 				indigo.server.log(u"Received: Motion Sensor %s %s" % (but.name, "vacancy detected"))
@@ -713,7 +732,7 @@ class Plugin(indigo.PluginBase):
 
 	# IP comm has not yet been tested with _cmdHvacChange().  Currently left as is -vic13
 	def _cmdHvacChange(self,cmd):
-		self.debugLog(u" Received an HVAC message: " + cmd)
+		self.debugLog(u"Received an HVAC message: " + cmd)
 		cmdArray = cmd.split(',')
 		id = cmdArray[1]
 		action = cmdArray[2]
@@ -745,26 +764,20 @@ class Plugin(indigo.PluginBase):
 					thermo.updateStateOnServer("hvacFanMode", indigo.kFanMode.AlwaysOn)
 
 	def _cmdTimeClock(self,cmd):
-		self.debugLog(u" Received a TimeClock message: " + cmd)
+		self.debugLog(u"Received a TimeClock message: " + cmd)
 		cmdArray = cmd.split(',')
 		id = cmdArray[1]
 		action = cmdArray[2]
 		event = cmdArray[3]
-		indigo.server.log(u"Received: TimeClock Event # %s" % event)
-		self.triggerCheck("timeClockEvent", event)
+		self.clockTriggerCheck(event)
 
 	def _cmdGroup(self,cmd):
-		self.debugLog(u" Received a Group message  " + cmd)
+		self.debugLog(u"Received a Group message  " + cmd)
 		cmdArray = cmd.split(',')
 		id = cmdArray[1]
 		action = cmdArray[2]
 		status = cmdArray[3]
-		if status == "3":
-			indigo.server.log(u"Received: Occupancy Area %s is occupied" % id)
-		elif status == "4":
-			indigo.server.log(u"Received: Occupancy Area %s is vacant" % id)
-		elif status == "255":
-			self.debugLog(u"Received: Occupancy Area %s is unknown" % id)
+		self.clockTriggerCheck(status)
 
 
 	##########################################
@@ -812,7 +825,7 @@ class Plugin(indigo.PluginBase):
 				switch = dev.pluginProps[PROP_SWITCH]
 				sendCmd = ("#OUTPUT," + switch + ",1,100")
 			elif dev.deviceTypeId == RA_CCI:
-				self.debugLog(" it is a cci")
+				self.debugLog(u"it is a cci")
 				cci = dev.pluginProps[PROP_CCI_INTEGRATION_ID]
 				component = dev.pluginProps[PROP_COMPONENT]
 				sendCmd = ("#DEVICE," + cci +"," + str(int(component)) + ",3")
@@ -855,7 +868,7 @@ class Plugin(indigo.PluginBase):
 				switch = dev.pluginProps[PROP_SWITCH]
 				sendCmd = ("#OUTPUT," + switch + ",1,0")
 			elif dev.deviceTypeId == RA_CCI:
-				self.debugLog(" it is a cci")
+				self.debugLog(u"it is a cci")
 				cci = dev.pluginProps[PROP_CCI_INTEGRATION_ID]
 				component = dev.pluginProps[PROP_COMPONENT]
 				sendCmd = ("#DEVICE," + cci +"," + str(int(component)) + ",4")
@@ -905,7 +918,7 @@ class Plugin(indigo.PluginBase):
 				else:
 					sendCmd = ("#OUTPUT," + switch + ",1,100")
 			elif dev.deviceTypeId == RA_CCI:
-				self.debugLog(" it is a cci")
+				self.debugLog(u"it is a cci")
 				cci = dev.pluginProps[PROP_CCI_INTEGRATION_ID]
 				component = dev.pluginProps[PROP_COMPONENT]
 				if dev.onState == True:
