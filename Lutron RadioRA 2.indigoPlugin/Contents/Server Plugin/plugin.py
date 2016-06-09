@@ -47,6 +47,7 @@ import string
 
 from telnetlib import select
 from lutron import Lutron
+from ghpu import GitHubPluginUpdater
 
 
 RA_PHANTOM_BUTTON = "ra2PhantomButton"
@@ -124,6 +125,12 @@ class Plugin(indigo.PluginBase):
 	def startup(self):
 		self.debugLog(u"startup called")
 		
+		self.updater = GitHubPluginUpdater(self)
+		self.updater.checkForUpdate()
+		self.updateFrequency = self.pluginPrefs.get('updateFrequency', 24)
+		if self.updateFrequency > 0:
+			self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
+
 		# Call IP startup routine, but only run them if the IP box is checked -vic13
 		try:
 			self.IPstartup()
@@ -299,6 +306,14 @@ class Plugin(indigo.PluginBase):
 			try:
 				while True:
 					self.sleep(.1)
+
+				# Plugin Update check
+				
+				if self.updateFrequency > 0:
+					if time.time() > self.next_update_check:
+						self.updater.checkForUpdate()
+						self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
+					
 					try:
 						if self.runstartup:
 							self.debugLog(u"Calling IP Startup")
@@ -788,6 +803,15 @@ class Plugin(indigo.PluginBase):
 		self.pluginPrefs["debugEnabled"] = self.debug
 		indigo.server.log("Debug set to " + str(self.debug) + " by user")
 
+	def checkForUpdates(self):
+		self.updater.checkForUpdate()
+
+	def updatePlugin(self):
+		self.updater.update()
+
+	def forceUpdate(self):
+		self.updater.update(currentVersion='0.0.0')
+			
 
 
 	########################################
