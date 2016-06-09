@@ -31,22 +31,23 @@
 # 1.2.4 improved keypad configuration dialog
 # 1.2.5 ignore actions that are not explicitly defined like undocumented "action 29" and "action 30" (thanks FlyingDiver)
 # 1.2.6 added explicit support for motorized shades, CCO and CCI devices (thanks rapamatic!!) and improved device/output logging
-# 2.0.0 added Caséta support by mathys and IP connectivity contributed by Sb08 and vic13.  Added menu option to query all devices
-# 2.0.3 added Pico device type.  Changed CCI device type from relay to sensor.  Restrict query all devices to this plugin's devices.
+# 2.0.0 added Caséta support by mathys and IP connectivity contributed by Sb08 and vic13.	Added menu option to query all devices
+# 2.0.3 added Pico device type.	 Changed CCI device type from relay to sensor.	Restrict query all devices to this plugin's devices.
+# 2.1.0 added Group and TimeClock events.  Added BrightenBy and DimBy command support
 
-from __future__ import with_statement
+# from __future__ import with_statement
 
-import functools
-import os, socket
+# import functools
+# import os, socket
+# import sys
+# import threading
+# import indigo
+# import string
 import serial
-import sys
-import threading
+import socket
+import telnetlib
 import time
-import indigo
-import string
 
-from telnetlib import select
-from lutron import Lutron
 from ghpu import GitHubPluginUpdater
 
 
@@ -87,17 +88,12 @@ class Plugin(indigo.PluginBase):
 	def __init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs):
 		indigo.PluginBase.__init__(self, pluginId, pluginDisplayName, pluginVersion, pluginPrefs)
 
-		if 'debugEnabled' in pluginPrefs:
-			self.debug = pluginPrefs['debugEnabled']
-		else:
-			self.debug = False
+		self.debug = self.pluginPrefs.get(u"debugEnabled", False)
+		self.debugLog(u"Debugging enabled")
 
-		if 'queryAtStartup' in pluginPrefs:
-			self.queryAtStartup = pluginPrefs['queryAtStartup']
-		else:
-			self.queryAtStartup = False
+		self.queryAtStartup = self.pluginPrefs.get(u"queryAtStartup", False)
 			
-		self.conn = {}
+		self.connSerial = {}
 		self.command = ''
 		self.phantomButtons = {}
 		self.keypads = {}
@@ -112,9 +108,8 @@ class Plugin(indigo.PluginBase):
 		self.shades = {}
 		self.picos = {}
 		self.runstartup = False
-		self.ePanel = Lutron("127.0.0.1", "23", 1)
 		self.IP = False		# Default to serial I/O, not IP -vic13
-		self.caseta = False	# Default to RadioRA 2, not Caséta -vic13
+		self.caseta = False # Default to RadioRA 2, not Caséta -vic13
 		self.portEnabled = False
 		self.triggers = { }
 
@@ -124,29 +119,34 @@ class Plugin(indigo.PluginBase):
 
 	def startup(self):
 		self.debugLog(u"startup called")
-		
+
+		try:
+			self.IP = self.pluginPrefs["IP"]
+		except KeyError:
+			self.errorLog(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
+			return
+
 		self.updater = GitHubPluginUpdater(self)
 		self.updater.checkForUpdate()
 		self.updateFrequency = self.pluginPrefs.get('updateFrequency', 24)
 		if self.updateFrequency > 0:
 			self.next_update_check = time.time() + float(self.updateFrequency) * 60.0 * 60.0
 
-		# Call IP startup routine, but only run them if the IP box is checked -vic13
-		try:
-			self.IPstartup()
-			self.runstartup = False
-		except KeyError:
-			self.errorLog(u"Plugin not configured. Delaying startup until configuration is saved")
-
-		# When not doing IP communications, run original serial setup routines	-vic13		
-		try:
+		if self.IP:
+			self.timeout = 1
+			self.ipStartup()
+		else:
 			self.serialStartup()
-			self.runstartup = False
-		except KeyError:
-			self.errorLog(u"Plugin not configured. Delaying startup until configuration is saved")
+		self.runstartup = False
+		
+		if self.queryAtStartup:
+			self.queryAllDevices()
+
 
 	def shutdown(self):
 		self.debugLog(u"shutdown called")
+		if self.IP:
+			self.connIP.close()
 
 
 	####################
@@ -201,7 +201,7 @@ class Plugin(indigo.PluginBase):
 	
 			
 
-	def	update_device_property ( self, dev, propertyname, new_value = ""):
+	def update_device_property(self, dev, propertyname, new_value = ""):
 		newProps = dev.pluginProps
 		newProps.update ( {propertyname : new_value} )
 		dev.replacePluginPropsOnServer(newProps)
@@ -257,7 +257,7 @@ class Plugin(indigo.PluginBase):
 			if ccoType == "momentary":
 				dev.updateStateOnServer("onOffState", False)
 			# To do - set SupportsStatusRequest to true if it is a sustained contact CCO
-			#         haven't figured out a way to do that without hanging the UI when a new CCO is added
+			#		  haven't figured out a way to do that without hanging the UI when a new CCO is added
 			self.debugLog(u"Watching CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
 		elif dev.deviceTypeId == RA_PICO:
 			self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]] = dev
@@ -300,29 +300,22 @@ class Plugin(indigo.PluginBase):
 			self.debugLog(u"Deleted Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON])
 
 	def runConcurrentThread(self):
-	# Select threads based on IP or serial communications - vic13
-		if self.IP:
-			self.debugLog(u"Starting IP monitor thread")
-			try:
-				while True:
-					self.sleep(.1)
 
-				# Plugin Update check
-				
+		try:
+			while True:
+
 				if self.updateFrequency > 0:
 					if time.time() > self.next_update_check:
 						self.updater.checkForUpdate()
 						self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
-					
+
+				if self.IP:
 					try:
 						if self.runstartup:
-							self.debugLog(u"Calling IP Startup")
-							self.IPstartup()
+							self.ipStartup()
 							self.runstartup = False
 
-						self.dispatchMsg(self.ePanel.readData())
-#						else:
-#							pass
+						self._processCommand(self.connIP.read_until("\n", self.timeout))
 					except EOFError, e:
 						self.errorLog(u"EOFError: %s" % e.message)
 						if ('telnet connection closed' in e.message):
@@ -332,136 +325,83 @@ class Plugin(indigo.PluginBase):
 						self.debugLog(u"AttributeError: %s" % e.message)
 					except select.error, e:
 						self.debugLog(u"Disconnected while listening: %s" % e.message)
-	#				except:
-	#					self.errorLog(u"Unknown Error: %s" % sys.exc_info()[0])
-			except self.StopThread:
-				pass
-		else:	# Added by vic13
 
+				else:
+					while not self.portEnabled:
+						self.sleep(.1)
 
-			
-			self.debugLog(u"Starting serial monitor thread")
-
-			while not self.portEnabled:
-				self.sleep(.1)
-
-			try:
-				while True:
 					if self.runstartup:
-						self.debugLog(u"Calling Serial Startup")
 						self.serialStartup()
 						self.runstartup = False
 
-					s = self.conn.read()
-					if self.stopThread:
-						self.debugLog(u"Ending serial monitor thread")
-						return
-					else:
-						if len(s) > 0:
-							# RadioRA 2 messages are always terminated with CRLF
-							if s == '\r':
-								self._processCommand(self.command)
-								self.command = ''
-							else:
-								self.command += s
-			except self.StopThread:
-				pass
+					s = self.connSerial.read()
+					if len(s) > 0:
+						# RadioRA 2 messages are always terminated with CRLF
+						if s == '\r':
+							self._processCommand(self.command)
+							self.command = ''
+						else:
+							self.command += s
+
+				self.sleep(.1)
+
+		except self.StopThread:
+			pass
 
 	def serialStartup(self):
-		self.IP = self.pluginPrefs["IP"]
-		if not self.IP:
-			try:
-				if 'debugEnabled' in self.pluginPrefs:
-					self.debug = self.pluginPrefs['debugEnabled']
-					self.debugLog(u"Debug logging enabled.")
-				else:
-					self.debug = False
-			except KeyError:
-				self.errorLog(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
-				return
+		self.debugLog(u"Running serialStartup")
 
-			self.portEnabled = False
-			
-			serialUrl = self.getSerialPortUrl(self.pluginPrefs, u"devicePort")
-			self.debugLog(u"Serial Port URL is: " + serialUrl)
-			
-			self.conn = self.openSerial(u"Lutron RadioRA", serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
-			if self.conn is None:
-				indigo.server.log(u"Failed to open serial port")
-				return
-			
-			self.portEnabled = True
-				
-			# Disable main repeater terminal prompt
-			self._sendCommand("#MONITORING,12,2")
-					
-			# Enable main repeater HVAC monitoring
-			self._sendCommand("#MONITORING,17,1")
-						
-			# Enable main repeater monitoring param 18
-			# (undocumented but seems to be enabled by default for ethernet connections)
-			self._sendCommand("#MONITORING,18,1")
-			
-			if self.queryAtStartup:
-				self.queryAllDevices()
-
-	def IPstartup(self):
-		# Check to see if we are using IP or serial communications. - vic13
-		self.IP = self.pluginPrefs["IP"]
+		self.portEnabled = False
 		
-		# Only start IP routines if IP box is checked	- vic13
-		if self.IP:
-			try:
-				if 'debugEnabled' in self.pluginPrefs:
-					self.debug = self.pluginPrefs['debugEnabled']
-					self.debugLog(u"Debug logging enabled.")
-				else:
-					self.debug = False
-			except KeyError:
-				self.errorLog(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
-				return
+		serialUrl = self.getSerialPortUrl(self.pluginPrefs, u"devicePort")
+		self.debugLog(u"Serial Port URL is: " + serialUrl)
+		
+		self.connSerial = self.openSerial(u"Lutron RadioRA", serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
+		if self.connSerial is None:
+			indigo.server.log(u"Failed to open serial port")
+			return
+		
+		self.portEnabled = True
 			
-			if 1 == 1:
-				self.debugLog(u"Creating instance of class Lutron.")
-				host = self.pluginPrefs["ip_address"]
-				port = self.pluginPrefs["ip_port"]
-				self.ePanel = Lutron(host, port, 1)
-				self.debugLog(u"Lutron class instance %s created." % repr(self.ePanel))
-				self.debugLog(u"Initiating connection to Lutron gateway.")
-
-				try:
-					self.ePanel.connect()
-					self.debugLog(u"Connecting...")
+		# Disable main repeater terminal prompt
+		self._sendCommand("#MONITORING,12,2")
 				
-					a = self.ePanel.readData()
-					self.debugLog(u"%s" % a)
-				
-					if 'login' in a:
-						self.ePanel.sendCmd(str(self.pluginPrefs["ip_username"]))
-						self.debugLog(u"Connected to panel, sending username.")
+		# Enable main repeater HVAC monitoring
+		self._sendCommand("#MONITORING,17,1")
 					
-						a = self.ePanel.readData()
-						self.debugLog(u"%s" % a)
-						if 'password' in a:
-							self.ePanel.sendCmd(str(self.pluginPrefs["ip_password"]))
-							self.debugLog(u"sending password.")
-						else:
-							self.debugLog(u"password failure.")
-					else:
-						self.debugLog(u"username failure.")
-#					indigo.devices[self.panelId].updateStateOnServer("conn_state", "On")
-					self.debugLog(u"end of connection process.")
-				
-				
+		# Enable main repeater monitoring param 18
+		# (undocumented but seems to be enabled by default for ethernet connections)
+		self._sendCommand("#MONITORING,18,1")
+		
+	def ipStartup(self):
+		self.debugLog(u"Running ipStartup")
+		
+		host = self.pluginPrefs["ip_address"]
 
-				except socket.error, e:
-					self.errorLog(u"Unable to connect to Lutron gateway. %s" % e.message)
-#					indigo.devices[self.panelId].updateStateOnServer("conn_state", "Off")
-
-
-				if self.queryAtStartup:
-						self.queryAllDevices()
-
+		try:
+			self.debugLog(u"Connecting via IP...")
+			self.connIP = telnetlib.Telnet(host, 23)
+		
+			a = self.connIP.read_until("\n", self.timeout)
+			self.debugLog(u"%s" % a)
+		
+			if 'login' in a:
+				self.debugLog(u"Connected to panel, sending username.")
+				self.connIP.write(str(self.pluginPrefs["ip_username"]) + "\r\n")
+			
+				a = self.connIP.read_until("\n", self.timeout)
+				self.debugLog(u"%s" % a)
+				if 'password' in a:
+					self.debugLog(u"sending password.")
+					self.connIP.write(str(self.pluginPrefs["ip_password"]) + "\r\n")
+				else:
+					self.debugLog(u"password failure.")
+			else:
+				self.debugLog(u"username failure.")
+			self.debugLog(u"end of connection process.")
+		
+		except socket.error, e:
+			self.errorLog(u"Unable to connect to Lutron gateway. %s" % e.message)
 
 #########################################
 # Poll registered devices for status
@@ -476,29 +416,28 @@ class Plugin(indigo.PluginBase):
 		errDict = indigo.Dict()
 
 		badAddr = "Please use either an IP address (i.e. 1.2.3.4) or a fully qualified host name (i.e. lutron.domain.com)"
-		newaddr = str("%s:%s" % (valuesDict["ip_address"], valuesDict["ip_port"]))
 
 		if valuesDict["debugEnabled"]:
 			self.debug = True
 		else:
 			self.debug = False
-        
+		
 		self.IP = valuesDict["IP"]
 
-		if 1==1:
-			if valuesDict["ip_address"].count('.') >= 3:
-				ipOK = True
-			else:
-				ipOK = False
+		if valuesDict["ip_address"].count('.') >= 3:
+			ipOK = True
+		else:
+			ipOK = False
 
-			try:
-				if ipOK:
-					rtn = True
-				else:
-					errDict["ip_address"] = badAddr
-					rtn = (False, valuesDict, errDict)
-			except AttributeError:
-				rtn = (True, valuesDict)
+		try:
+			if ipOK:
+				rtn = True
+			else:
+				errDict["ip_address"] = badAddr
+				rtn = (False, valuesDict, errDict)
+		except AttributeError:
+			rtn = (True, valuesDict)
+
 		try:
 			if valuesDict["configDone"]:
 				self.runstartup = False
@@ -518,64 +457,40 @@ class Plugin(indigo.PluginBase):
 		self.debugLog(u"%s, %s, %s" % (str(rtn), str(ipOK), str(self.IP)))
 		return rtn
 
-	
+	def _processCommand(self, cmd):
+		cmd = cmd.rstrip()
+		if len(cmd) > 0:
+			if "~OUTPUT" in cmd:
+				self._cmdOutputChange(cmd)
+			elif "~DEVICE" in cmd:
+				self._cmdDeviceChange(cmd)
+			elif "~HVAC" in cmd:
+				self._cmdHvacChange(cmd)
+			elif "~GROUP" in cmd:
+				self._cmdGroup(cmd)
+			elif "~TIMECLOCK" in cmd:
+				self._cmdTimeClock(cmd)
+			elif "~MONITORING" in cmd:
+				self.debugLog(u"Main repeater serial interface configured" + cmd)
+			elif 'GNET' in cmd:
+				#command prompt is ready					
+				self.debugLog(u"Command prompt received. Device is ready.")
+			elif cmd != "!":
+				self.errorLog(u"Unrecognized command: " + cmd)
 
-	def dispatchMsg(self, msg):
-		try:
-			msg = msg.rstrip()
-			if len(msg) > 0:
-#				self.debugLog(u"Message received: %s" % msg)
-				# RadioRA 2 messages are always terminated with CRLF
-				if "~OUTPUT" in msg:
-					self._cmdOutputChange(msg)
-				elif "~DEVICE" in msg:
-					self._cmdDeviceChange(msg)
-				elif "~HVAC" in msg:
-					self._cmdHvacChange(msg)
-				elif "~TIMECLOCK" in msg:
-					self._cmdTimeClock(msg)
-				elif "~MONITORING" in msg:
-					self.debugLog(u"Main repeater serial interface configured" + msg)
-				elif "~GROUP" in msg:
-					self._cmdGroup(msg)
-				elif 'GNET' in msg:
-					#command prompt is ready					
-					self.debugLog(u"Command prompt received. Device is ready.")
-				elif msg != "!":
-					self.errorLog(u" Unrecognized command: " + msg)
-		except self.StopThread:
-			pass
 
 	def _sendCommand(self, cmd):
-        # Choose IP or serial routines - vic13
+		# Choose IP or serial routines - vic13
 		# Need to add the \n for Caseta here in the IP section
 		if self.IP:
 			self.debugLog(u"Sending network command: " + cmd)
 			# Caseta needs "\n" appended
 			if self.caseta:
 				cmd = cmd + "\n"
-			self.ePanel.sendCmd(cmd)
+			self.connIP.write(fullCmd + "\r\n")
 		else:
 			self.debugLog(u"Sending serial command: " + cmd)	
-			self.conn.write(cmd + "\r") # \r needed for serial -vic13
-
-	# IP communications use dispatchMsg() instead. -vic13
-	def _processCommand(self, cmd):
-		if "~OUTPUT" in cmd:
-			self._cmdOutputChange(cmd)
-		elif "~DEVICE" in cmd:
-			self._cmdDeviceChange(cmd)
-		elif "~HVAC" in cmd:
-			self._cmdHvacChange(cmd)
-		elif "~TIMECLOCK" in cmd:
-			self._cmdTimeClock(cmd)
-		elif "~GROUP" in cmd:
-			self._cmdGroup(cmd)
-		elif "~MONITORING" in cmd:
-			self.debugLog(u"Main repeater serial interface configured" + cmd)
-		elif cmd != "!":
-			self.debugLog(u"Unrecognized command: " + cmd)
-
+			self.connSerial.write(cmd + "\r") # \r needed for serial -vic13
 
 	def _cmdOutputChange(self,cmd):
 		self.debugLog(u"Received an Output message: " + cmd)
@@ -640,15 +555,15 @@ class Plugin(indigo.PluginBase):
 						fan.updateStateOnServer("speedIndex", 3)
 				indigo.server.log(u"Received: Fan " + fan.name + " speed set to " + str(level))
 				return
-		elif action == '2':  # start raising
+		elif action == '2':	 # start raising
 			return
-		elif action == '3':  # start lowering
+		elif action == '3':	 # start lowering
 			return
-		elif action == '4':  # stop raising/lowering
+		elif action == '4':	 # stop raising/lowering
 			return
-		elif action == '5':  # start flash
+		elif action == '5':	 # start flash
 			return
-		elif action == '6':  # pulse
+		elif action == '6':	 # pulse
 			return
 		elif action == '29':  # Lutron firmware 7.5 added an undocumented 29 action code; ignore for now
 			return
@@ -711,7 +626,7 @@ class Plugin(indigo.PluginBase):
 						keypad.updateStateOnServer("onOffState", True)
 						self.debugLog(u"Set status to True on Server.")
 				else:
-					indigo.server.log("WARNING: Invalid ID (%s) specified for LED.  Must be in range 81-87.  Please correct and reload the plugin." % keypadid, isError=True)
+					indigo.server.log("WARNING: Invalid ID (%s) specified for LED.	Must be in range 81-87.	 Please correct and reload the plugin." % keypadid, isError=True)
 					self.debugLog(keypadid)
 
 
@@ -818,7 +733,7 @@ class Plugin(indigo.PluginBase):
 	# Relay / Dimmer / /Shade / CCO / CCI Action callback
 	########################################
 	def actionControlDimmerRelay(self, action, dev):
-		# Original change by Ramias.  \r is added only for serial I/O.  We use sendCmd()
+		# Original change by Ramias.  \r is added only for serial I/O.	We use sendCmd()
 		#
 		sendCmd = ""
 	
@@ -1073,11 +988,11 @@ class Plugin(indigo.PluginBase):
 				indigo.server.log(u"sent \"%s\" %s" % (dev.name, "status request"))
 
 		###### CYCLE SPEED ######
-        # Future enhancement
-        #elif action.speedControlAction == indigo.kSpeedControlAction.cycleSpeedControlState:
+		# Future enhancement
+		#elif action.speedControlAction == indigo.kSpeedControlAction.cycleSpeedControlState:
 
 		###### TOGGLE ######
-        # Future enhancement
+		# Future enhancement
 		#elif action.speedControlAction == indigo.kSpeedControlAction.toggle:
 		#indigo.server.log(u"sent \"%s\" %s" % (dev.name, "cycle speed"))
 
@@ -1089,7 +1004,7 @@ class Plugin(indigo.PluginBase):
 		integration_id = dev.pluginProps[PROP_THERMO]
 		currentCoolSetpoint = dev.coolSetpoint
 		currentHeatSetpoint = dev.heatSetpoint
-        
+		
 		###### SET SETPOINTS ######
 		if action.thermostatAction == indigo.kThermostatAction.DecreaseCoolSetpoint:
 			newCoolSetpoint = float(currentCoolSetpoint) - 1
@@ -1118,7 +1033,7 @@ class Plugin(indigo.PluginBase):
 			newHeatSetpoint = float(currentHeatSetpoint)
 			self._sendCommand("#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint) +"\r")
 
-        ###### SET HVAC MODE ######
+		###### SET HVAC MODE ######
 		elif action.thermostatAction == indigo.kThermostatAction.SetHvacMode:
 			mode = action.actionMode
 			if mode == indigo.kHvacMode.Off:
@@ -1134,7 +1049,7 @@ class Plugin(indigo.PluginBase):
 				self._sendCommand("#HVAC," + integration_id + ",3,4")
 				indigo.server.log(u"sent \"%s\" %s" % (dev.name, "set hvac mode to Auto"))
 
-        ###### SET FAN MODE ######
+		###### SET FAN MODE ######
 		elif action.thermostatAction == indigo.kThermostatAction.SetFanMode:
 			mode = action.actionMode
 			if mode == indigo.kFanMode.Auto:
@@ -1152,7 +1067,7 @@ class Plugin(indigo.PluginBase):
 			self._sendCommand("?HVAC," + integration_id + ",4,") # get fan mode
 			indigo.server.log(u"sent \"%s\" %s" % (dev.name, "status request"))
 
-    #################################
-    #
-    #  Future versions: implement additional thermostat actions, shades (define as dimmers for now)
+	#################################
+	#
+	#  Future versions: implement additional thermostat actions, shades (define as dimmers for now)
 
