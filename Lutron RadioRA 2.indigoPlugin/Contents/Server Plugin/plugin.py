@@ -33,6 +33,7 @@
 # 1.2.6 added explicit support for motorized shades, CCO and CCI devices (thanks rapamatic!!) and improved device/output logging
 # 2.0.0 added Caséta support by mathys and IP connectivity contributed by Sb08 and vic13.  Added menu option to query all devices
 # 2.0.3 added Pico device type.  Changed CCI device type from relay to sensor.  Restrict query all devices to this plugin's devices.
+# 2.1.0 added Group and TimeClock events.  Added BrightenBy and DimBy command support.  Added GitHubPluginUpdater support.
 
 from __future__ import with_statement
 
@@ -307,12 +308,12 @@ class Plugin(indigo.PluginBase):
 				while True:
 					self.sleep(.1)
 
-				# Plugin Update check
+					# Plugin Update check
 				
-				if self.updateFrequency > 0:
-					if time.time() > self.next_update_check:
-						self.updater.checkForUpdate()
-						self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
+					if self.updateFrequency > 0:
+						if time.time() > self.next_update_check:
+							self.updater.checkForUpdate()
+							self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
 					
 					try:
 						if self.runstartup:
@@ -351,6 +352,13 @@ class Plugin(indigo.PluginBase):
 						self.debugLog(u"Calling Serial Startup")
 						self.serialStartup()
 						self.runstartup = False
+
+					# Plugin Update check
+				
+					if self.updateFrequency > 0:
+						if time.time() > self.next_update_check:
+							self.updater.checkForUpdate()
+							self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
 
 					s = self.conn.read()
 					if self.stopThread:
