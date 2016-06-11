@@ -33,7 +33,9 @@
 # 1.2.6 added explicit support for motorized shades, CCO and CCI devices (thanks rapamatic!!) and improved device/output logging
 # 2.0.0 added Caséta support by mathys and IP connectivity contributed by Sb08 and vic13.	Added menu option to query all devices
 # 2.0.3 added Pico device type.	 Changed CCI device type from relay to sensor.	Restrict query all devices to this plugin's devices.
-# 2.1.0 added Group and TimeClock events.  Added BrightenBy and DimBy command support
+# 2.1.0 added Group and TimeClock events.  Added BrightenBy and DimBy command support.  Added GitHubPluginUpdater support.
+# 2.2.0 architectural update to normalize IP and Serial data flows.  Removed redundant code and execution paths.
+
 
 # from __future__ import with_statement
 
