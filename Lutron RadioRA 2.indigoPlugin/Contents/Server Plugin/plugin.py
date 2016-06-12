@@ -313,7 +313,7 @@ class Plugin(indigo.PluginBase):
 					if self.updateFrequency > 0:
 						if time.time() > self.next_update_check:
 							self.updater.checkForUpdate()
-							self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
+							self.next_update_check = time.time() + float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
 					
 					try:
 						if self.runstartup:
@@ -358,7 +358,7 @@ class Plugin(indigo.PluginBase):
 					if self.updateFrequency > 0:
 						if time.time() > self.next_update_check:
 							self.updater.checkForUpdate()
-							self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
+							self.next_update_check = time.time() + float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
 
 					s = self.conn.read()
 					if self.stopThread:

@@ -23,7 +23,7 @@
 	<Field id="space1" type="label">
 		<Label/>
 	</Field>
-	<Field id="ip_address" type="textfield"  defaultValue="192.168.0.100" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
+	<Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
 		<Label>IP Address or Hostname:</Label>
 	</Field>
 	<Field id="ip_port" type="textfield" defaultValue="23" hidden="true" >
@@ -33,6 +33,13 @@
 	</Field>
 	<Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
 		<Label>Password:</Label>
+	</Field>
+	<Field id="sep1" type="separator"/>
+	<Field id="updateFrequency" type="textfield" defaultValue="24">
+		<Label>Check for plugin update frequency (hours):</Label>
+	</Field>
+	<Field id="updateNote" type="label" fontSize="small" fontColor="darkgray">
+		<Label>The plugin will not check for updates if the frequency is set to zero.</Label>
 	</Field>
     <Field id="simpleSeparator2" type="separator"/>
 	<Field type="checkbox" id="debugEnabled" defaultValue="false">
