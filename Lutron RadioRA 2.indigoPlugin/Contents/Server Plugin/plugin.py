@@ -482,11 +482,11 @@ class Plugin(indigo.PluginBase):
 
 	def _sendCommand(self, cmd):
 		if self.IP:
-			self.debugLog(u"Sending network command:  %s (%s)" % cmd)
+			self.debugLog(u"Sending network command:  %s" % cmd)
 			cmd = cmd + "\r\n"
 			self.connIP.write(str(cmd))
 		else:
-			self.debugLog(u"Sending serial command: %s (%s)" % cmd)	
+			self.debugLog(u"Sending serial command: %s" % cmd)	
 			cmd = cmd + "\r"
 			self.connSerial.write(str(cmd))
 
