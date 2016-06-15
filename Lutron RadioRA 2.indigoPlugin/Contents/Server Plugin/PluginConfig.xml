@@ -10,13 +10,6 @@
         <Label>Enhancements by Joe Keenan (FlyingDiver).</Label>
     </Field>
     <Field id="simpleSeparator1" type="separator"/>
-	<Field type="menu" id="caseta" defaultValue="false">
-		<Label>Lutron Gateway Type:</Label>
-		<List>
-			<Option value="false">RadioRA 2</Option>
-			<Option value="true">Caséta</Option>
-		</List>
-	</Field>
 	<Field type="checkbox" id="IP" defaultValue="false">
 		<Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
 	</Field>

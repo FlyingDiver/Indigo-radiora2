@@ -36,15 +36,6 @@
 # 2.1.0 added Group and TimeClock events.  Added BrightenBy and DimBy command support.  Added GitHubPluginUpdater support.
 # 2.2.0 architectural update to normalize IP and Serial data flows.  Removed redundant code and execution paths.
 
-
-# from __future__ import with_statement
-
-# import functools
-# import os, socket
-# import sys
-# import threading
-# import indigo
-# import string
 import serial
 import socket
 import telnetlib
@@ -111,7 +102,6 @@ class Plugin(indigo.PluginBase):
 		self.picos = {}
 		self.runstartup = False
 		self.IP = False		# Default to serial I/O, not IP -vic13
-		self.caseta = False # Default to RadioRA 2, not Caséta -vic13
 		self.portEnabled = False
 		self.triggers = { }
 
@@ -189,7 +179,6 @@ class Plugin(indigo.PluginBase):
 
 		for triggerId, trigger in sorted(self.triggers.iteritems()):
 			type = trigger.pluginTypeId
-			groupNumber = trigger.pluginProps["groupNumber"]
 			try:
 				groupNumber = trigger.pluginProps["groupNumber"]
 			except KeyError:
@@ -383,6 +372,7 @@ class Plugin(indigo.PluginBase):
 		# Enable main repeater monitoring param 18
 		# (undocumented but seems to be enabled by default for ethernet connections)
 		self._sendCommand("#MONITORING,18,1")
+
 		
 	def ipStartup(self):
 		self.debugLog(u"Running ipStartup")
@@ -491,17 +481,14 @@ class Plugin(indigo.PluginBase):
 
 
 	def _sendCommand(self, cmd):
-		# Choose IP or serial routines - vic13
-		# Need to add the \n for Caseta here in the IP section
 		if self.IP:
-			self.debugLog(u"Sending network command: " + cmd)
-			# Caseta needs "\n" appended
-			if self.caseta:
-				cmd = cmd + "\n"
-			self.connIP.write(cmd + "\r\n")
+			self.debugLog(u"Sending network command:  %s (%s)" % cmd)
+			cmd = cmd + "\r\n"
+			self.connIP.write(str(cmd))
 		else:
-			self.debugLog(u"Sending serial command: " + cmd)	
-			self.connSerial.write(cmd + "\r") # \r needed for serial -vic13
+			self.debugLog(u"Sending serial command: %s (%s)" % cmd)	
+			cmd = cmd + "\r"
+			self.connSerial.write(str(cmd))
 
 	def _cmdOutputChange(self,cmd):
 		self.debugLog(u"Received an Output message: " + cmd)
