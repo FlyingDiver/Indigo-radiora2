@@ -167,7 +167,11 @@ class Plugin(indigo.PluginBase):
 
 		for triggerId, trigger in sorted(self.triggers.iteritems()):
 			type = trigger.pluginTypeId
-			eventNumber = trigger.pluginProps["eventNumber"]
+			try:
+				eventNumber = trigger.pluginProps["eventNumber"]
+			except KeyError:
+				self.debugLog(u"Trigger %s (%s), Type: %s does not have eventNumber" % (trigger.name, trigger.id, type))
+				
 			self.debugLog(u"Checking Trigger %s (%s), Type: %s, Event: %s" % (trigger.name, trigger.id, type, eventNumber))
 			
 			if "timeClockEvent" != type:
@@ -186,6 +190,11 @@ class Plugin(indigo.PluginBase):
 		for triggerId, trigger in sorted(self.triggers.iteritems()):
 			type = trigger.pluginTypeId
 			groupNumber = trigger.pluginProps["groupNumber"]
+			try:
+				groupNumber = trigger.pluginProps["groupNumber"]
+			except KeyError:
+				self.debugLog(u"Trigger %s (%s), Type: %s does not have groupNumber" % (trigger.name, trigger.id, type))
+				
 			self.debugLog(u"Checking Trigger %s (%s), Type: %s, Group: %s" % (trigger.name, trigger.id, type, groupNumber))
 			
 			if "groupEvent" != type:
