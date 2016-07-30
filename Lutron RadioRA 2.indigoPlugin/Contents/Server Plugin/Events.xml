@@ -1,28 +1,28 @@
 <?xml version="1.0"?>
 <Events>
-	<Event id="timeClockEvent">
+    <Event id="timeClockEvent">
         <Name>Time Clock Event</Name>
- 		<ConfigUI>
-			<Field id="eventNumber" type="textfield">
-				<Label>Event Number:</Label>
-			</Field>
- 		</ConfigUI>
+        <ConfigUI>
+            <Field id="eventNumber" type="textfield">
+                <Label>Event Number:</Label>
+            </Field>
+        </ConfigUI>
    </Event>
-	<Event id="groupEvent">
+    <Event id="groupEvent">
         <Name>Group Event</Name>
- 		<ConfigUI>
-			<Field id="groupNumber" type="textfield">
-				<Label>Group (Room) Number:</Label>
-			</Field>
-			<Field type="menu" id="occupancyPopUp" defaultValue="occupied">
-				<Label>Becomes:</Label>
-				<List>
-					<Option value="3">Occupied</Option>
-					<Option value="4">Vacant (Unoccupied)</Option>
-					<Option value="255">Unknown</Option>
-				</List>
-			</Field>			
- 		</ConfigUI>
+        <ConfigUI>
+            <Field id="groupNumber" type="textfield">
+                <Label>Group (Room) Number:</Label>
+            </Field>
+            <Field type="menu" id="occupancyPopUp" defaultValue="occupied">
+                <Label>Becomes:</Label>
+                <List>
+                    <Option value="3">Occupied</Option>
+                    <Option value="4">Vacant (Unoccupied)</Option>
+                    <Option value="255">Unknown</Option>
+                </List>
+            </Field>            
+        </ConfigUI>
    </Event>
 </Events>
 

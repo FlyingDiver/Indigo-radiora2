@@ -2,24 +2,24 @@
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>PluginVersion</key>
-	<string>2.2.1</string>
-	<key>ServerApiVersion</key>
-	<string>1.5</string>
-	<key>IwsApiVersion</key>
-	<string>1.0.0</string>
-	<key>CFBundleDisplayName</key>
-	<string>Lutron RadioRA2/Caséta</string>
-	<key>CFBundleIdentifier</key>
-	<string>com.jimandnoreen.indigoplugin.lutron-radiora2</string>
-	<key>CFBundleVersion</key>
-	<string>1.0.0</string>
-	<key>CFBundleURLTypes</key>
-	<array>
-		<dict>
-			<key>CFBundleURLName</key>
-			<string>http://jimandnoreen.com/?p=96</string>
-		</dict>
-	</array>
+    <key>PluginVersion</key>
+    <string>3.00</string>
+    <key>ServerApiVersion</key>
+    <string>2.0</string>
+    <key>IwsApiVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleDisplayName</key>
+    <string>Lutron RRA2/Caséta</string>
+    <key>CFBundleIdentifier</key>
+    <string>com.jimandnoreen.indigoplugin.lutron-radiora2</string>
+    <key>CFBundleVersion</key>
+    <string>1.0.0</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>http://jimandnoreen.com/?p=96</string>
+        </dict>
+    </array>
 </dict>
 </plist>

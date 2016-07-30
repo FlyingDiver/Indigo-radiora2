@@ -26,3 +26,8 @@ Edit (3/2016):  Beginning with version 2.0.0, the plugin also supports Caseta Sm
 1. Main repeater phantom buttons can be set up in multiple ways but the plugin currently only supports On/Off commands.  So, for example, if a phantom button is defined as a toggle, clicking its On button in Indigo will turn the device on and clicking On again will turn it off.  Indigo’s Off button will have no effect on a phantom button that’s defined as a toggle.
 
 1. The Lutron fan switches have four fan speeds (low, medium, medium-high, and high) but only three of these speeds are selectable from the Indigo GUI.
+
+### Indigo 7 Only
+
+
+This plugin only works under Indigo 7 or greater.

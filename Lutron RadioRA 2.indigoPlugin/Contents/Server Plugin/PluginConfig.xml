@@ -1,8 +1,8 @@
 <?xml version="1.0"?>
 <PluginConfig>
-	<Field id="infoLabel1" type="label">
-		<Label>Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
-	</Field>
+    <Field id="infoLabel1" type="label">
+        <Label>Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
+    </Field>
     <Field id="infoLabel2" type="label">
         <Label>IP connectivity portions by Sylvain Beaudry and vic13.</Label>
     </Field>
@@ -10,37 +10,44 @@
         <Label>Enhancements by Joe Keenan (FlyingDiver).</Label>
     </Field>
     <Field id="simpleSeparator1" type="separator"/>
-	<Field type="checkbox" id="IP" defaultValue="false">
-		<Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
-	</Field>
-	<Field id="space1" type="label">
-		<Label/>
-	</Field>
-	<Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
-		<Label>IP Address or Hostname:</Label>
-	</Field>
-	<Field id="ip_port" type="textfield" defaultValue="23" hidden="true" >
-	</Field>
-	<Field id="ip_username" type="textfield" defaultValue="lutron" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP User Name for Lutron gateway.">
-		<Label>Username:</Label>
-	</Field>
-	<Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
-		<Label>Password:</Label>
-	</Field>
-	<Field id="sep1" type="separator"/>
-	<Field id="updateFrequency" type="textfield" defaultValue="24">
-		<Label>Check for plugin update frequency (hours):</Label>
-	</Field>
-	<Field id="updateNote" type="label" fontSize="small" fontColor="darkgray">
-		<Label>The plugin will not check for updates if the frequency is set to zero.</Label>
-	</Field>
+    <Field type="checkbox" id="IP" defaultValue="false">
+        <Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
+    </Field>
+    <Field id="space1" type="label">
+        <Label/>
+    </Field>
+    <Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
+        <Label>IP Address or Hostname:</Label>
+    </Field>
+    <Field id="ip_port" type="textfield" defaultValue="23" hidden="true" >
+    </Field>
+    <Field id="ip_username" type="textfield" defaultValue="lutron" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP User Name for Lutron gateway.">
+        <Label>Username:</Label>
+    </Field>
+    <Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
+        <Label>Password:</Label>
+    </Field>
+    <Field id="sep1" type="separator"/>
+    <Field id="updateFrequency" type="textfield" defaultValue="24">
+        <Label>Check for plugin update frequency (hours):</Label>
+    </Field>
+    <Field id="updateNote" type="label" fontSize="small" fontColor="darkgray">
+        <Label>The plugin will not check for updates if the frequency is set to zero.</Label>
+    </Field>
     <Field id="simpleSeparator2" type="separator"/>
-	<Field type="checkbox" id="debugEnabled" defaultValue="false">
-		<Label>Enable debugging:</Label>
-	</Field>
-	<Field type="checkbox" id="queryAtStartup" defaultValue="false">
-		<Label>Send status request for all devices at startup:</Label>
-	</Field>
+    <Field id="logLevel" type="menu" defaultValue="30">
+        <Label>Event Logging Level:</Label>
+        <List>
+            <Option value="10">Debugging Messages</Option>
+            <Option value="20">Informational Messages</Option>
+            <Option value="30">Warning Messages</Option>
+            <Option value="40">Error Messages</Option>
+            <Option value="50">Critical Errors Only</Option>
+        </List>
+    </Field>            
+    <Field type="checkbox" id="queryAtStartup" defaultValue="false">
+        <Label>Send status request for all devices at startup:</Label>
+    </Field>
     <Field id="simpleSeparator3" type="separator"/>
-	<Field type="serialport" id="devicePort"/>
+    <Field type="serialport" id="devicePort"/>
 </PluginConfig>
