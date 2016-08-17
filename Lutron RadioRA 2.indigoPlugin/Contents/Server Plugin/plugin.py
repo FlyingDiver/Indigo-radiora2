@@ -35,12 +35,15 @@
 # 2.0.3 added Pico device type.  Changed CCI device type from relay to sensor.  Restrict query all devices to this plugin's devices.
 # 2.1.0 added Group and TimeClock events.  Added BrightenBy and DimBy command support.  Added GitHubPluginUpdater support.
 # 2.2.0 architectural update to normalize IP and Serial data flows.  Removed redundant code and execution paths.
+# 2.2.1 debug statement fix
+# 2.3.0 Fixed fan speeds.  Added button press events/triggers.
 # 3.0.0 Indigo 7 logging and other API changes
 
 import serial
 import socket
 import telnetlib
 import time
+import select # was getting errors on the select.error exception in runConcurrentThread
 import logging
 
 from ghpu import GitHubPluginUpdater
@@ -147,6 +150,77 @@ class Plugin(indigo.PluginBase):
 
     ####################
 
+    def triggerStopProcessing(self, trigger):
+        self.debugLog(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+        assert trigger.id in self.triggers
+        del self.triggers[trigger.id]
+
+    def clockTriggerCheck(self, info):
+
+        for triggerId, trigger in sorted(self.triggers.iteritems()):
+            type = trigger.pluginTypeId
+            try:
+                eventNumber = trigger.pluginProps["eventNumber"]
+            except KeyError:
+                self.debugLog(u"Trigger %s (%s), Type: %s does not have eventNumber" % (trigger.name, trigger.id, type))
+
+            if "timeClockEvent" != type:
+                self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+                return
+
+            if eventNumber != info:
+                self.debugLog(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
+                return
+
+            self.debugLog(u"\tExecuting Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
+            indigo.trigger.execute(trigger)
+
+    def groupTriggerCheck(self, info):
+
+        for triggerId, trigger in sorted(self.triggers.iteritems()):
+            type = trigger.pluginTypeId
+            try:
+                groupNumber = trigger.pluginProps["groupNumber"]
+            except KeyError:
+                self.debugLog(u"Trigger %s (%s), Type: %s does not have groupNumber" % (trigger.name, trigger.id, type))
+
+            if "groupEvent" != type:
+                self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+                return
+
+            if groupNumber != info:
+                self.debugLog(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
+                return
+
+            self.debugLog(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
+            indigo.trigger.execute(trigger)
+
+    def keypadTriggerCheck(self, devID, compID):
+
+        for triggerId, trigger in sorted(self.triggers.iteritems()):
+            type = trigger.pluginTypeId
+            try:
+                deviceID = trigger.pluginProps["deviceID"]
+            except KeyError:
+                self.debugLog(u"Trigger %s (%s), Type: %s does not have deviceID" % (trigger.name, trigger.id, type))
+
+            try:
+                componentID = trigger.pluginProps["componentID"]
+            except KeyError:
+                self.debugLog(u"Trigger %s (%s), Type: %s does not have componentID" % (trigger.name, trigger.id, type))
+
+            if "keypadButtonPress" != type:
+                self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+                return
+
+            if not (deviceID == devID and componentID == compID):
+                self.debugLog(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
+                return
+
+            self.debugLog(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
+            indigo.trigger.execute(trigger)
+
+    ####################
 
     def update_device_property(self, dev, propertyname, new_value = ""):
         newProps = dev.pluginProps
@@ -293,63 +367,6 @@ class Plugin(indigo.PluginBase):
 
         except self.StopThread:
             pass
-
-    ####################
-
-    def triggerStartProcessing(self, trigger):
-        self.logger.debug(u"Adding Trigger %s (%d) - %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-        assert trigger.id not in self.triggers
-        self.triggers[trigger.id] = trigger
-
-    def triggerStopProcessing(self, trigger):
-        self.logger.debug(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
-        assert trigger.id in self.triggers
-        del self.triggers[trigger.id]
-
-    def clockTriggerCheck(self, info):
-
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
-            type = trigger.pluginTypeId
-            try:
-                eventNumber = trigger.pluginProps["eventNumber"]
-            except KeyError:
-                self.logger.debug(u"Trigger %s (%s), Type: %s does not have eventNumber" % (trigger.name, trigger.id, type))
-            else:
-                self.logger.debug(u"Checking Trigger %s (%s), Type: %s, Event: %s" % (trigger.name, trigger.id, type, eventNumber))
-
-                if "timeClockEvent" != type:
-                    self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                    return
-
-                if eventNumber != info:
-                    self.logger.debug(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
-                    return
-
-                self.logger.debug(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
-                indigo.trigger.execute(trigger)
-
-    def groupTriggerCheck(self, info):
-
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
-            type = trigger.pluginTypeId
-
-            try:
-                groupNumber = trigger.pluginProps["groupNumber"]
-            except KeyError:
-                self.logger.debug(u"Trigger %s (%s), Type: %s does not have groupNumber" % (trigger.name, trigger.id, type))
-            else:
-                self.logger.debug(u"Checking Trigger %s (%s), Type: %s, Group: %s" % (trigger.name, trigger.id, type, groupNumber))
-
-                if "groupEvent" != type:
-                    self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                    return
-
-                if groupNumber != info:
-                    self.logger.debug(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
-                    return
-
-                self.logger.debug(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
-                indigo.trigger.execute(trigger)
 
     ####################
 
@@ -561,15 +578,13 @@ class Plugin(indigo.PluginBase):
                     self.logger.info(u"Received: CCO %s %s" % (cco.name, "Closed"))
             elif id in self.fans:
                 fan = self.fans[id]
-                if level == '0.00':
+                if int(float(level)) == 0:
                     fan.updateStateOnServer("onOffState", False)
                 else:
                     fan.updateStateOnServer("onOffState", True)
-                    if level == '25.10':
+                    if float(level) < 26:
                         fan.updateStateOnServer("speedIndex", 1)
-                    elif level == '50.20':
-                        fan.updateStateOnServer("speedIndex", 2)
-                    elif level == '75.30':
+                    elif float(level) < 76:
                         fan.updateStateOnServer("speedIndex", 2)
                     else:
                         fan.updateStateOnServer("speedIndex", 3)
@@ -651,6 +666,9 @@ class Plugin(indigo.PluginBase):
                     self.logger.info("WARNING: Invalid ID (%s) specified for LED.   Must be in range 81-87.  Please correct and reload the plugin." % keypadid, isError=True)
                     self.logger.debug(keypadid)
 
+            if action == '3': # Check for triggers
+                self.debugLog(u"Received a Keypad Button press message, checking triggers: " + cmd)
+                self.keypadTriggerCheck(id, button)
 
         if keypadid in self.picos:
             self.logger.debug(u"Received a pico button status message: " + cmd)
@@ -988,9 +1006,9 @@ class Plugin(indigo.PluginBase):
                 if newSpeed == 0:
                     self._sendCommand("#OUTPUT," + fan + ",1,0")
                 elif newSpeed == 1:
-                    self._sendCommand("#OUTPUT," + fan + ",1,25.10")
+                    self._sendCommand("#OUTPUT," + fan + ",1,25")
                 elif newSpeed == 2:
-                    self._sendCommand("#OUTPUT," + fan + ",1,75.30")
+                    self._sendCommand("#OUTPUT," + fan + ",1,75")
                 else:
                     self._sendCommand("#OUTPUT," + fan + ",1,100")
             self.logger.info(u"sent \"%s\" %s to %d" % (dev.name, "set fan speed", newSpeed))

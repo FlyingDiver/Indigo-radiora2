@@ -24,6 +24,17 @@
             </Field>            
         </ConfigUI>
    </Event>
+   <Event id="keypadButtonPress">
+        <Name>Keypad Button Press</Name>
+ 		<ConfigUI>
+			<Field id="deviceID" type="textfield">
+				<Label>Device ID:</Label>
+			</Field>
+			<Field id="componentID" type="textfield">
+				<Label>Component ID:</Label>
+			</Field>
+ 		</ConfigUI>
+   </Event>
 </Events>
 
 
