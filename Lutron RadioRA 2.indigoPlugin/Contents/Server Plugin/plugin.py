@@ -1003,7 +1003,7 @@ class Plugin(indigo.PluginBase):
 				elif newSpeed == 1:
 					self._sendCommand("#OUTPUT," + fan + ",1,25")
 				elif newSpeed == 2:
-					self._sendCommand("#OUTPUT," + fan + ",1,50")
+					self._sendCommand("#OUTPUT," + fan + ",1,75")
 				else:
 					self._sendCommand("#OUTPUT," + fan + ",1,100")
 			indigo.server.log(u"sent \"%s\" %s to %d" % (dev.name, "set fan speed", newSpeed))
