@@ -332,24 +332,24 @@ class Plugin(indigo.PluginBase):
 
         for triggerId, trigger in sorted(self.triggers.iteritems()):
             type = trigger.pluginTypeId
+
             try:
                 groupNumber = trigger.pluginProps["groupNumber"]
             except KeyError:
                 self.logger.debug(u"Trigger %s (%s), Type: %s does not have groupNumber" % (trigger.name, trigger.id, type))
             else:
+                self.logger.debug(u"Checking Trigger %s (%s), Type: %s, Group: %s" % (trigger.name, trigger.id, type, groupNumber))
 
-            self.logger.debug(u"Checking Trigger %s (%s), Type: %s, Group: %s" % (trigger.name, trigger.id, type, groupNumber))
+                if "groupEvent" != type:
+                    self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+                    return
 
-            if "groupEvent" != type:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                return
+                if groupNumber != info:
+                    self.logger.debug(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
+                    return
 
-            if groupNumber != info:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
-                return
-
-            self.logger.debug(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
-            indigo.trigger.execute(trigger)
+                self.logger.debug(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
+                indigo.trigger.execute(trigger)
 
     ####################
 
@@ -440,7 +440,7 @@ class Plugin(indigo.PluginBase):
         except AttributeError:
             rtn = (True, valuesDict)
 
-       updateFrequency = int(valuesDict['updateFrequency'])
+        updateFrequency = int(valuesDict['updateFrequency'])
         if (updateFrequency < 0) or (updateFrequency > 24):
             errorDict['updateFrequency'] = u"Update frequency is invalid - enter a valid number (between 0 and 24)"
             self.logger.debug(u"updateFrequency out of range: " + valuesDict['updateFrequency'])
@@ -589,7 +589,7 @@ class Plugin(indigo.PluginBase):
             return
         elif action == '30':  # Lutron firmware ??? added an undocumented 30 action code; ignore for now
             return
-        else
+        else:
             self.logger.debug(u"Received Unknown Action Code:  %s" % action)
         return
 
