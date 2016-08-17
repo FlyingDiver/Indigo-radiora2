@@ -40,6 +40,7 @@ import serial
 import socket
 import telnetlib
 import time
+import select # was getting errors on the select.error exception in runConcurrentThread
 
 from ghpu import GitHubPluginUpdater
 
@@ -192,6 +193,30 @@ class Plugin(indigo.PluginBase):
 				
 			if groupNumber != info:
 				self.debugLog(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
+				return
+				
+			self.debugLog(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
+			indigo.trigger.execute(trigger)
+
+	def keypadTriggerCheck(self, devID, compID):
+
+		for triggerId, trigger in sorted(self.triggers.iteritems()):
+			type = trigger.pluginTypeId
+			try:
+				deviceID = trigger.pluginProps["deviceID"]
+			except KeyError:
+				self.debugLog(u"Trigger %s (%s), Type: %s does not have deviceID" % (trigger.name, trigger.id, type))
+				
+			self.debugLog(u"Checking Trigger %s (%s), Type: %s, Keypad: %s, %s" % (trigger.name, trigger.id, type, devID, compID))
+			
+			componentID = trigger.pluginProps["componentID"]
+			
+			if "keypadButtonPress" != type:
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+				return
+				
+			if not (deviceID == devID and componentID == compID):
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
 				return
 				
 			self.debugLog(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
@@ -626,7 +651,11 @@ class Plugin(indigo.PluginBase):
 				else:
 					indigo.server.log("WARNING: Invalid ID (%s) specified for LED.	Must be in range 81-87.	 Please correct and reload the plugin." % keypadid, isError=True)
 					self.debugLog(keypadid)
-
+					
+			if action == '3': # Check for triggers
+				self.debugLog(u"Received a Keypad Button press message, checking triggers: " + cmd)
+				self.keypadTriggerCheck(id, button)
+				
 
 		if keypadid in self.picos:
 			self.debugLog(u"Received a pico button status message: " + cmd)
