@@ -40,6 +40,7 @@ import serial
 import socket
 import telnetlib
 import time
+import select # was getting errors on the select.error exception in runConcurrentThread
 
 from ghpu import GitHubPluginUpdater
 
@@ -192,6 +193,30 @@ class Plugin(indigo.PluginBase):
 				
 			if groupNumber != info:
 				self.debugLog(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
+				return
+				
+			self.debugLog(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
+			indigo.trigger.execute(trigger)
+
+	def keypadTriggerCheck(self, devID, compID):
+
+		for triggerId, trigger in sorted(self.triggers.iteritems()):
+			type = trigger.pluginTypeId
+			try:
+				deviceID = trigger.pluginProps["deviceID"]
+			except KeyError:
+				self.debugLog(u"Trigger %s (%s), Type: %s does not have deviceID" % (trigger.name, trigger.id, type))
+				
+			self.debugLog(u"Checking Trigger %s (%s), Type: %s, Keypad: %s, %s" % (trigger.name, trigger.id, type, devID, compID))
+			
+			componentID = trigger.pluginProps["componentID"]
+			
+			if "keypadButtonPress" != type:
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+				return
+				
+			if not (deviceID == devID and componentID == compID):
+				self.debugLog(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
 				return
 				
 			self.debugLog(u"\tExecuting Trigger %s (%s)" % (trigger.name, trigger.id))
@@ -539,15 +564,15 @@ class Plugin(indigo.PluginBase):
 					indigo.server.log(u"Received: CCO %s %s" % (cco.name, "Closed"))
 			elif id in self.fans:
 				fan = self.fans[id]
-				if level == '0.00':
+				if int(float(level)) == 0:
 					fan.updateStateOnServer("onOffState", False)
 				else:
 					fan.updateStateOnServer("onOffState", True)
-					if level == '25.10':
+					if float(level) < 26:
 						fan.updateStateOnServer("speedIndex", 1)
-					elif level == '50.20':
+					elif float(level) < 51:
 						fan.updateStateOnServer("speedIndex", 2)
-					elif level == '75.30':
+					elif float(level) < 76:
 						fan.updateStateOnServer("speedIndex", 2)
 					else:
 						fan.updateStateOnServer("speedIndex", 3)
@@ -626,7 +651,11 @@ class Plugin(indigo.PluginBase):
 				else:
 					indigo.server.log("WARNING: Invalid ID (%s) specified for LED.	Must be in range 81-87.	 Please correct and reload the plugin." % keypadid, isError=True)
 					self.debugLog(keypadid)
-
+					
+			if action == '3': # Check for triggers
+				self.debugLog(u"Received a Keypad Button press message, checking triggers: " + cmd)
+				self.keypadTriggerCheck(id, button)
+				
 
 		if keypadid in self.picos:
 			self.debugLog(u"Received a pico button status message: " + cmd)
@@ -972,9 +1001,9 @@ class Plugin(indigo.PluginBase):
 				if newSpeed == 0:
 					self._sendCommand("#OUTPUT," + fan + ",1,0")
 				elif newSpeed == 1:
-					self._sendCommand("#OUTPUT," + fan + ",1,25.10")
+					self._sendCommand("#OUTPUT," + fan + ",1,25")
 				elif newSpeed == 2:
-					self._sendCommand("#OUTPUT," + fan + ",1,75.30")
+					self._sendCommand("#OUTPUT," + fan + ",1,75")
 				else:
 					self._sendCommand("#OUTPUT," + fan + ",1,100")
 			indigo.server.log(u"sent \"%s\" %s to %d" % (dev.name, "set fan speed", newSpeed))
