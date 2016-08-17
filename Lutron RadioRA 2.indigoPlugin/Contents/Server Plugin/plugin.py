@@ -539,15 +539,15 @@ class Plugin(indigo.PluginBase):
 					indigo.server.log(u"Received: CCO %s %s" % (cco.name, "Closed"))
 			elif id in self.fans:
 				fan = self.fans[id]
-				if level == '0.00':
+				if int(float(level)) == 0:
 					fan.updateStateOnServer("onOffState", False)
 				else:
 					fan.updateStateOnServer("onOffState", True)
-					if level == '25.10':
+					if float(level) < 26:
 						fan.updateStateOnServer("speedIndex", 1)
-					elif level == '50.20':
+					elif float(level) < 51:
 						fan.updateStateOnServer("speedIndex", 2)
-					elif level == '75.30':
+					elif float(level) < 76:
 						fan.updateStateOnServer("speedIndex", 2)
 					else:
 						fan.updateStateOnServer("speedIndex", 3)
@@ -972,9 +972,9 @@ class Plugin(indigo.PluginBase):
 				if newSpeed == 0:
 					self._sendCommand("#OUTPUT," + fan + ",1,0")
 				elif newSpeed == 1:
-					self._sendCommand("#OUTPUT," + fan + ",1,25.10")
+					self._sendCommand("#OUTPUT," + fan + ",1,25")
 				elif newSpeed == 2:
-					self._sendCommand("#OUTPUT," + fan + ",1,75.30")
+					self._sendCommand("#OUTPUT," + fan + ",1,50")
 				else:
 					self._sendCommand("#OUTPUT," + fan + ",1,100")
 			indigo.server.log(u"sent \"%s\" %s to %d" % (dev.name, "set fan speed", newSpeed))
