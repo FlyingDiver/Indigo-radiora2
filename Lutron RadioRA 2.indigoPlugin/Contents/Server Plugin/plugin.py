@@ -167,14 +167,16 @@ class Plugin(indigo.PluginBase):
 
             if "timeClockEvent" != type:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                return
+                continue
 
             if eventNumber != info:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
-                return
+                continue
 
             self.debugLog(u"\tExecuting Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
             indigo.trigger.execute(trigger)
+        else:
+        	return
 
     def groupTriggerCheck(self, info):
 
@@ -187,14 +189,16 @@ class Plugin(indigo.PluginBase):
 
             if "groupEvent" != type:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                return
+                continue
 
             if groupNumber != info:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
-                return
+                continue
 
             self.debugLog(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
             indigo.trigger.execute(trigger)
+        else:
+        	return
 
     def keypadTriggerCheck(self, devID, compID):
 
@@ -212,14 +216,16 @@ class Plugin(indigo.PluginBase):
 
             if "keypadButtonPress" != type:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                return
+                continue
 
             if not (deviceID == devID and componentID == compID):
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
-                return
+                continue
 
             self.debugLog(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
             indigo.trigger.execute(trigger)
+        else:
+        	return
 
     ####################
 
