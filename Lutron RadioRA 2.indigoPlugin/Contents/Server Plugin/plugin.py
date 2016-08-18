@@ -330,6 +330,7 @@ class Plugin(indigo.PluginBase):
                     self.updater.checkForUpdate()
 
                 if self.IP:
+                    self.sleep(.1)
                     try:
                         if self.runstartup:
                             self.ipStartup()
@@ -362,8 +363,6 @@ class Plugin(indigo.PluginBase):
                             self.command = ''
                         else:
                             self.command += s
-
-                self.sleep(.1)
 
         except self.StopThread:
             pass
