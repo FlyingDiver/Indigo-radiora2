@@ -37,6 +37,9 @@
 # 2.2.0 architectural update to normalize IP and Serial data flows.  Removed redundant code and execution paths.
 # 2.2.1 debug statement fix
 # 2.3.0 Fixed fan speeds.  Added button press events/triggers.
+# 2.3.1 Fixed repository name
+# 2.3.2 Fixed serial comms delay
+# 2.3.3 Trigger processing changes
 # 3.0.0 Indigo 7 logging and other API changes
 
 import serial
@@ -166,11 +169,11 @@ class Plugin(indigo.PluginBase):
 
             if "timeClockEvent" != type:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                return
+                continue
 
             if eventNumber != info:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
-                return
+                continue
 
             self.debugLog(u"\tExecuting Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
             indigo.trigger.execute(trigger)
@@ -186,11 +189,11 @@ class Plugin(indigo.PluginBase):
 
             if "groupEvent" != type:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                return
+                continue
 
             if groupNumber != info:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
-                return
+                continue
 
             self.debugLog(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
             indigo.trigger.execute(trigger)
@@ -211,11 +214,11 @@ class Plugin(indigo.PluginBase):
 
             if "keypadButtonPress" != type:
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
-                return
+                continue
 
             if not (deviceID == devID and componentID == compID):
                 self.debugLog(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
-                return
+                continue
 
             self.debugLog(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
             indigo.trigger.execute(trigger)
