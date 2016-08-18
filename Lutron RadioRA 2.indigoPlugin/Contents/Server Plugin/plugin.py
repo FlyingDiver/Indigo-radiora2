@@ -334,6 +334,7 @@ class Plugin(indigo.PluginBase):
                         self.next_update_check = time.time() + float(self.pluginPrefs['updateFrequency']) * 60.0 * 60.0
 
                 if self.IP:
+                    self.sleep(.1)
                     try:
                         if self.runstartup:
                             self.ipStartup()
@@ -366,8 +367,6 @@ class Plugin(indigo.PluginBase):
                             self.command = ''
                         else:
                             self.command += s
-
-                self.sleep(.1)
 
         except self.StopThread:
             pass
