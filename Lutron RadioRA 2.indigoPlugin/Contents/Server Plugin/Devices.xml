@@ -17,6 +17,9 @@
             <Field type="textField" id="zone" defaultValue="1">
                 <Label>Integration ID:</Label>
             </Field>
+            <Field type="textField" id="fadeTime" defaultValue="1">
+                <Label>Integration ID:</Label>
+            </Field>
             <Field type="textField" id="notes" defaultValue="">
                 <Label>Notes:</Label>
             </Field>

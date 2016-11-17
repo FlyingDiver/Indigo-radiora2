@@ -1,3 +1,20 @@
 <?xml version="1.0"?>
 <Actions>
+	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177</SupportURL>
+	<Action id="fadeDimmer" deviceFilter="self.dimmer" uiPath="DeviceActions">
+		<Name>Set Dimmer with Fade</Name>
+		<CallbackMethod>fadeDimmer</CallbackMethod>
+		<ConfigUI>
+			<Field id="brightness" type="textfield">
+				<Label>Brightness:</Label>
+			</Field>
+			<Field id="fadeTime" type="textfield">
+				<Label>Fade Time:</Label>
+			</Field>
+			<Field id="simpleSeparator2" type="separator"/>
+			<Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Variable and Device State Substitution is enabled for all fields. Use the format %%v:12345%% for variables and %%d:12345:someStateId%% for device states.</Label>
+			</Field>
+		</ConfigUI>
+	</Action>
 </Actions>

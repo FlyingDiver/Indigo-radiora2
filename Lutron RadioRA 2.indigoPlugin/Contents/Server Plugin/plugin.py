@@ -235,48 +235,48 @@ class Plugin(indigo.PluginBase):
     def deviceStartComm(self, dev):
         if dev.deviceTypeId == RA_PHANTOM_BUTTON:
             self.phantomButtons[dev.pluginProps[PROP_BUTTON]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_BUTTON] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_BUTTON] )
             self.logger.debug(u"Watching phantom button: " + dev.pluginProps[PROP_BUTTON])
         elif dev.deviceTypeId == RA_DIMMER:
             self.zones[dev.pluginProps[PROP_ZONE]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_ZONE] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_ZONE] )
             self.logger.debug(u"Watching dimmer: " + dev.pluginProps[PROP_ZONE])
         elif dev.deviceTypeId == RA_SHADE:
             self.shades[dev.pluginProps[PROP_SHADE]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SHADE] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SHADE] )
             dev.updateStateImageOnServer( indigo.kStateImageSel.None )
             self.logger.debug(u"Watching shade: " + dev.pluginProps[PROP_SHADE])
         elif dev.deviceTypeId == RA_SWITCH:
             self.switches[dev.pluginProps[PROP_SWITCH]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SWITCH] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SWITCH] )
             self.logger.debug(u"Watching switch: " + dev.pluginProps[PROP_SWITCH])
         elif dev.deviceTypeId == RA_FAN:
             self.fans[dev.pluginProps[PROP_FAN]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_FAN] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_FAN] )
             self.logger.debug(u"Watching fan: " + dev.pluginProps[PROP_FAN])
         elif dev.deviceTypeId == RA_THERMO:
             self.thermos[dev.pluginProps[PROP_THERMO]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_THERMO] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_THERMO] )
             self.logger.debug(u"Watching thermostat: " + dev.pluginProps[PROP_THERMO])
         elif dev.deviceTypeId == RA_KEYPAD:
             self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT])
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT])
             if dev.pluginProps[PROP_KEYPADBUT] > 80:
-                self.update_device_property ( dev, "keypadButtonDisplayLEDState", new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE] )
+                self.update_device_property(dev, "keypadButtonDisplayLEDState", new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE] )
                 self.logger.debug(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " LED: " + dev.pluginProps[PROP_KEYPADBUT])
             else:
                 self.logger.debug(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " button: " + dev.pluginProps[PROP_KEYPADBUT])
         elif dev.deviceTypeId == RA_SENSOR:
             self.sensors[dev.pluginProps[PROP_SENSOR]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SENSOR] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SENSOR] )
             self.logger.debug(u"Watching sensor: " + dev.pluginProps[PROP_SENSOR])
         elif dev.deviceTypeId == RA_CCI:
             self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT])
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT])
             self.logger.debug(u"Watching CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID] + " input: " + dev.pluginProps[PROP_COMPONENT])
         elif dev.deviceTypeId == RA_CCO:
             self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_CCO_INTEGRATION_ID] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCO_INTEGRATION_ID] )
             ccoType = dev.pluginProps[PROP_CCO_TYPE]
             if ccoType == "momentary":
                 dev.updateStateOnServer("onOffState", False)
@@ -285,7 +285,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"Watching CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
         elif dev.deviceTypeId == RA_PICO:
             self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON])
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON])
             self.logger.debug(u"Watching Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID] + " button: " + dev.pluginProps[PROP_PICOBUTTON])
 
     def deviceStopComm(self, dev):
@@ -542,6 +542,7 @@ class Plugin(indigo.PluginBase):
             # something else to consider for future enhancements
             # fade = cmdArray[4]
             # delay = cmdArray[5]
+
             if id in self.zones:
                 zone = self.zones[id]
                 if int(float(level)) == 0:
@@ -1105,3 +1106,20 @@ class Plugin(indigo.PluginBase):
     #
     #  Future versions: implement additional thermostat actions, shades (define as dimmers for now)
 
+
+	########################################
+	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
+	######################
+	def fadeDimmer(self, pluginAction):
+		self.debugLog(u"fadeDimmer queueing message '" + indigo.activePlugin.substitute(pluginAction.props["emailSubject"]) + "'")
+		dev = indigo.devices[pluginAction.deviceId]
+		brightness =  indigo.activePlugin.substitute(pluginAction.props["brightness"])
+		fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
+
+        if dev.deviceTypeId == RA_DIMMER:
+            zone = dev.pluginProps[PROP_ZONE]
+        elif dev.deviceTypeId == RA_SHADE:
+            zone = dev.pluginProps[PROP_SHADE]
+
+        sendCmd = ("#OUTPUT," + zone + "," + str(fadeTime) + "," + str(brightness))
+        self.logger.info(u"sending \"%s\" %s to %d\%" % (dev.name, "set to", brightness))
