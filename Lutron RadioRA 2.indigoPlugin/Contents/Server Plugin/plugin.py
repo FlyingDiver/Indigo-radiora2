@@ -227,56 +227,58 @@ class Plugin(indigo.PluginBase):
 
     def update_device_property(self, dev, propertyname, new_value = ""):
         newProps = dev.pluginProps
-        newProps.update ( {propertyname : new_value} )
+        newProps.update ( {propertyname : new_value})
         dev.replacePluginPropsOnServer(newProps)
         return None
 
+	########################################
 
     def deviceStartComm(self, dev):
         if dev.deviceTypeId == RA_PHANTOM_BUTTON:
             self.phantomButtons[dev.pluginProps[PROP_BUTTON]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_BUTTON] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_BUTTON])
             self.logger.debug(u"Watching phantom button: " + dev.pluginProps[PROP_BUTTON])
         elif dev.deviceTypeId == RA_DIMMER:
             self.zones[dev.pluginProps[PROP_ZONE]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_ZONE] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_ZONE])
             self.logger.debug(u"Watching dimmer: " + dev.pluginProps[PROP_ZONE])
         elif dev.deviceTypeId == RA_SHADE:
             self.shades[dev.pluginProps[PROP_SHADE]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SHADE] )
-            dev.updateStateImageOnServer( indigo.kStateImageSel.None )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SHADE])
+            dev.updateStateImageOnServer( indigo.kStateImageSel.None)
             self.logger.debug(u"Watching shade: " + dev.pluginProps[PROP_SHADE])
         elif dev.deviceTypeId == RA_SWITCH:
             self.switches[dev.pluginProps[PROP_SWITCH]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SWITCH] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SWITCH])
             self.logger.debug(u"Watching switch: " + dev.pluginProps[PROP_SWITCH])
         elif dev.deviceTypeId == RA_FAN:
             self.fans[dev.pluginProps[PROP_FAN]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_FAN] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_FAN])
             self.logger.debug(u"Watching fan: " + dev.pluginProps[PROP_FAN])
         elif dev.deviceTypeId == RA_THERMO:
             self.thermos[dev.pluginProps[PROP_THERMO]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_THERMO] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_THERMO])
             self.logger.debug(u"Watching thermostat: " + dev.pluginProps[PROP_THERMO])
         elif dev.deviceTypeId == RA_KEYPAD:
             self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT])
-            if dev.pluginProps[PROP_KEYPADBUT] > 80:
-                self.update_device_property ( dev, "keypadButtonDisplayLEDState", new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT])
+            if int(dev.pluginProps[PROP_KEYPADBUT]) > 80:
+                self.update_device_property(dev, "keypadButtonDisplayLEDState", new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
                 self.logger.debug(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " LED: " + dev.pluginProps[PROP_KEYPADBUT])
             else:
+                self.update_device_property(dev, "keypadButtonDisplayLEDState", new_value = False)
                 self.logger.debug(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " button: " + dev.pluginProps[PROP_KEYPADBUT])
         elif dev.deviceTypeId == RA_SENSOR:
             self.sensors[dev.pluginProps[PROP_SENSOR]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_SENSOR] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SENSOR])
             self.logger.debug(u"Watching sensor: " + dev.pluginProps[PROP_SENSOR])
         elif dev.deviceTypeId == RA_CCI:
             self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT])
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT])
             self.logger.debug(u"Watching CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID] + " input: " + dev.pluginProps[PROP_COMPONENT])
         elif dev.deviceTypeId == RA_CCO:
             self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_CCO_INTEGRATION_ID] )
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCO_INTEGRATION_ID])
             ccoType = dev.pluginProps[PROP_CCO_TYPE]
             if ccoType == "momentary":
                 dev.updateStateOnServer("onOffState", False)
@@ -285,7 +287,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"Watching CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
         elif dev.deviceTypeId == RA_PICO:
             self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]] = dev
-            self.update_device_property ( dev, "address", new_value = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON])
+            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON])
             self.logger.debug(u"Watching Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID] + " button: " + dev.pluginProps[PROP_PICOBUTTON])
 
     def deviceStopComm(self, dev):
@@ -322,6 +324,21 @@ class Plugin(indigo.PluginBase):
         elif dev.deviceTypeId == RA_PICO:
             del self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]]
             self.logger.debug(u"Deleted Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON])
+
+    def validateDeviceConfigUi(self, valuesDict, typeId, devId):
+
+        errorsDict = indigo.Dict()
+
+        if typeId == RA_KEYPAD and bool(valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE]) and int(valuesDict[PROP_KEYPADBUT]) < 80:
+            valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE] = False
+            self.logger.debug(u"validateDeviceConfigUi: forced PROP_KEYPADBUT_DISPLAY_LED_STATE to False for keypad # %s, button # %s" % (valuesDict[PROP_KEYPAD]), valuesDict[PROP_KEYPADBUT]))
+
+        if len(errorsDict) > 0:
+            return (False, valuesDict, errorsDict)
+
+        return (True, valuesDict)
+
+	########################################
 
     def runConcurrentThread(self):
 
@@ -653,9 +670,7 @@ class Plugin(indigo.PluginBase):
                 keypad.updateStateOnServer("onOffState", True)
 
             if dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]: # Also display this LED state on its corresponding button
-                self.logger.debug(keypadid)
                 keypadid = keypadid[0:len(keypadid)-2] + keypadid[len(keypadid)-1] # Convert LED ID to button ID
-                self.logger.debug(keypadid)
                 if keypadid in self.keypads:
                     keypad = self.keypads[keypadid]
                     self.logger.debug(u"Updating button status with state of LED for keypadID " + keypadid)
@@ -665,7 +680,7 @@ class Plugin(indigo.PluginBase):
                         keypad.updateStateOnServer("onOffState", True)
                         self.logger.debug(u"Set status to True on Server.")
                 else:
-                    self.logger.info("WARNING: Invalid ID (%s) specified for LED.   Must be in range 81-87.  Please correct and reload the plugin." % keypadid, isError=True)
+                    self.logger.error("WARNING: Invalid ID (%s) specified for LED.   Must be in range 81-87.  Please correct and reload the plugin." % keypadid)
                     self.logger.debug(keypadid)
 
             if action == '3': # Check for triggers
