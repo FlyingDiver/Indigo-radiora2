@@ -559,6 +559,7 @@ class Plugin(indigo.PluginBase):
             # something else to consider for future enhancements
             # fade = cmdArray[4]
             # delay = cmdArray[5]
+
             if id in self.zones:
                 zone = self.zones[id]
                 if int(float(level)) == 0:
@@ -1120,3 +1121,20 @@ class Plugin(indigo.PluginBase):
     #
     #  Future versions: implement additional thermostat actions, shades (define as dimmers for now)
 
+
+	########################################
+	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
+	######################
+	def fadeDimmer(self, pluginAction):
+		self.debugLog(u"fadeDimmer queueing message '" + indigo.activePlugin.substitute(pluginAction.props["emailSubject"]) + "'")
+		dev = indigo.devices[pluginAction.deviceId]
+		brightness =  indigo.activePlugin.substitute(pluginAction.props["brightness"])
+		fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
+
+        if dev.deviceTypeId == RA_DIMMER:
+            zone = dev.pluginProps[PROP_ZONE]
+        elif dev.deviceTypeId == RA_SHADE:
+            zone = dev.pluginProps[PROP_SHADE]
+
+        sendCmd = ("#OUTPUT," + zone + "," + str(fadeTime) + "," + str(brightness))
+        self.logger.info(u"sending \"%s\" %s to %d\%" % (dev.name, "set to", brightness))
