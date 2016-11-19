@@ -50,4 +50,7 @@
     </Field>
     <Field id="simpleSeparator3" type="separator"/>
     <Field type="serialport" id="devicePort"/>
+    <Field id="configDone" type="checkbox" defaultValue="false" hidden="true">
+        <Label>Is it configured?</Label>
+    </Field>
 </PluginConfig>

@@ -331,7 +331,7 @@ class Plugin(indigo.PluginBase):
 
         if typeId == RA_KEYPAD and bool(valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE]) and int(valuesDict[PROP_KEYPADBUT]) < 80:
             valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE] = False
-            self.logger.debug(u"validateDeviceConfigUi: forced PROP_KEYPADBUT_DISPLAY_LED_STATE to False for keypad # %s, button # %s" % (valuesDict[PROP_KEYPAD]), valuesDict[PROP_KEYPADBUT]))
+            self.logger.debug(u"validateDeviceConfigUi: forced PROP_KEYPADBUT_DISPLAY_LED_STATE to False for keypad # %s, button # %s" % (valuesDict[PROP_KEYPAD], valuesDict[PROP_KEYPADBUT]))
 
         if len(errorsDict) > 0:
             return (False, valuesDict, errorsDict)
@@ -555,10 +555,6 @@ class Plugin(indigo.PluginBase):
         action = cmdArray[2]
         if action == '1':  # set level
             level = cmdArray[3]
-
-            # something else to consider for future enhancements
-            # fade = cmdArray[4]
-            # delay = cmdArray[5]
 
             if id in self.zones:
                 zone = self.zones[id]
@@ -868,7 +864,7 @@ class Plugin(indigo.PluginBase):
                     sendCmd = ("#OUTPUT," + cco + ",6")
                 else:
                     sendCmd = ("#OUTPUT," + cco + ",1,0")
-            self.logger.info(u"sending \"%s\" %s" % (dev.name, "off"))
+            self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "off"))
 
         ###### TOGGLE ######
         elif action.deviceAction == indigo.kDeviceAction.Toggle:
@@ -925,7 +921,7 @@ class Plugin(indigo.PluginBase):
                         sendCmd = ("#OUTPUT," + cco + ",1,0")
                     else:
                         sendCmd = ("#OUTPUT," + cco + ",1,1")
-            self.logger.info(u"sending \"%s\" %s" % (dev.name, "toggle"))
+            self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "toggle"))
 
         ###### SET BRIGHTNESS ######
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
@@ -933,12 +929,12 @@ class Plugin(indigo.PluginBase):
                 newBrightness = action.actionValue
                 zone = dev.pluginProps[PROP_ZONE]
                 sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
-                self.logger.info(u"sending \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
+                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
             elif dev.deviceTypeId == RA_SHADE:
                 newBrightness = action.actionValue
                 shade = dev.pluginProps[PROP_SHADE]
                 sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
-                self.logger.info(u"sending \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
+                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
         ###### BRIGHTEN BY ######
         elif action.deviceAction == indigo.kDimmerRelayAction.BrightenBy:
@@ -949,11 +945,11 @@ class Plugin(indigo.PluginBase):
             if dev.deviceTypeId == RA_DIMMER:
                 zone = dev.pluginProps[PROP_ZONE]
                 sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
-                self.logger.info(u"sending \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
+                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
             elif dev.deviceTypeId == RA_SHADE:
                 shade = dev.pluginProps[PROP_SHADE]
                 sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
-                self.logger.info(u"sending \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
+                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
         ###### DIM BY ######
         elif action.deviceAction == indigo.kDimmerRelayAction.DimBy:
@@ -964,11 +960,11 @@ class Plugin(indigo.PluginBase):
             if dev.deviceTypeId == RA_DIMMER:
                 zone = dev.pluginProps[PROP_ZONE]
                 sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
-                self.logger.info(u"sending \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
+                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
             elif dev.deviceTypeId == RA_SHADE:
                 shade = dev.pluginProps[PROP_SHADE]
                 sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
-                self.logger.info(u"sending \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
+                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
         ###### STATUS REQUEST ######
         elif action.deviceAction == indigo.kDeviceAction.RequestStatus:
@@ -1003,7 +999,7 @@ class Plugin(indigo.PluginBase):
 
 
         self._sendCommand(sendCmd)
-        self.logger.debug(u"sent \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
+        self.logger.debug(u"Sent: \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
 
     ######################
     # Sensor Action callback
@@ -1021,6 +1017,7 @@ class Plugin(indigo.PluginBase):
             if dev.deviceTypeId == RA_FAN:
                 newSpeed = action.actionValue
                 fan = dev.pluginProps[PROP_FAN]
+                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set fan speed", newSpeed))
                 if newSpeed == 0:
                     self._sendCommand("#OUTPUT," + fan + ",1,0")
                 elif newSpeed == 1:
@@ -1029,13 +1026,12 @@ class Plugin(indigo.PluginBase):
                     self._sendCommand("#OUTPUT," + fan + ",1,75")
                 else:
                     self._sendCommand("#OUTPUT," + fan + ",1,100")
-            self.logger.info(u"sent \"%s\" %s to %d" % (dev.name, "set fan speed", newSpeed))
 
         ###### STATUS REQUEST ######
         elif action.speedControlAction == indigo.kSpeedControlAction.RequestStatus:
+                self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "status request"))
                 integration_id = dev.pluginProps[PROP_FAN]
                 self._sendCommand("?OUTPUT," + integration_id + ",1,")
-                self.logger.info(u"sent \"%s\" %s" % (dev.name, "status request"))
 
         ###### CYCLE SPEED ######
         # Future enhancement
@@ -1103,38 +1099,36 @@ class Plugin(indigo.PluginBase):
         elif action.thermostatAction == indigo.kThermostatAction.SetFanMode:
             mode = action.actionMode
             if mode == indigo.kFanMode.Auto:
+                self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "set fan mode to Auto"))
                 self._sendCommand("#HVAC," + integration_id + ",4,1")
-                self.logger.info(u"sent \"%s\" %s" % (dev.name, "set fan mode to Auto"))
             elif mode == indigo.kFanMode.AlwaysOn:
+                self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "set fan mode to Always On"))
                 self._sendCommand("#HVAC," + integration_id + ",4,2")
-                self.logger.info(u"sent \"%s\" %s" % (dev.name, "set fan mode to Always On"))
 
         ###### STATUS REQUEST ######
         elif action.thermostatAction == indigo.kThermostatAction.RequestStatusAll:
+            self.logger.debug(u"Sending: \"%s\" %s" % (dev.name, "status request"))
             self._sendCommand("?HVAC," + integration_id + ",1,") # get temperature
             self._sendCommand("?HVAC," + integration_id + ",2,") # get heat and cool setpoints
             self._sendCommand("?HVAC," + integration_id + ",3,") # get operating mode
             self._sendCommand("?HVAC," + integration_id + ",4,") # get fan mode
-            self.logger.info(u"sent \"%s\" %s" % (dev.name, "status request"))
+
+
+	########################################
+	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
+
+    def fadeDimmerAction(self, pluginAction, dimmerDevice):
+
+        brightness =  indigo.activePlugin.substitute(pluginAction.props["brightness"])
+        fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
+        zone = dimmerDevice.address
+
+        sendCmd = ("#OUTPUT," + zone + ",1," + str(brightness) + "," + str(fadeTime))
+        self.logger.info(u"Sending: \"%s\" set brightness to %s with fade %s" % (dimmerDevice.name, brightness, fadeTime))
+        self._sendCommand(sendCmd)
+
 
     #################################
     #
     #  Future versions: implement additional thermostat actions, shades (define as dimmers for now)
 
-
-	########################################
-	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
-	######################
-	def fadeDimmer(self, pluginAction):
-		self.debugLog(u"fadeDimmer queueing message '" + indigo.activePlugin.substitute(pluginAction.props["emailSubject"]) + "'")
-		dev = indigo.devices[pluginAction.deviceId]
-		brightness =  indigo.activePlugin.substitute(pluginAction.props["brightness"])
-		fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
-
-        if dev.deviceTypeId == RA_DIMMER:
-            zone = dev.pluginProps[PROP_ZONE]
-        elif dev.deviceTypeId == RA_SHADE:
-            zone = dev.pluginProps[PROP_SHADE]
-
-        sendCmd = ("#OUTPUT," + zone + "," + str(fadeTime) + "," + str(brightness))
-        self.logger.info(u"sending \"%s\" %s to %d\%" % (dev.name, "set to", brightness))

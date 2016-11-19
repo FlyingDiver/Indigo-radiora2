@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <Actions>
 	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177</SupportURL>
-	<Action id="fadeDimmer" deviceFilter="self.dimmer" uiPath="DeviceActions">
+	<Action id="fadeDimmer" deviceFilter="self.ra2Dimmer" uiPath="DeviceActions">
 		<Name>Set Dimmer with Fade</Name>
-		<CallbackMethod>fadeDimmer</CallbackMethod>
+		<CallbackMethod>fadeDimmerAction</CallbackMethod>
 		<ConfigUI>
 			<Field id="brightness" type="textfield">
 				<Label>Brightness:</Label>
