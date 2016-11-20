@@ -153,6 +153,11 @@ class Plugin(indigo.PluginBase):
 
     ####################
 
+    def triggerStartProcessing(self, trigger):
+        self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
+        assert trigger.id not in self.triggers
+        self.triggers[trigger.id] = trigger
+
     def triggerStopProcessing(self, trigger):
         self.debugLog(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
         assert trigger.id in self.triggers
