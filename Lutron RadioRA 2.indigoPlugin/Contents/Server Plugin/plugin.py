@@ -40,7 +40,9 @@
 # 2.3.1 Fixed repository name
 # 2.3.2 Fixed serial comms delay
 # 2.3.3 Trigger processing changes
-# 3.0.0 Indigo 7 logging and other API changes
+# 7.0.0 Indigo 7 logging and other API changes
+# 7.0.1 Fixed trigger handling code
+# 7.0.2 Added send raw command action
 
 import serial
 import socket
@@ -1122,7 +1124,7 @@ class Plugin(indigo.PluginBase):
 	########################################
 	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
 
-    def fadeDimmerAction(self, pluginAction, dimmerDevice):
+    def fadeDimmer(self, pluginAction, dimmerDevice):
 
         brightness =  indigo.activePlugin.substitute(pluginAction.props["brightness"])
         fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
@@ -1131,6 +1133,22 @@ class Plugin(indigo.PluginBase):
         sendCmd = ("#OUTPUT," + zone + ",1," + str(brightness) + "," + str(fadeTime))
         self.logger.info(u"Sending: \"%s\" set brightness to %s with fade %s" % (dimmerDevice.name, brightness, fadeTime))
         self._sendCommand(sendCmd)
+
+    def sendRawCommand(self, pluginAction, dimmerDevice):
+
+        sendCmd =  indigo.activePlugin.substitute(pluginAction.props["commandString"])
+
+        self.logger.info(u"Sending Raw Command: \"%s\"" % sendCmd)
+        self._sendCommand(sendCmd)
+
+    def sendRawCommandMenu(self, valuesDict, typeId):
+
+        sendCmd =  indigo.activePlugin.substitute(valuesDict["commandString"])
+
+        self.logger.info(u"Sending Raw Command (Menu): \"%s\"" % sendCmd)
+        self._sendCommand(sendCmd)
+
+        return True
 
 
     #################################

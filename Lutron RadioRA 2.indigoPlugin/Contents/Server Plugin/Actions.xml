@@ -1,9 +1,9 @@
 <?xml version="1.0"?>
 <Actions>
 	<SupportURL>http://forums.indigodomo.com/viewtopic.php?f=177</SupportURL>
-	<Action id="fadeDimmer" deviceFilter="self.ra2Dimmer" uiPath="DeviceActions">
+	<Action id="fadeDimmer" deviceFilter="self.ra2Dimmer">
 		<Name>Set Dimmer with Fade</Name>
-		<CallbackMethod>fadeDimmerAction</CallbackMethod>
+		<CallbackMethod>fadeDimmer</CallbackMethod>
 		<ConfigUI>
 			<Field id="brightness" type="textfield">
 				<Label>Brightness:</Label>
@@ -17,4 +17,13 @@
 			</Field>
 		</ConfigUI>
 	</Action>
+    <Action id="sendRawCommand">
+        <Name>Send Raw Command</Name>
+        <CallbackMethod>sendRawCommand</CallbackMethod>
+        <ConfigUI>
+            <Field id="commandString" type="textfield" >
+                <Label>Command String:</Label>
+            </Field>
+        </ConfigUI>
+    </Action>
 </Actions>

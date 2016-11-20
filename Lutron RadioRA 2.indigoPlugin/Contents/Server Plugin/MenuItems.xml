@@ -4,6 +4,16 @@
         <Name>Query All Devices Now</Name>
         <CallbackMethod>queryAllDevices</CallbackMethod>
     </MenuItem>
+    <MenuItem id="sendCommand">
+        <Name>Send Raw Command</Name>
+        <CallbackMethod>sendRawCommandMenu</CallbackMethod>
+        <ButtonTitle>Send</ButtonTitle>
+        <ConfigUI>
+            <Field id="commandString" type="textfield">
+                <Label>Command String:</Label>
+            </Field>
+        </ConfigUI>
+    </MenuItem>
     <MenuItem id="titleSeparator2" type="separator" />
     <MenuItem id="checkForUpdates">
         <Name>Check for Updates</Name>
