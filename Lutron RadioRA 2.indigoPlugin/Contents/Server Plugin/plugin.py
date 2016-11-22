@@ -431,6 +431,8 @@ class Plugin(indigo.PluginBase):
         try:
             self.logger.info(u"Connecting via IP to %s" % host)
             self.connIP = telnetlib.Telnet(host, 23)
+            self.connIP.write(str("\r\n")
+            self.connIP.write(str("\r\n")
 
             a = self.connIP.read_until("\n", self.timeout)
             self.logger.debug(u"self.connIP.read: %s" % a)
