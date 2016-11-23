@@ -21,13 +21,16 @@ Edit (3/2016):  Beginning with version 2.0.0, the plugin also supports Caseta Sm
 
 5. Operating and monitoring status of the Lutron devices from Indigo should be self-explanatory.
 
-##Limitations in plugin version 2.0.0
+##Plugin Limitations
 
 1. Main repeater phantom buttons can be set up in multiple ways but the plugin currently only supports On/Off commands.  So, for example, if a phantom button is defined as a toggle, clicking its On button in Indigo will turn the device on and clicking On again will turn it off.  Indigo’s Off button will have no effect on a phantom button that’s defined as a toggle.
 
 1. The Lutron fan switches have four fan speeds (low, medium, medium-high, and high) but only three of these speeds are selectable from the Indigo GUI.
 
+1. Only one main repeater is currently supported for Radio Ra 2 systems.  The plugin works with dual main repeaters, but the only the phantom buttons from the primary repeater (Integration ID 1) are accessible.
+
+
 ### Indigo 7 Only
 
 
-This plugin only works under Indigo 7 or greater.
+Version 7.0.0 and later of this plugin require Indigo 7 or greater.
