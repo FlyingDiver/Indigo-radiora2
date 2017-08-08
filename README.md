@@ -1,6 +1,8 @@
 # Lutron RadioRA 2 / Caséta Plugin
 Indigo plugin for Lutron RadioRa 2 and  Caséta
 
+**PluginID:**	com.jimandnoreen.indigoplugin.lutron-radiora2
+
 ##Installation
 
 1. Download the plugin zip file and double-click it to expand. Double-click the Lutron RadioRA 2 plugin to install it.
