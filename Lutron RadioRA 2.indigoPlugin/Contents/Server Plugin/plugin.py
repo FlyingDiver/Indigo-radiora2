@@ -43,6 +43,7 @@
 # 7.0.0 Indigo 7 logging and other API changes
 # 7.0.1 Fixed trigger handling code
 # 7.0.2 Added send raw command action
+# 7.0.3 Added error trapping for corrupt ~OUTPUT strings
 
 import serial
 import socket
@@ -431,6 +432,8 @@ class Plugin(indigo.PluginBase):
         try:
             self.logger.info(u"Connecting via IP to %s" % host)
             self.connIP = telnetlib.Telnet(host, 23)
+            self.sleep(3)                                   # give interface a chance to initialize
+#            self.connIP.write(str("\r\n"))
 
             a = self.connIP.read_until("\n", self.timeout)
             self.logger.debug(u"self.connIP.read: %s" % a)
@@ -560,58 +563,63 @@ class Plugin(indigo.PluginBase):
         cmdArray = cmd.split(',')
         id = cmdArray[1]
         action = cmdArray[2]
+        
         if action == '1':  # set level
-            level = cmdArray[3]
-
+            try:
+                level = float(cmdArray[3])
+            except:
+                self.logger.warning(u": Unable to parse level as float in _cmdOutputChange: " + str(cmdArray[3]))
+                return
+                
             if id in self.zones:
                 zone = self.zones[id]
-                if int(float(level)) == 0:
+                if int(level) == 0:
                     zone.updateStateOnServer("onOffState", False)
                 else:
                     zone.updateStateOnServer("onOffState", True)
-                    zone.updateStateOnServer("brightnessLevel", int(float(level)))
-                self.logger.info(u"Received: Dimmer \"" + zone.name + "\" level set to " + str(level))
+                    zone.updateStateOnServer("brightnessLevel", int(level))
+                self.logger.info(u"Received: Dimmer " + zone.name + " level set to " + str(level))
             elif id in self.shades:
                 shade = self.shades[id]
-                if int(float(level)) == 0:
+                if int(level) == 0:
                     shade.updateStateOnServer("onOffState", False)
                 else:
                     shade.updateStateOnServer("onOffState", True)
-                    shade.updateStateOnServer("brightnessLevel", int(float(level)))
-                self.logger.info(u"Received: Shade \"" + shade.name + "\" opening set to " + str(level))
+                    shade.updateStateOnServer("brightnessLevel", int(level))
+                self.logger.info(u"Received: Shade " + shade.name + " opening set to " + str(level))
             elif id in self.switches:
                 switch = self.switches[id]
-                if int(float(level)) == 0:
+                if int(level) == 0:
                     switch.updateStateOnServer("onOffState", False)
-                    self.logger.info(u"Received: Switch \"%s\" %s" % (switch.name, "turned Off"))
+                    self.logger.info(u"Received: Switch %s %s" % (switch.name, "turned Off"))
                 else:
                     switch.updateStateOnServer("onOffState", True)
-                    self.logger.info(u"Received: Switch \"%s\" %s" % (switch.name, "turned On"))
+                    self.logger.info(u"Received: Switch %s %s" % (switch.name, "turned On"))
             elif id in self.ccos:
                 cco = self.ccos[id]
                 ccoType = cco.pluginProps[PROP_CCO_TYPE]
                 if ccoType == "sustained":
-                    if int(float(level)) == 0:
+                    if int(level) == 0:
                      cco.updateStateOnServer("onOffState", False)
                     else:
                      cco.updateStateOnServer("onOffState", True)
-                if level == '0.00':
-                    self.logger.info(u"Received: CCO \"%s\" %s" % (cco.name, "Opened"))
+                if level == 0.0:
+                    self.logger.info(u"Received: CCO %s %s" % (cco.name, "Opened"))
                 else:
-                    self.logger.info(u"Received: CCO \"%s\" %s" % (cco.name, "Closed"))
+                    self.logger.info(u"Received: CCO %s %s" % (cco.name, "Closed"))
             elif id in self.fans:
                 fan = self.fans[id]
-                if int(float(level)) == 0:
+                if int(level) == 0:
                     fan.updateStateOnServer("onOffState", False)
                 else:
                     fan.updateStateOnServer("onOffState", True)
-                    if float(level) < 26:
+                    if level < 26.0:
                         fan.updateStateOnServer("speedIndex", 1)
-                    elif float(level) < 76:
+                    elif level < 76.0:
                         fan.updateStateOnServer("speedIndex", 2)
                     else:
                         fan.updateStateOnServer("speedIndex", 3)
-                self.logger.info(u"Received: Fan \"" + fan.name + "\" speed set to " + str(level))
+                self.logger.info(u"Received: Fan " + fan.name + " speed set to " + str(level))
                 return
         elif action == '2':  # start raising
             return
