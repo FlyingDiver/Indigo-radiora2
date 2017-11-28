@@ -44,6 +44,7 @@
 # 7.0.1 Fixed trigger handling code
 # 7.0.2 Added send raw command action
 # 7.0.3 Added error trapping for corrupt ~OUTPUT strings
+# 7.0.4 Plugin store release, no code changes
 
 import serial
 import socket
