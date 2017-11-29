@@ -45,6 +45,7 @@
 # 7.0.2 Added send raw command action
 # 7.0.3 Added error trapping for corrupt ~OUTPUT strings
 # 7.0.4 Plugin store release, no code changes
+# 7.0.5 Error handling for socket connect failure, hide fade rate in dimmer config.  Merged Jim's 7.0.2.1 changes.
 
 import serial
 import socket
@@ -134,12 +135,6 @@ class Plugin(indigo.PluginBase):
             self.logger.warning(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
             return
 
-        self.updater = GitHubPluginUpdater(self)
-        self.updater.checkForUpdate()
-        self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
-        self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
-        self.next_update_check = time.time()
-
         if self.IP:
             self.ipStartup()
         else:
@@ -148,6 +143,11 @@ class Plugin(indigo.PluginBase):
 
         if self.queryAtStartup:
             self.queryAllDevices()
+
+        self.updater = GitHubPluginUpdater(self)
+        self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
+        self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
+        self.next_update_check = time.time()
 
 
     def shutdown(self):
@@ -356,7 +356,10 @@ class Plugin(indigo.PluginBase):
 
                 if (self.updateFrequency > 0.0) and (time.time() > self.next_update_check):
                     self.next_update_check = time.time() + self.updateFrequency
-                    self.updater.checkForUpdate()
+                    try:
+                        self.updater.checkForUpdate()
+                    except:
+                        self.logger.error(u"Unable to connect to update server")
 
                 if self.IP:
                     self.sleep(.1)
@@ -365,7 +368,11 @@ class Plugin(indigo.PluginBase):
                             self.ipStartup()
                             self.runstartup = False
 
-                        self._processCommand(self.connIP.read_until("\n", self.timeout))
+                        try:
+                            self._processCommand(self.connIP.read_until("\n", self.timeout))
+                        except:
+                            pass
+                            
                     except EOFError, e:
                         self.logger.error(u"EOFError: %s" % e.message)
                         if ('telnet connection closed' in e.message):
@@ -426,36 +433,35 @@ class Plugin(indigo.PluginBase):
 
     def ipStartup(self):
         self.logger.info(u"Running ipStartup")
-        self.timeout = 1
+        self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
 
         host = self.pluginPrefs["ip_address"]
 
         try:
             self.logger.info(u"Connecting via IP to %s" % host)
-            self.connIP = telnetlib.Telnet(host, 23)
-            self.sleep(3)                                   # give interface a chance to initialize
-#            self.connIP.write(str("\r\n"))
+            self.connIP = telnetlib.Telnet(host, 23, self.timeout)
+        except socket.timeout:
+            self.logger.error(u"Unable to connect to Lutron gateway. Timed out.")
+            return
+                    
+        a = self.connIP.read_until(" ", self.timeout)
+        self.logger.debug(u"self.connIP.read: %s" % a)
 
-            a = self.connIP.read_until("\n", self.timeout)
+        if 'login' in a:
+            self.logger.debug(u"Sending username.")
+            self.connIP.write(str(self.pluginPrefs["ip_username"]) + "\r\n")
+
+            a = self.connIP.read_until(" ", self.timeout)
             self.logger.debug(u"self.connIP.read: %s" % a)
-
-            if 'login' in a:
-                self.logger.debug(u"Sending username.")
-                self.connIP.write(str(self.pluginPrefs["ip_username"]) + "\r\n")
-
-                a = self.connIP.read_until("\n", self.timeout)
-                self.logger.debug(u"self.connIP.read: %s" % a)
-                if 'password' in a:
-                    self.logger.debug(u"Sending password.")
-                    self.connIP.write(str(self.pluginPrefs["ip_password"]) + "\r\n")
-                else:
-                    self.logger.debug(u"password failure.")
+            if 'password' in a:
+                self.logger.debug(u"Sending password.")
+                self.connIP.write(str(self.pluginPrefs["ip_password"]) + "\r\n")
             else:
-                self.logger.debug(u"username failure.")
-            self.logger.debug(u"End of connection process.")
+                self.logger.debug(u"password failure.")
+        else:
+            self.logger.debug(u"username failure.")
+        self.logger.debug(u"End of connection process.")
 
-        except socket.error, e:
-            self.logger.exception(u"Unable to connect to Lutron gateway. %s" % e.message)
 
 #########################################
 # Poll registered devices for status
@@ -783,13 +789,22 @@ class Plugin(indigo.PluginBase):
     ##########################################
 
     def checkForUpdates(self):
-        self.updater.checkForUpdate()
+        try:
+            self.updater.checkForUpdate()
+        except:
+            self.logger.warning(u"Unable to connect to update server")
 
     def updatePlugin(self):
-        self.updater.update()
+        try:
+            self.updater.update()
+        except:
+            self.logger.warning(u"Unable to connect to update server")
 
     def forceUpdate(self):
-        self.updater.update(currentVersion='0.0.0')
+        try:
+            self.updater.update(currentVersion='0.0.0')
+        except:
+            self.logger.warning(u"Unable to connect to update server")
 
     ########################################
     # Relay / Dimmer / /Shade / CCO / CCI Action callback
