@@ -559,7 +559,12 @@ class Plugin(indigo.PluginBase):
         if self.IP:
             self.logger.debug(u"Sending network command:  %s" % cmd)
             cmd = cmd + "\r\n"
-            self.connIP.write(str(cmd))
+            try:
+                self.connIP.write(str(cmd))
+            except Exception, e:
+                self.logger.warning(u"Error sending IP command, resetting connection:  %s", e)
+                self.connIP.close()
+                self.runstartup = True
         else:
             self.logger.debug(u"Sending serial command: %s" % cmd)
             cmd = cmd + "\r"
