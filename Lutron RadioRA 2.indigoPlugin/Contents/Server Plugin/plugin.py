@@ -9,7 +9,7 @@
 # More info and instructions for this plugin at http://jimandnoreen.com/?p=96
 #
 #
-# This plugin is for Lutron RadioRA 2 and Caséta systems only and is NOT compatible with
+# This plugin is for Lutron RadioRA 2 and Caseta systems only and is NOT compatible with
 # the classic RadioRA command set.
 #
 # If you have an older classic RadioRA system, please use this plugin instead:
@@ -31,7 +31,7 @@
 # 1.2.4 improved keypad configuration dialog
 # 1.2.5 ignore actions that are not explicitly defined like undocumented "action 29" and "action 30" (thanks FlyingDiver)
 # 1.2.6 added explicit support for motorized shades, CCO and CCI devices (thanks rapamatic!!) and improved device/output logging
-# 2.0.0 added Caséta support by mathys and IP connectivity contributed by Sb08 and vic13.  Added menu option to query all devices
+# 2.0.0 added Caseta support by mathys and IP connectivity contributed by Sb08 and vic13.  Added menu option to query all devices
 # 2.0.3 added Pico device type.  Changed CCI device type from relay to sensor.  Restrict query all devices to this plugin's devices.
 # 2.1.0 added Group and TimeClock events.  Added BrightenBy and DimBy command support.  Added GitHubPluginUpdater support.
 # 2.2.0 architectural update to normalize IP and Serial data flows.  Removed redundant code and execution paths.
@@ -51,10 +51,11 @@ import serial
 import socket
 import telnetlib
 import time
-import select # was getting errors on the select.error exception in runConcurrentThread
+import select       # was getting errors on the select.error exception in runConcurrentThread
 import logging
 
-from ghpu import GitHubPluginUpdater
+import requests
+import xml.etree.ElementTree as ET
 
 
 RA_PHANTOM_BUTTON = "ra2PhantomButton"
@@ -143,11 +144,6 @@ class Plugin(indigo.PluginBase):
 
         if self.queryAtStartup:
             self.queryAllDevices()
-
-        self.updater = GitHubPluginUpdater(self)
-        self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', 24)) * 60.0 * 60.0
-        self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
-        self.next_update_check = time.time()
 
 
     def shutdown(self):
@@ -240,7 +236,7 @@ class Plugin(indigo.PluginBase):
         dev.replacePluginPropsOnServer(newProps)
         return None
 
-	########################################
+    ########################################
 
     def deviceStartComm(self, dev):
         if dev.deviceTypeId == RA_PHANTOM_BUTTON:
@@ -347,19 +343,12 @@ class Plugin(indigo.PluginBase):
 
         return (True, valuesDict)
 
-	########################################
+    ########################################
 
     def runConcurrentThread(self):
 
         try:
             while True:
-
-                if (self.updateFrequency > 0.0) and (time.time() > self.next_update_check):
-                    self.next_update_check = time.time() + self.updateFrequency
-                    try:
-                        self.updater.checkForUpdate()
-                    except:
-                        self.logger.error(u"Unable to connect to update server")
 
                 if self.IP:
                     self.sleep(.1)
@@ -527,9 +516,6 @@ class Plugin(indigo.PluginBase):
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
 
-            self.updateFrequency = float(self.pluginPrefs.get('updateFrequency', "24")) * 60.0 * 60.0
-            self.logger.debug(u"updateFrequency = " + str(self.updateFrequency))
-            self.next_update_check = time.time()
 
     ########################################
 
@@ -790,26 +776,6 @@ class Plugin(indigo.PluginBase):
         status = cmdArray[3]
         self.clockTriggerCheck(status)
 
-
-    ##########################################
-
-    def checkForUpdates(self):
-        try:
-            self.updater.checkForUpdate()
-        except:
-            self.logger.warning(u"Unable to connect to update server")
-
-    def updatePlugin(self):
-        try:
-            self.updater.update()
-        except:
-            self.logger.warning(u"Unable to connect to update server")
-
-    def forceUpdate(self):
-        try:
-            self.updater.update(currentVersion='0.0.0')
-        except:
-            self.logger.warning(u"Unable to connect to update server")
 
     ########################################
     # Relay / Dimmer / /Shade / CCO / CCI Action callback
@@ -1150,8 +1116,8 @@ class Plugin(indigo.PluginBase):
             self._sendCommand("?HVAC," + integration_id + ",4,") # get fan mode
 
 
-	########################################
-	# Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
+    ########################################
+    # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
 
     def fadeDimmer(self, pluginAction, dimmerDevice):
 
@@ -1176,6 +1142,37 @@ class Plugin(indigo.PluginBase):
 
         self.logger.info(u"Sending Raw Command (Menu): \"%s\"" % sendCmd)
         self._sendCommand(sendCmd)
+
+        return True
+
+
+    def createAllDevices(self, valuesDict, typeId):
+
+        if not self.IP:
+            self.logger.info(u"createAllDevices failed, no IP connection")
+            return False
+            
+        self.logger.info(u"createAllDevices from %s" % (self.pluginPrefs["ip_address"]))
+        
+        login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
+        fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
+        
+        s = requests.Session()
+        r = s.get(login)
+        r = s.get(fetch)
+        root = ET.fromstring(r.text)
+        
+        for room in root.findall('Areas/Area/Areas/Area'):
+            self.logger.info("Room: %s (%s)" % (room.attrib['Name'], room.attrib['IntegrationID']))
+    
+            for device in room.findall('DeviceGroups/DeviceGroup/Devices/Device'):
+                self.logger.info("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
+                if device.attrib['DeviceType'] == "SEETOUCH_KEYPAD":
+                    for component in device.findall('Components/Component'):
+                        self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+    
+            for output in room.findall('Outputs/Output'):
+                self.logger.info("\tOutput: %s (%s,%s)" % (output.attrib['Name'], output.attrib['IntegrationID'], output.attrib['OutputType']))
 
         return True
 

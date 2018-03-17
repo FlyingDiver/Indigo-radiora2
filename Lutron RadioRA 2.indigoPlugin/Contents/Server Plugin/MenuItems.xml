@@ -14,17 +14,20 @@
             </Field>
         </ConfigUI>
     </MenuItem>
-    <MenuItem id="titleSeparator2" type="separator" />
-    <MenuItem id="checkForUpdates">
-        <Name>Check for Updates</Name>
-        <CallbackMethod>checkForUpdates</CallbackMethod>
-    </MenuItem>
-    <MenuItem id="updatePlugin">
-        <Name>Update Plugin</Name>
-        <CallbackMethod>updatePlugin</CallbackMethod>
-    </MenuItem>
-    <MenuItem id="forceUpdate">
-        <Name>Force Update</Name>
-        <CallbackMethod>forceUpdate</CallbackMethod>
+    <MenuItem id="titleSeparator1" type="separator" />
+    <MenuItem id="createAll">
+        <Name>Create Devices from Repeater</Name>
+        <CallbackMethod>createAllDevices</CallbackMethod>
+        <ButtonTitle>Create</ButtonTitle>
+        <ConfigUI>
+			<Field id="groupBy" type="menu" defaultValue="30">
+				<Label>Group New Devices By:</Label>
+				<List>
+					<Option value="None">No Grouping</Option>
+					<Option value="Room">Device Location</Option>
+					<Option value="Type">Device Type</Option>
+				</List>
+			</Field>            
+        </ConfigUI>
     </MenuItem>
 </MenuItems>
