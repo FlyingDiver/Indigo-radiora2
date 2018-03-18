@@ -59,6 +59,7 @@ import xml.etree.ElementTree as ET
 from threading import Thread
 
 
+RA_MAIN_REPEATER = "ra2MainRepeater"
 RA_PHANTOM_BUTTON = "ra2PhantomButton"
 RA_DIMMER = "ra2Dimmer"
 RA_SWITCH = "ra2Switch"
@@ -241,13 +242,14 @@ class Plugin(indigo.PluginBase):
     ########################################
 
     def deviceStartComm(self, dev):
-        if dev.deviceTypeId == RA_PHANTOM_BUTTON:
-            repeater = dev.pluginProps.get(PROP_REPEATER, None)
-            if repeater == None:
-                newProps = dev.pluginProps
-                newProps[PROP_REPEATER] = "1"
-                dev.replacePluginPropsOnServer(newProps)
+        if dev.deviceTypeId == RA_MAIN_REPEATER:
+            pass
+                        
+        elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
+            if dev.pluginProps.get(PROP_REPEATER, None) == None:
+                self.update_device_property(dev, PROP_REPEATER, new_value = "1")
                 self.logger.info(u"%s: Added repeater property" % (dev.name))
+
             self.phantomButtons[dev.pluginProps[PROP_BUTTON]] = dev
             address = dev.pluginProps[PROP_REPEATER] + "." + dev.pluginProps[PROP_BUTTON]
             self.update_device_property(dev, "address", new_value = address)
@@ -273,10 +275,12 @@ class Plugin(indigo.PluginBase):
             self.fans[dev.pluginProps[PROP_FAN]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_FAN])
             self.logger.debug(u"Watching fan: " + dev.pluginProps[PROP_FAN])
+
         elif dev.deviceTypeId == RA_THERMO:
             self.thermos[dev.pluginProps[PROP_THERMO]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_THERMO])
             self.logger.debug(u"Watching thermostat: " + dev.pluginProps[PROP_THERMO])
+
         elif dev.deviceTypeId == RA_KEYPAD:
             self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT])
@@ -286,14 +290,17 @@ class Plugin(indigo.PluginBase):
             else:
                 self.update_device_property(dev, "keypadButtonDisplayLEDState", new_value = False)
                 self.logger.debug(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " button: " + dev.pluginProps[PROP_KEYPADBUT])
+
         elif dev.deviceTypeId == RA_SENSOR:
             self.sensors[dev.pluginProps[PROP_SENSOR]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SENSOR])
             self.logger.debug(u"Watching sensor: " + dev.pluginProps[PROP_SENSOR])
+
         elif dev.deviceTypeId == RA_CCI:
             self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT])
             self.logger.debug(u"Watching CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID] + " input: " + dev.pluginProps[PROP_COMPONENT])
+
         elif dev.deviceTypeId == RA_CCO:
             self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCO_INTEGRATION_ID])
@@ -303,45 +310,65 @@ class Plugin(indigo.PluginBase):
             # To do - set SupportsStatusRequest to true if it is a sustained contact CCO
             #         haven't figured out a way to do that without hanging the UI when a new CCO is added
             self.logger.debug(u"Watching CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+
         elif dev.deviceTypeId == RA_PICO:
             self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON])
             self.logger.debug(u"Watching Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID] + " button: " + dev.pluginProps[PROP_PICOBUTTON])
 
+        else:
+            self.logger.error(u"deviceStartComm: Unknown device type:" + dev.deviceTypeId)
+        
     def deviceStopComm(self, dev):
-        if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+        if dev.deviceTypeId == RA_MAIN_REPEATER:
+            pass
+                        
+        elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
             del self.phantomButtons[dev.pluginProps[PROP_BUTTON]]
             self.logger.debug(u"Deleted phantom button: " + dev.pluginProps[PROP_BUTTON])
+
         elif dev.deviceTypeId == RA_DIMMER:
             del self.zones[dev.pluginProps[PROP_ZONE]]
             self.logger.debug(u"Deleted dimmer: " + dev.pluginProps[PROP_ZONE])
+
         elif dev.deviceTypeId == RA_SHADE:
             del self.shades[dev.pluginProps[PROP_SHADE]]
             self.logger.debug(u"Deleted shade: " + dev.pluginProps[PROP_SHADE])
+
         elif dev.deviceTypeId == RA_SWITCH:
             del self.switches[dev.pluginProps[PROP_SWITCH]]
             self.logger.debug(u"Deleted switch: " + dev.pluginProps[PROP_SWITCH])
+
         elif dev.deviceTypeId == RA_KEYPAD:
             del self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]]
             self.logger.debug(u"Deleted keypad: " + dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT])
+
         elif dev.deviceTypeId == RA_FAN:
             del self.fans[dev.pluginProps[PROP_FAN]]
             self.logger.debug(u"Deleted fan: " + dev.pluginProps[PROP_FAN])
+
         elif dev.deviceTypeId == RA_THERMO:
             del self.thermos[dev.pluginProps[PROP_THERMO]]
             self.logger.debug(u"Deleted thermostat: " + dev.pluginProps[PROP_THERMO])
+
         elif dev.deviceTypeId == RA_SENSOR:
             del self.sensors[dev.pluginProps[PROP_SENSOR]]
             self.logger.debug(u"Deleted sensor: " + dev.pluginProps[PROP_SENSOR])
+
         elif dev.deviceTypeId == RA_CCI:
             del self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]]
             self.logger.debug(u"Deleted CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT])
+
         elif dev.deviceTypeId == RA_CCO:
             del self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]]
             self.logger.debug(u"Deleted CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+
         elif dev.deviceTypeId == RA_PICO:
             del self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]]
             self.logger.debug(u"Deleted Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON])
+
+        else:
+            self.logger.error(u"deviceStopComm: Unknown device type:" + dev.deviceTypeId)
 
     def validateDeviceConfigUi(self, valuesDict, typeId, devId):
 

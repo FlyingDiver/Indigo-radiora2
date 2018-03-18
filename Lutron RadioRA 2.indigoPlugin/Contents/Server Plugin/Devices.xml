@@ -1,5 +1,16 @@
 <?xml version="1.0"?>
 <Devices>
+    <Device type="custom" id="ra2MainRepeater">
+    	<Name>RadioRA 2 Main Repeater</Name>
+       	<States>
+        	<State id="serialNumber">
+                <ValueType>String</ValueType>
+                <TriggerLabel>Serial Number</TriggerLabel>
+                <ControlPageLabel>Serial Number</ControlPageLabel>
+            </State>
+        </States>
+    </Device>
+    
     <Device type="relay" id="ra2PhantomButton">
         <Name>RadioRA 2 Phantom Button/LED</Name>
         <ConfigUI>
@@ -14,6 +25,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="dimmer" id="ra2Dimmer">
         <Name>RadioRA 2 Dimmer</Name>
         <ConfigUI>
@@ -28,6 +40,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="relay" id="ra2Switch">
         <Name>RadioRA 2 Switch</Name>
         <ConfigUI>
@@ -39,6 +52,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="relay" id="ra2Keypad">
         <Name>RadioRA 2 Keypad</Name>
         <ConfigUI>
@@ -80,6 +94,7 @@
             
         </ConfigUI>
     </Device>
+    
     <Device type="speedcontrol" id="ra2Fan">
         <Name>RadioRA 2 Fan</Name>
         <ConfigUI>
@@ -91,6 +106,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="thermostat" id="ra2Thermo">
         <Name>RadioRA 2 Thermostat</Name>
         <ConfigUI>
@@ -102,6 +118,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="sensor" id="ra2Sensor">
         <Name>RadioRA 2 Powr Savr Sensor</Name>
         <ConfigUI>
@@ -115,6 +132,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="relay" id="ra2CCO">
         <Name>RadioRA 2 CCO</Name>
         <ConfigUI>
@@ -135,6 +153,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="sensor" id="ra2CCI">
         <Name>RadioRA 2 CCI</Name>
         <ConfigUI>
@@ -148,6 +167,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="dimmer" id="ra2MotorizedShade">
         <Name>RadioRA 2 Motorized Shade</Name>
         <ConfigUI>
@@ -159,6 +179,7 @@
             </Field>
         </ConfigUI>
     </Device>
+    
     <Device type="relay" id="ra2Pico">
         <Name>RadioRA 2 Pico Button</Name>
         <ConfigUI>
