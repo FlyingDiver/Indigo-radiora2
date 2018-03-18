@@ -17,7 +17,7 @@
     <MenuItem id="titleSeparator1" type="separator" />
     <MenuItem id="createAll">
         <Name>Create Devices from Repeater</Name>
-        <CallbackMethod>createAllDevices</CallbackMethod>
+        <CallbackMethod>createAllDevicesMenu</CallbackMethod>
         <ButtonTitle>Create</ButtonTitle>
         <ConfigUI>
 			<Field id="groupBy" type="menu" defaultValue="30">
@@ -27,6 +27,9 @@
 					<Option value="Room">Device Location</Option>
 					<Option value="Type">Device Type</Option>
 				</List>
+			</Field>            
+			<Field id="simulated" type="checkbox" defaultValue="true">
+				<Label>Simulate only:</Label>
 			</Field>            
         </ConfigUI>
     </MenuItem>

@@ -56,6 +56,7 @@ import logging
 
 import requests
 import xml.etree.ElementTree as ET
+from threading import Thread
 
 
 RA_PHANTOM_BUTTON = "ra2PhantomButton"
@@ -69,6 +70,7 @@ RA_CCO = "ra2CCO"
 RA_CCI = "ra2CCI"
 RA_SHADE = "ra2MotorizedShade"
 RA_PICO = "ra2Pico"
+PROP_REPEATER = "repeater"
 PROP_BUTTON = "button"
 PROP_ZONE = "zone"
 PROP_SWITCH = "switch"
@@ -240,22 +242,33 @@ class Plugin(indigo.PluginBase):
 
     def deviceStartComm(self, dev):
         if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+            repeater = dev.pluginProps.get(PROP_REPEATER, None)
+            if repeater == None:
+                newProps = dev.pluginProps
+                newProps[PROP_REPEATER] = "1"
+                dev.replacePluginPropsOnServer(newProps)
+                self.logger.info(u"%s: Added repeater property" % (dev.name))
             self.phantomButtons[dev.pluginProps[PROP_BUTTON]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_BUTTON])
-            self.logger.debug(u"Watching phantom button: " + dev.pluginProps[PROP_BUTTON])
+            address = dev.pluginProps[PROP_REPEATER] + "." + dev.pluginProps[PROP_BUTTON]
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching phantom button: " + address)
+            
         elif dev.deviceTypeId == RA_DIMMER:
             self.zones[dev.pluginProps[PROP_ZONE]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_ZONE])
             self.logger.debug(u"Watching dimmer: " + dev.pluginProps[PROP_ZONE])
+            
         elif dev.deviceTypeId == RA_SHADE:
             self.shades[dev.pluginProps[PROP_SHADE]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SHADE])
             dev.updateStateImageOnServer( indigo.kStateImageSel.None)
             self.logger.debug(u"Watching shade: " + dev.pluginProps[PROP_SHADE])
+            
         elif dev.deviceTypeId == RA_SWITCH:
             self.switches[dev.pluginProps[PROP_SWITCH]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SWITCH])
             self.logger.debug(u"Watching switch: " + dev.pluginProps[PROP_SWITCH])
+            
         elif dev.deviceTypeId == RA_FAN:
             self.fans[dev.pluginProps[PROP_FAN]] = dev
             self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_FAN])
@@ -788,8 +801,9 @@ class Plugin(indigo.PluginBase):
         ###### TURN ON ######
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
             if dev.deviceTypeId == RA_PHANTOM_BUTTON:
-                button = dev.pluginProps[PROP_BUTTON]
-                sendCmd = ("#DEVICE,1," + str(int(button)-100) + ",3") # Press button
+                phantom_button = dev.pluginProps[PROP_BUTTON]
+                integration_id = dev.pluginProps[PROP_REPEATER]
+                sendCmd = ("#DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)-100) + ",3,") # Press button
             elif dev.deviceTypeId == RA_PICO:
                 pico = dev.pluginProps[PROP_PICO_INTEGRATION_ID]
                 button = dev.pluginProps[PROP_PICOBUTTON]
@@ -830,8 +844,9 @@ class Plugin(indigo.PluginBase):
         ###### TURN OFF ######
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
             if dev.deviceTypeId == RA_PHANTOM_BUTTON:
-                integration_id = dev.pluginProps[PROP_BUTTON]
-                sendCmd = ("#DEVICE,1," + str(int(integration_id)-100) + ",4") # Release button
+                phantom_button = dev.pluginProps[PROP_BUTTON]
+                integration_id = dev.pluginProps[PROP_REPEATER]
+                sendCmd = ("#DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)-100) + ",4,") # Release button
             elif dev.deviceTypeId == RA_PICO:
                 pico = dev.pluginProps[PROP_PICO_INTEGRATION_ID]
                 button = dev.pluginProps[PROP_PICOBUTTON]
@@ -871,8 +886,9 @@ class Plugin(indigo.PluginBase):
         ###### TOGGLE ######
         elif action.deviceAction == indigo.kDeviceAction.Toggle:
             if dev.deviceTypeId == RA_PHANTOM_BUTTON:
-                integration_id = dev.pluginProps[PROP_BUTTON];
-                sendCmd = ("#DEVICE,1," + str(int(integration_id)-100) + ",3")
+                phantom_button = dev.pluginProps[PROP_BUTTON]
+                integration_id = dev.pluginProps[PROP_REPEATER]
+                sendCmd = ("#DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)-100) + ",3,")
             elif dev.deviceTypeId == RA_KEYPAD:
                 keypad = dev.pluginProps[PROP_KEYPAD]
                 keypadButton = dev.pluginProps[PROP_KEYPADBUT]
@@ -971,8 +987,9 @@ class Plugin(indigo.PluginBase):
         ###### STATUS REQUEST ######
         elif action.deviceAction == indigo.kDeviceAction.RequestStatus:
             if dev.deviceTypeId == RA_PHANTOM_BUTTON:
-                integration_id = dev.pluginProps[PROP_BUTTON]
-                sendCmd = ("?DEVICE,1," + str(int(integration_id)) + ",9,")
+                phantom_button = dev.pluginProps[PROP_BUTTON]
+                integration_id = dev.pluginProps[PROP_REPEATER]
+                sendCmd = ("?DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)) + ",9,")
             elif dev.deviceTypeId == RA_KEYPAD:
                 keypad = dev.pluginProps[PROP_KEYPAD]
                 keypadButton = dev.pluginProps[PROP_KEYPADBUT]
@@ -1146,14 +1163,25 @@ class Plugin(indigo.PluginBase):
         return True
 
 
-    def createAllDevices(self, valuesDict, typeId):
+    def createAllDevicesMenu(self, valuesDict, typeId):
 
         if not self.IP:
-            self.logger.info(u"createAllDevices failed, no IP connection")
+            self.logger.info(u"createAllDevicesMenu failed, no IP connection")
             return False
-            
-        self.logger.info(u"createAllDevices from %s" % (self.pluginPrefs["ip_address"]))
+
+        thread = Thread(target = self.createAllDevices, args = (valuesDict, ))
+        thread.start()    
+                
+        return True
+ 
+    def createAllDevices(self, valuesDict):
         
+        self.groupBy = valuesDict["groupBy"]
+        self.simulated = bool(valuesDict["simulated"])
+
+        self.logger.info(u"createAllDevices from %s, Grouping = %s, Simulated = %s" % (self.pluginPrefs["ip_address"], self.groupBy, self.simulated))
+        
+
         login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
         fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
         
@@ -1167,7 +1195,25 @@ class Plugin(indigo.PluginBase):
     
             for device in room.findall('DeviceGroups/DeviceGroup/Devices/Device'):
                 self.logger.info("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
+
+                if device.attrib['DeviceType'] == "MAIN_REPEATER":
+                    for component in device.findall('Components/Component'):
+                        self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                        if component.attrib['DeviceType'] == "BUTTON":
+                            name = "%s - %s" % (device.attrib['Name'], component.attrib['Name'])
+                            self.logger.info("Create Button: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+#                            self.createDevice("ra2PhantomButton", name, device.attrib['IntegrationID'], component.attrib['ComponentNumber']) 
+    
                 if device.attrib['DeviceType'] == "SEETOUCH_KEYPAD":
+                    for component in device.findall('Components/Component'):
+                        self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                        if component.attrib['ComponentType'] == "BUTTON":
+                            self.logger.info("Create Button: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                                                 
+    
+            for device in room.findall('DeviceGroups/Device'):
+                self.logger.info("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
+                if device.attrib['DeviceType'] == "SEETOUCH_KEYPAD" or device.attrib['DeviceType'] == "MAIN_REPEATER":
                     for component in device.findall('Components/Component'):
                         self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
     
@@ -1175,6 +1221,25 @@ class Plugin(indigo.PluginBase):
                 self.logger.info("\tOutput: %s (%s,%s)" % (output.attrib['Name'], output.attrib['IntegrationID'], output.attrib['OutputType']))
 
         return True
+
+    def createDevice(self, devType, name, integrationID, buttonID = None, notes = None):
+
+        self.logger.info("Creating %s device: %s (%s-%s) %s" % (devType, name, integrationID, buttonID, notes))
+
+        if not self.simulated:
+            newdev = indigo.device.create(indigo.kProtocol.Plugin, 
+                                            address=devAddress,
+                                            name=devAddress + " Hygrometer",
+                                            deviceTypeId="ra2Dimmer", 
+                                            props={ 'valueType': 'hygrometry',
+                                                    'configDone': True, 
+                                                    'AllowOnStateChange': False,
+                                                    'SupportsOnState': False,
+                                                    'SupportsSensorValue': True,
+                                                    'SupportsStatusRequest': False
+                                                },
+                                            folder=device.folderId)
+                                                    
 
 
     #################################

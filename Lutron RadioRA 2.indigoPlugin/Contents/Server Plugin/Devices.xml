@@ -3,6 +3,9 @@
     <Device type="relay" id="ra2PhantomButton">
         <Name>RadioRA 2 Phantom Button/LED</Name>
         <ConfigUI>
+            <Field type="textField" id="repeater" defaultValue="1">
+                <Label>Integration ID:</Label>
+            </Field>
             <Field type="textField" id="button" defaultValue="101">
                 <Label>Button/LED Number (101-200):</Label>
             </Field>
