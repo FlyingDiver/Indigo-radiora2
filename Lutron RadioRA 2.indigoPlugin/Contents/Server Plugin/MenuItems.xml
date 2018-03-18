@@ -20,7 +20,7 @@
         <CallbackMethod>createAllDevicesMenu</CallbackMethod>
         <ButtonTitle>Create</ButtonTitle>
         <ConfigUI>
-			<Field id="groupBy" type="menu" defaultValue="30">
+			<Field id="group_by" type="menu" defaultValue="Type">
 				<Label>Group New Devices By:</Label>
 				<List>
 					<Option value="None">No Grouping</Option>
@@ -31,6 +31,12 @@
 			<Field id="simulated" type="checkbox" defaultValue="true">
 				<Label>Simulate only:</Label>
 			</Field>            
+			<Field id="create_all" type="checkbox" defaultValue="false">
+				<Label>Create all devices:</Label>
+			</Field>            
+			<Field id="create_all_note" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Checking this box will create buttons for all keypads/repeaters, even if unprogrammed.</Label>
+			</Field>
         </ConfigUI>
     </MenuItem>
 </MenuItems>

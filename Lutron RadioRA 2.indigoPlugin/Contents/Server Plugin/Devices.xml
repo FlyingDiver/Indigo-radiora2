@@ -40,7 +40,7 @@
             </Field>
         </ConfigUI>
     </Device>
-    
+     
     <Device type="relay" id="ra2Switch">
         <Name>RadioRA 2 Switch</Name>
         <ConfigUI>
