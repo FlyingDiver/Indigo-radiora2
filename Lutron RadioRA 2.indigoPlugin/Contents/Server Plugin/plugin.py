@@ -1219,15 +1219,13 @@ class Plugin(indigo.PluginBase):
         login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
         fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
         
-        s = requests.Session()
-        r = s.get(login)
-        r = s.get(fetch)
+#        s = requests.Session()
+#        r = s.get(login)
+#        r = s.get(fetch)
+#        root = ET.fromstring(r.text)
 
-        self.logger.info(u"createAllDevices fetch completed")
-
-        root = ET.fromstring(r.text)
-
-        self.logger.info(u"createAllDevices XML Parse completed")
+        tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
+        root = tree.getroot()
         
         for room in root.findall('Areas/Area/Areas/Area'):
             self.logger.info("Room: %s (%s)" % (room.attrib['Name'], room.attrib['IntegrationID']))
@@ -1240,9 +1238,10 @@ class Plugin(indigo.PluginBase):
                         self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
                             try:
+                                name = device.attrib['Name'] + " - " + component.find('Button').get('Name')
                                 address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                                 props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
-                                self.createLutronDevice(RA_KEYPAD, output.attrib['Name'], address, props, room.attrib['Name'])
+                                self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
                             except e:
                                 self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
                         elif component.attrib['ComponentType'] == "LED":
@@ -1250,7 +1249,7 @@ class Plugin(indigo.PluginBase):
                             try:
                                 address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                                 props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
-                                self.createLutronDevice(RA_KEYPAD, output.attrib['Name'], address, props, room.attrib['Name'])
+                                self.createLutronDevice(RA_KEYPAD, device.attrib['Name'], address, props, room.attrib['Name'])
                             except e:
                                 self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
                         else:
@@ -1264,7 +1263,7 @@ class Plugin(indigo.PluginBase):
                             try:
                                 address = device.attrib['IntegrationID']
                                 props = { 'sensor': device.attrib['IntegrationID'], 'notes': "", "SupportsStatusRequest": "False" }
-                                self.createLutronDevice(RA_SENSOR, output.attrib['Name'], address, props, room.attrib['Name'])
+                                self.createLutronDevice(RA_SENSOR, device.attrib['Name'], address, props, room.attrib['Name'])
                             except e:
                                 self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
                         else:
@@ -1277,7 +1276,7 @@ class Plugin(indigo.PluginBase):
                             try:
                                 address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                                 props={ 'picoIntegrationID': device.attrib['IntegrationID'], 'picoButton': component.attrib['ComponentNumber'], 'notes': ""}
-                                self.createLutronDevice(RA_PICO, output.attrib['Name'], address, props, room.attrib['Name'])
+                                self.createLutronDevice(RA_PICO, device.attrib['Name'], address, props, room.attrib['Name'])
                             except e:
                                 self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
                         else:
@@ -1293,9 +1292,10 @@ class Plugin(indigo.PluginBase):
                         self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
                             try:
+                                name = device.attrib['Name'] + " - " + component.find('Button').get('Name')
                                 address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                                props={ 'repeater': '1', 'button': component.attrib['ComponentNumber'], 'notes': ""}
-                                self.createLutronDevice(RA_PHANTOM_BUTTON, output.attrib['Name'], address, props, room.attrib['Name'])
+                                props={ 'repeater': device.attrib['IntegrationID'], 'button': component.attrib['ComponentNumber'], 'notes': ""}
+                                self.createLutronDevice(RA_PHANTOM_BUTTON, name, address, props, room.attrib['Name'])
                             except e:
                                 self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
                         elif component.attrib['ComponentType'] == "LED":
@@ -1358,7 +1358,7 @@ class Plugin(indigo.PluginBase):
             RA_CCO              : "Lutron Sensors",
             RA_CCI              : "Lutron Sensors",
             RA_SHADE            : "Lutron Shades",
-            RA_PICO             : "Lutron Keypads"
+            RA_PICO             : "Lutron Keypad Buttons"
         }
 
 
