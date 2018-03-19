@@ -1237,14 +1237,17 @@ class Plugin(indigo.PluginBase):
         login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
         fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
 
-        self.logger.info(u"Creating Devices - starting data fetch..."
+        self.logger.info(u"Creating Devices - starting data fetch...")
         
-        s = requests.Session()
-        r = s.get(login)
-        r = s.get(fetch)
-        root = ET.fromstring(r.text)        
+#        s = requests.Session()
+#        r = s.get(login)
+#        r = s.get(fetch)
+#        root = ET.fromstring(r.text)        
 
-        self.logger.info(u"Creating Devices fetch completed, parsing data..."
+        tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
+        root = tree.getroot()
+
+        self.logger.info(u"Creating Devices fetch completed, parsing data...")
         
         for room in root.findall('Areas/Area/Areas/Area'):
             self.logger.debug("Room: %s (%s)" % (room.attrib['Name'], room.attrib['IntegrationID']))
@@ -1293,6 +1296,21 @@ class Plugin(indigo.PluginBase):
                     props={ 'shade': output.attrib['IntegrationID'], 'notes': ""}
                     self.createLutronDevice(RA_SHADE, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
+                elif output.attrib['OutputType'] == "CEILING_FAN_TYPE":
+                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    props={ 'fan': output.attrib['IntegrationID'], 'notes': ""}
+                    self.createLutronDevice(RA_FAN, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+
+                elif output.attrib['OutputType'] == "CCO_PULSED":
+                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "momentary", 'notes': ""}
+                    self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+
+                elif output.attrib['OutputType'] == "CCO_MAINTAINED":
+                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "sustained", 'notes': "", 'SupportsStatusRequest': "False"}
+                    self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+
                 else:
                     self.logger.error("Unexpected Output Type: %s (%s)" % (output.attrib['Name'], output.attrib['OutputType']))
 
@@ -1300,7 +1318,7 @@ class Plugin(indigo.PluginBase):
             for device in room.findall('DeviceGroups/DeviceGroup/Devices/Device'):
                 self.logger.debug("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
     
-                if device.attrib['DeviceType'] == "SEETOUCH_KEYPAD" or device.attrib['DeviceType'] == "HYBRID_SEETOUCH_KEYPAD":
+                if device.attrib['DeviceType'] == "SEETOUCH_KEYPAD" or device.attrib['DeviceType'] == "HYBRID_SEETOUCH_KEYPAD" or device.attrib['DeviceType'] == "SEETOUCH_TABLETOP_KEYPAD":  
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
@@ -1323,6 +1341,35 @@ class Plugin(indigo.PluginBase):
                         else:
                             self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
                                                  
+                elif device.attrib['DeviceType'] == "VISOR_CONTROL_RECEIVER":
+                    for component in device.findall('Components/Component'):
+                        self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                        if component.attrib['ComponentType'] == "BUTTON":
+                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
+                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + component.attrib['ComponentNumber']
+                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            if not self.create_unused and assignments == 0:
+                                self.logger.info("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
+                                continue
+                            props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
+                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+
+                        elif component.attrib['ComponentType'] == "LED":
+                            button = str(int(component.attrib['ComponentNumber']) - 80)
+                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + button + " LED"
+                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
+                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+
+                        elif component.attrib['ComponentType'] == "CCI":
+                            name = room.attrib['Name'] + " - CCI " + device.attrib['Name']
+                            address = device.attrib['IntegrationID']
+                            props = { 'cciIntegrationID': device.attrib['IntegrationID'], 'component': component.attrib['ComponentNumber'], 'notes': "", "SupportsStatusRequest": "False" }
+                            self.createLutronDevice(RA_CCI, name, address, props, room.attrib['Name'])
+
+                        else:
+                            self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
+                                                 
                 elif device.attrib['DeviceType'] == "PICO_KEYPAD":
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
@@ -1339,7 +1386,7 @@ class Plugin(indigo.PluginBase):
                         else:
                             self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
                                                  
-                elif device.attrib['DeviceType'] == "MOTION_SENSOR":
+                elif device.attrib['DeviceType'] == "MOTION_SENSOR" or device.attrib['DeviceType'] == "CCI":
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "CCI":
@@ -1355,7 +1402,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.error("Unexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
                                
                         
-        self.logger.info(u"Creating Devices completed, devices created..."
+        self.logger.info(u"Creating Devices completed, devices created...")
         self.threadLock.release()
 
         return
