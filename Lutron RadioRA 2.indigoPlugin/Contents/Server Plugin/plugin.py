@@ -1231,21 +1231,24 @@ class Plugin(indigo.PluginBase):
         self.group_by = valuesDict["group_by"]
         self.simulated = bool(valuesDict["simulated"])
         self.create_unused = bool(valuesDict["create_unused"])
+        self.use_local = bool(valuesDict["use_local"])
 
         self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create Unprogrammed = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_unused))
 
-        login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
-        fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
+        if use_local:
+            tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
+            root = tree.getroot()
+        else:
 
-        self.logger.info(u"Creating Devices - starting data fetch...")
+            login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
+            fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
+
+            self.logger.info(u"Creating Devices - starting data fetch...")
         
-#        s = requests.Session()
-#        r = s.get(login)
-#        r = s.get(fetch)
-#        root = ET.fromstring(r.text)        
-
-        tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
-        root = tree.getroot()
+            s = requests.Session()
+            r = s.get(login)
+            r = s.get(fetch)
+            root = ET.fromstring(r.text)        
 
         self.logger.info(u"Creating Devices fetch completed, parsing data...")
         
@@ -1362,8 +1365,8 @@ class Plugin(indigo.PluginBase):
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
 
                         elif component.attrib['ComponentType'] == "CCI":
-                            name = room.attrib['Name'] + " - CCI " + device.attrib['Name']
-                            address = device.attrib['IntegrationID']
+                            name = room.attrib['Name'] + " - CCI " + device.attrib['Name'] + " - Input " + component.attrib['ComponentNumber']
+                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             props = { 'cciIntegrationID': device.attrib['IntegrationID'], 'component': component.attrib['ComponentNumber'], 'notes': "", "SupportsStatusRequest": "False" }
                             self.createLutronDevice(RA_CCI, name, address, props, room.attrib['Name'])
 
@@ -1419,7 +1422,7 @@ class Plugin(indigo.PluginBase):
             RA_FAN              : "Lutron Fans",
             RA_THERMO           : "Lutron Thermostats",
             RA_SENSOR           : "Lutron Sensors",
-            RA_CCO              : "Lutron Sensors",
+            RA_CCO              : "Lutron Switches",
             RA_CCI              : "Lutron Sensors",
             RA_SHADE            : "Lutron Shades",
             RA_PICO             : "Lutron Keypad Buttons"

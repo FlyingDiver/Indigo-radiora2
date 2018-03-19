@@ -37,6 +37,10 @@
 			<Field id="create_unused_note" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Checking this box will create buttons for all keypads/repeaters, even those not programmed.</Label>
 			</Field>
+    		<Field id="separator1" type="separator" />
+			<Field id="use_local" type="checkbox" defaultValue="false">
+				<Label>Use local file (developer only):</Label>
+			</Field>            
         </ConfigUI>
     </MenuItem>
 </MenuItems>
