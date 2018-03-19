@@ -32,7 +32,7 @@
 				<Label>Simulate only:</Label>
 			</Field>            
 			<Field id="create_unused" type="checkbox" defaultValue="false">
-				<Label>Create Unused Buttons:</Label>
+				<Label>Create unprogrammed buttons:</Label>
 			</Field>            
 			<Field id="create_unused_note" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Checking this box will create buttons for all keypads/repeaters, even those not programmed.</Label>

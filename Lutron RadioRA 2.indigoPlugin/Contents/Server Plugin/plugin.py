@@ -1257,9 +1257,13 @@ class Plugin(indigo.PluginBase):
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
+                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
                             name = "Repeater " + device.attrib['IntegrationID'] + " - Button " + component.attrib['ComponentNumber']
-                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             button = str(int(component.attrib['ComponentNumber']) + 100)
+                            address = device.attrib['IntegrationID'] + "." + button
+                            if not self.create_unused and assignments == 0:
+                                self.logger.info("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
+                                continue
                             props={ 'repeater': device.attrib['IntegrationID'], 'button': button, 'notes': ""}
                             self.createLutronDevice(RA_PHANTOM_BUTTON, name, address, props, room.attrib['Name'])
 
@@ -1302,8 +1306,12 @@ class Plugin(indigo.PluginBase):
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
+                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
                             name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + component.attrib['ComponentNumber']
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            if not self.create_unused and assignments == 0:
+                                self.logger.info("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
+                                continue
                             props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
 
@@ -1321,8 +1329,12 @@ class Plugin(indigo.PluginBase):
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
+                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
                             name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            if not self.create_unused and assignments == 0:
+                                self.logger.info("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
+                                continue
                             props={ 'picoIntegrationID': device.attrib['IntegrationID'], 'picoButton': component.attrib['ComponentNumber'], 'notes': ""}
                             self.createLutronDevice(RA_PICO, name, address, props, room.attrib['Name'])
 
@@ -1372,7 +1384,15 @@ class Plugin(indigo.PluginBase):
             RA_PICO             : "Lutron Keypad Buttons"
         }
 
-
+        # first, make sure this device doesn't exist.  Unless I screwed up, the addresses should be unique
+        # it would be more efficient to search through the internal device lists, but a pain to code.
+        
+        for dev in indigo.devices.iter("self"):
+            if dev.address == address:
+                self.logger.warning("Not creating duplicate device: '%s' (%s)" % (name, address))
+                return
+                
+            
         if self.group_by == "Type":
             folderName = folderNameDict[devType]
             if folderName in indigo.devices.folders:
