@@ -127,6 +127,8 @@ class Plugin(indigo.PluginBase):
         self.IP = False     # Default to serial I/O, not IP -vic13
         self.portEnabled = False
         self.triggers = { }
+        
+        self.threadLock = threading.Lock()  # for background data fetch
 
     def startup(self):
         self.logger.info(u"Starting up Lutron")
@@ -1212,9 +1214,9 @@ class Plugin(indigo.PluginBase):
     def createAllDevicesMenu(self, valuesDict, typeId):
 
         if not self.IP:
-            self.logger.info(u"createAllDevicesMenu failed, no IP connection")
+            self.logger.warning(u"Unable to create devices, no IP connection to repeater.")
             return False
-
+            
         deviceThread = threading.Thread(target = self.createAllDevices, args = (valuesDict, ))
         deviceThread.start()    
                 
@@ -1222,19 +1224,27 @@ class Plugin(indigo.PluginBase):
 
     def createAllDevices(self, valuesDict):
         
+        if not self.threadLock.acquire(False):
+            self.logger.warning(u"Unable to create devices, process already running.")
+            return
+
         self.group_by = valuesDict["group_by"]
         self.simulated = bool(valuesDict["simulated"])
         self.create_unused = bool(valuesDict["create_unused"])
 
-        self.logger.info(u"createAllDevices from %s, Grouping = %s, Simulated = %s, Create Unused = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_unused))
+        self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create Unprogrammed = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_unused))
 
         login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
         fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
+
+        self.logger.info(u"Creating Devices - starting data fetch..."
         
         s = requests.Session()
         r = s.get(login)
         r = s.get(fetch)
         root = ET.fromstring(r.text)        
+
+        self.logger.info(u"Creating Devices fetch completed, parsing data..."
         
         for room in root.findall('Areas/Area/Areas/Area'):
             self.logger.debug("Room: %s (%s)" % (room.attrib['Name'], room.attrib['IntegrationID']))
@@ -1345,8 +1355,8 @@ class Plugin(indigo.PluginBase):
                     self.logger.error("Unexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
                                
                         
-
-        self.logger.info(u"createAllDevices completed")
+        self.logger.info(u"Creating Devices completed, devices created..."
+        self.threadLock.release()
 
         return
 

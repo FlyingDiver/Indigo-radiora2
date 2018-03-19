@@ -2,6 +2,11 @@
 <Devices>
     <Device type="custom" id="ra2MainRepeater">
     	<Name>RadioRA 2 Main Repeater</Name>
+        <ConfigUI>
+            <Field type="textField" id="repeater" defaultValue="1">
+                <Label>Integration ID:</Label>
+            </Field>
+        </ConfigUI>
        	<States>
         	<State id="serialNumber">
                 <ValueType>String</ValueType>
