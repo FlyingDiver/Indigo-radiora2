@@ -1240,13 +1240,10 @@ class Plugin(indigo.PluginBase):
         login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
         fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
         
-#        s = requests.Session()
-#        r = s.get(login)
-#        r = s.get(fetch)
-#        root = ET.fromstring(r.text)
-        tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
-        root = tree.getroot()
-        
+        s = requests.Session()
+        r = s.get(login)
+        r = s.get(fetch)
+        root = ET.fromstring(r.text)        
         
         for room in root.findall('Areas/Area/Areas/Area'):
             self.logger.debug("Room: %s (%s)" % (room.attrib['Name'], room.attrib['IntegrationID']))
