@@ -23,7 +23,7 @@
 			<Field id="group_by" type="menu" defaultValue="Type">
 				<Label>Group New Devices By:</Label>
 				<List>
-					<Option value="None">No Grouping</Option>
+					<Option value="None">No Folders</Option>
 					<Option value="Room">Device Location</Option>
 					<Option value="Type">Device Type</Option>
 				</List>
@@ -31,11 +31,11 @@
 			<Field id="simulated" type="checkbox" defaultValue="true">
 				<Label>Simulate only:</Label>
 			</Field>            
-			<Field id="create_all" type="checkbox" defaultValue="false">
-				<Label>Create all devices:</Label>
+			<Field id="create_unused" type="checkbox" defaultValue="false">
+				<Label>Create Unused Buttons:</Label>
 			</Field>            
-			<Field id="create_all_note" type="label" fontSize="small" fontColor="darkgray">
-				<Label>Checking this box will create buttons for all keypads/repeaters, even if unprogrammed.</Label>
+			<Field id="create_unused_note" type="label" fontSize="small" fontColor="darkgray">
+				<Label>Checking this box will create buttons for all keypads/repeaters, even those not programmed.</Label>
 			</Field>
         </ConfigUI>
     </MenuItem>

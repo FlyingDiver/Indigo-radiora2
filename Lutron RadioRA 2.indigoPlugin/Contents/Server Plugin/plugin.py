@@ -256,71 +256,81 @@ class Plugin(indigo.PluginBase):
                 self.update_device_property(dev, PROP_REPEATER, new_value = "1")
                 self.logger.info(u"%s: Added repeater property" % (dev.name))
 
-            self.phantomButtons[dev.pluginProps[PROP_BUTTON]] = dev
             address = dev.pluginProps[PROP_REPEATER] + "." + dev.pluginProps[PROP_BUTTON]
             self.update_device_property(dev, "address", new_value = address)
             self.logger.debug(u"Watching phantom button: " + address)
+            self.phantomButtons[address] = dev
             
         elif dev.deviceTypeId == RA_DIMMER:
-            self.zones[dev.pluginProps[PROP_ZONE]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_ZONE])
-            self.logger.debug(u"Watching dimmer: " + dev.pluginProps[PROP_ZONE])
+            address = dev.pluginProps[PROP_ZONE]
+            self.zones[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching dimmer: " + address)
             
         elif dev.deviceTypeId == RA_SHADE:
-            self.shades[dev.pluginProps[PROP_SHADE]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SHADE])
+            address = dev.pluginProps[PROP_SHADE]
+            self.shades[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
             dev.updateStateImageOnServer( indigo.kStateImageSel.None)
-            self.logger.debug(u"Watching shade: " + dev.pluginProps[PROP_SHADE])
+            self.logger.debug(u"Watching shade: " + address)
             
         elif dev.deviceTypeId == RA_SWITCH:
-            self.switches[dev.pluginProps[PROP_SWITCH]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SWITCH])
-            self.logger.debug(u"Watching switch: " + dev.pluginProps[PROP_SWITCH])
+            address = dev.pluginProps[PROP_SWITCH]
+            self.switches[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching switch: " + address)
             
         elif dev.deviceTypeId == RA_FAN:
-            self.fans[dev.pluginProps[PROP_FAN]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_FAN])
-            self.logger.debug(u"Watching fan: " + dev.pluginProps[PROP_FAN])
+            address = dev.pluginProps[PROP_FAN]
+            self.fans[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching fan: " + address)
 
         elif dev.deviceTypeId == RA_THERMO:
-            self.thermos[dev.pluginProps[PROP_THERMO]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_THERMO])
-            self.logger.debug(u"Watching thermostat: " + dev.pluginProps[PROP_THERMO])
+            address = dev.pluginProps[PROP_THERMO]
+            self.thermos[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching thermostat: " + address)
 
         elif dev.deviceTypeId == RA_KEYPAD:
-            self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT])
+            address = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT]
+            self.update_device_property(dev, "address", new_value = address)
             if int(dev.pluginProps[PROP_KEYPADBUT]) > 80:
                 self.update_device_property(dev, "keypadButtonDisplayLEDState", new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
                 self.logger.debug(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " LED: " + dev.pluginProps[PROP_KEYPADBUT])
             else:
                 self.update_device_property(dev, "keypadButtonDisplayLEDState", new_value = False)
                 self.logger.debug(u"Watching keypad: " + dev.pluginProps[PROP_KEYPAD] + " button: " + dev.pluginProps[PROP_KEYPADBUT])
+            self.keypads[address] = dev
 
         elif dev.deviceTypeId == RA_SENSOR:
-            self.sensors[dev.pluginProps[PROP_SENSOR]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_SENSOR])
-            self.logger.debug(u"Watching sensor: " + dev.pluginProps[PROP_SENSOR])
+            address = dev.pluginProps[PROP_SENSOR]
+            self.sensors[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching sensor: " + address)
 
         elif dev.deviceTypeId == RA_CCI:
-            self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT])
-            self.logger.debug(u"Watching CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID] + " input: " + dev.pluginProps[PROP_COMPONENT])
+            address = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT]
+            self.ccis[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching CCI: " + address)
 
         elif dev.deviceTypeId == RA_CCO:
-            self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+            address = dev.pluginProps[PROP_CCO_INTEGRATION_ID]
+            self.ccos[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
             ccoType = dev.pluginProps[PROP_CCO_TYPE]
             if ccoType == "momentary":
                 dev.updateStateOnServer("onOffState", False)
             # To do - set SupportsStatusRequest to true if it is a sustained contact CCO
             #         haven't figured out a way to do that without hanging the UI when a new CCO is added
-            self.logger.debug(u"Watching CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+            self.logger.debug(u"Watching CCO: " + address)
 
         elif dev.deviceTypeId == RA_PICO:
-            self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]] = dev
-            self.update_device_property(dev, "address", new_value = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON])
-            self.logger.debug(u"Watching Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID] + " button: " + dev.pluginProps[PROP_PICOBUTTON])
+            address = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON]
+            self.picos[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+            self.logger.debug(u"Watching Pico: " + address)
 
         else:
             self.logger.error(u"deviceStartComm: Unknown device type:" + dev.deviceTypeId)
@@ -330,48 +340,59 @@ class Plugin(indigo.PluginBase):
             pass
                         
         elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
-            del self.phantomButtons[dev.pluginProps[PROP_BUTTON]]
-            self.logger.debug(u"Deleted phantom button: " + dev.pluginProps[PROP_BUTTON])
+            address = dev.pluginProps[PROP_REPEATER] + "." + dev.pluginProps[PROP_BUTTON]
+            del self.phantomButtons[address]
+            self.logger.debug(u"Deleted phantom button: " + address)
 
         elif dev.deviceTypeId == RA_DIMMER:
-            del self.zones[dev.pluginProps[PROP_ZONE]]
-            self.logger.debug(u"Deleted dimmer: " + dev.pluginProps[PROP_ZONE])
+            address = dev.pluginProps[PROP_ZONE]
+            del self.zones[address]
+            self.logger.debug(u"Deleted dimmer: " + address)
 
         elif dev.deviceTypeId == RA_SHADE:
-            del self.shades[dev.pluginProps[PROP_SHADE]]
-            self.logger.debug(u"Deleted shade: " + dev.pluginProps[PROP_SHADE])
+            address = dev.pluginProps[PROP_SHADE]
+            del self.shades[address]
+            self.logger.debug(u"Deleted shade: " + address)
 
         elif dev.deviceTypeId == RA_SWITCH:
-            del self.switches[dev.pluginProps[PROP_SWITCH]]
-            self.logger.debug(u"Deleted switch: " + dev.pluginProps[PROP_SWITCH])
+            address = dev.pluginProps[PROP_SWITCH]
+            del self.switches[address]
+            self.logger.debug(u"Deleted switch: " + address)
 
         elif dev.deviceTypeId == RA_KEYPAD:
-            del self.keypads[dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT]]
-            self.logger.debug(u"Deleted keypad: " + dev.pluginProps[PROP_KEYPAD]+dev.pluginProps[PROP_KEYPADBUT])
+            address = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT]
+            del self.keypads[address]
+            self.logger.debug(u"Deleted keypad: " + address)
 
         elif dev.deviceTypeId == RA_FAN:
-            del self.fans[dev.pluginProps[PROP_FAN]]
-            self.logger.debug(u"Deleted fan: " + dev.pluginProps[PROP_FAN])
+            address = dev.pluginProps[RA_FAN]
+            del self.fans[address]
+            self.logger.debug(u"Deleted fan: " + address)
 
         elif dev.deviceTypeId == RA_THERMO:
-            del self.thermos[dev.pluginProps[PROP_THERMO]]
-            self.logger.debug(u"Deleted thermostat: " + dev.pluginProps[PROP_THERMO])
+            address = dev.pluginProps[PROP_THERMO]
+            del self.thermos[address]
+            self.logger.debug(u"Deleted thermostat: " + address)
 
         elif dev.deviceTypeId == RA_SENSOR:
-            del self.sensors[dev.pluginProps[PROP_SENSOR]]
-            self.logger.debug(u"Deleted sensor: " + dev.pluginProps[PROP_SENSOR])
+            address = dev.pluginProps[PROP_SENSOR]
+            del self.sensors[address]
+            self.logger.debug(u"Deleted sensor: " + address)
 
         elif dev.deviceTypeId == RA_CCI:
-            del self.ccis[dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT]]
-            self.logger.debug(u"Deleted CCI: " + dev.pluginProps[PROP_CCI_INTEGRATION_ID]+dev.pluginProps[PROP_COMPONENT])
+            address = dev.pluginProps[PROP_CCI_INTEGRATION_ID] + "." + dev.pluginProps[PROP_COMPONENT]
+            del self.ccis[address]
+            self.logger.debug(u"Deleted CCI: " + address)
 
         elif dev.deviceTypeId == RA_CCO:
-            del self.ccos[dev.pluginProps[PROP_CCO_INTEGRATION_ID]]
-            self.logger.debug(u"Deleted CCO: " + dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+            address = dev.pluginProps[PROP_CCO_INTEGRATION_ID]
+            del self.ccos[address]
+            self.logger.debug(u"Deleted CCO: " + address)
 
         elif dev.deviceTypeId == RA_PICO:
-            del self.picos[dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON]]
-            self.logger.debug(u"Deleted Pico: " + dev.pluginProps[PROP_PICO_INTEGRATION_ID]+dev.pluginProps[PROP_PICOBUTTON])
+            address = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON]
+            del self.picos[address]
+            self.logger.debug(u"Deleted Pico: " + address)
 
         else:
             self.logger.error(u"deviceStopComm: Unknown device type:" + dev.deviceTypeId)
@@ -1212,9 +1233,9 @@ class Plugin(indigo.PluginBase):
         
         self.group_by = valuesDict["group_by"]
         self.simulated = bool(valuesDict["simulated"])
-        self.create_all = bool(valuesDict["create_all"])
+        self.create_unused = bool(valuesDict["create_unused"])
 
-        self.logger.info(u"createAllDevices from %s, Grouping = %s, Simulated = %s, Create All = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_all))
+        self.logger.info(u"createAllDevices from %s, Grouping = %s, Simulated = %s, Create Unused = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_unused))
 
         login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
         fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
@@ -1223,116 +1244,107 @@ class Plugin(indigo.PluginBase):
 #        r = s.get(login)
 #        r = s.get(fetch)
 #        root = ET.fromstring(r.text)
-
         tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
         root = tree.getroot()
         
-        for room in root.findall('Areas/Area/Areas/Area'):
-            self.logger.info("Room: %s (%s)" % (room.attrib['Name'], room.attrib['IntegrationID']))
         
+        for room in root.findall('Areas/Area/Areas/Area'):
+            self.logger.debug("Room: %s (%s)" % (room.attrib['Name'], room.attrib['IntegrationID']))
+        
+            for device in room.findall('DeviceGroups/Device'):
+                self.logger.debug("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
+                if device.attrib['DeviceType'] == "MAIN_REPEATER":
+                    for component in device.findall('Components/Component'):
+                        self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                        if component.attrib['ComponentType'] == "BUTTON":
+                            name = "Repeater " + device.attrib['IntegrationID'] + " - Button " + component.attrib['ComponentNumber']
+                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            button = str(int(component.attrib['ComponentNumber']) + 100)
+                            props={ 'repeater': device.attrib['IntegrationID'], 'button': button, 'notes': ""}
+                            self.createLutronDevice(RA_PHANTOM_BUTTON, name, address, props, room.attrib['Name'])
+
+                        elif component.attrib['ComponentType'] == "LED":
+                            pass
+
+                        else:
+                            self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
+
+                else:
+                    self.logger.error("Unexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
+
+
+            for output in room.findall('Outputs/Output'):
+                self.logger.debug("\tOutput: %s (%s) %s" % (output.attrib['Name'], output.attrib['IntegrationID'], output.attrib['OutputType']))
+
+                if output.attrib['OutputType'] == "INC" or output.attrib['OutputType'] == "MLV" or output.attrib['OutputType'] == "AUTO_DETECT":
+                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    props={ 'zone': output.attrib['IntegrationID'], 'fadeTime': "1", 'notes': ""}
+                    self.createLutronDevice(RA_DIMMER, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    
+                elif output.attrib['OutputType'] == "NON_DIM":
+                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    props={ 'switch': output.attrib['IntegrationID'], 'notes': ""}
+                    self.createLutronDevice(RA_SWITCH, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                        
+                elif output.attrib['OutputType'] == "SYSTEM_SHADE":
+                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    props={ 'shade': output.attrib['IntegrationID'], 'notes': ""}
+                    self.createLutronDevice(RA_SHADE, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+
+                else:
+                    self.logger.error("Unexpected Output Type: %s (%s)" % (output.attrib['Name'], output.attrib['OutputType']))
+
+
             for device in room.findall('DeviceGroups/DeviceGroup/Devices/Device'):
-                self.logger.info("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
+                self.logger.debug("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
     
                 if device.attrib['DeviceType'] == "SEETOUCH_KEYPAD" or device.attrib['DeviceType'] == "HYBRID_SEETOUCH_KEYPAD":
                     for component in device.findall('Components/Component'):
-                        self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                        self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
-                            try:
-                                name = device.attrib['Name'] + " - " + component.find('Button').get('Name')
-                                address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                                props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
-                                self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
-                            except e:
-                                self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
+                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + component.attrib['ComponentNumber']
+                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
+                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+
                         elif component.attrib['ComponentType'] == "LED":
-                            self.logger.debug("Create LED: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
-                            try:
-                                address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                                props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
-                                self.createLutronDevice(RA_KEYPAD, device.attrib['Name'], address, props, room.attrib['Name'])
-                            except e:
-                                self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
+                            button = str(int(component.attrib['ComponentNumber']) - 80)
+                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + button + " LED"
+                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
+                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+
                         else:
-                            self.logger.error("\t\tUnexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
-                                                 
-                elif device.attrib['DeviceType'] == "MOTION_SENSOR":
-                    for component in device.findall('Components/Component'):
-                        self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
-                        if component.attrib['ComponentType'] == "CCI":
-                            self.logger.debug("Create Motion Sensor: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
-                            try:
-                                address = device.attrib['IntegrationID']
-                                props = { 'sensor': device.attrib['IntegrationID'], 'notes': "", "SupportsStatusRequest": "False" }
-                                self.createLutronDevice(RA_SENSOR, device.attrib['Name'], address, props, room.attrib['Name'])
-                            except e:
-                                self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
-                        else:
-                            self.logger.error("\t\tUnexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
+                            self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
                                                  
                 elif device.attrib['DeviceType'] == "PICO_KEYPAD":
                     for component in device.findall('Components/Component'):
-                        self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                        self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
-                            try:
-                                address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                                props={ 'picoIntegrationID': device.attrib['IntegrationID'], 'picoButton': component.attrib['ComponentNumber'], 'notes': ""}
-                                self.createLutronDevice(RA_PICO, device.attrib['Name'], address, props, room.attrib['Name'])
-                            except e:
-                                self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
+                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
+                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            props={ 'picoIntegrationID': device.attrib['IntegrationID'], 'picoButton': component.attrib['ComponentNumber'], 'notes': ""}
+                            self.createLutronDevice(RA_PICO, name, address, props, room.attrib['Name'])
+
                         else:
-                            self.logger.error("\t\tUnexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
+                            self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
+                                                 
+                elif device.attrib['DeviceType'] == "MOTION_SENSOR":
+                    for component in device.findall('Components/Component'):
+                        self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
+                        if component.attrib['ComponentType'] == "CCI":
+                            name = room.attrib['Name'] + " - Motion Sensor " + device.attrib['Name']
+                            address = device.attrib['IntegrationID']
+                            props = { 'sensor': device.attrib['IntegrationID'], 'notes': "", "SupportsStatusRequest": "False" }
+                            self.createLutronDevice(RA_SENSOR, name, address, props, room.attrib['Name'])
+
+                        else:
+                            self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
                                                  
                 else:
-                    self.logger.error("\t\tUnexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
+                    self.logger.error("Unexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
                                
-            for device in room.findall('DeviceGroups/Device'):
-                self.logger.info("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
-                if device.attrib['DeviceType'] == "MAIN_REPEATER":
-                    for component in device.findall('Components/Component'):
-                        self.logger.info("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
-                        if component.attrib['ComponentType'] == "BUTTON":
-                            try:
-                                name = device.attrib['Name'] + " - " + component.find('Button').get('Name')
-                                address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                                props={ 'repeater': device.attrib['IntegrationID'], 'button': component.attrib['ComponentNumber'], 'notes': ""}
-                                self.createLutronDevice(RA_PHANTOM_BUTTON, name, address, props, room.attrib['Name'])
-                            except e:
-                                self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
-                        elif component.attrib['ComponentType'] == "LED":
-                            self.logger.debug("Create LED: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
-                        else:
-                            self.logger.error("\t\tUnexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
-
-                else:
-                    self.logger.error("\t\tUnexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
-                           
-            for output in room.findall('Outputs/Output'):
-                self.logger.info("\tOutput: %s (%s,%s)" % (output.attrib['Name'], output.attrib['IntegrationID'], output.attrib['OutputType']))
-
-                if output.attrib['OutputType'] == "INC" or output.attrib['OutputType'] == "MLV" or output.attrib['OutputType'] == "AUTO_DETECT":
-                    try:
-                        props={ 'zone': output.attrib['IntegrationID'], 'fadeTime': "1", 'notes': ""}
-                        self.createLutronDevice(RA_DIMMER, output.attrib['Name'], output.attrib['IntegrationID'], props, room.attrib['Name'])
-                    except e:
-                        self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
-                    
-                elif output.attrib['OutputType'] == "NON_DIM":
-                    try:
-                        props={ 'switch': output.attrib['IntegrationID'], 'notes': ""}
-                        self.createLutronDevice(RA_SWITCH, output.attrib['Name'], output.attrib['IntegrationID'], props, room.attrib['Name'])
-                    except e:
-                        self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
                         
-                elif output.attrib['OutputType'] == "SYSTEM_SHADE":
-                    try:
-                        props={ 'shade': output.attrib['IntegrationID'], 'notes': ""}
-                        self.createLutronDevice(RA_SHADE, output.attrib['Name'], output.attrib['IntegrationID'], props, room.attrib['Name'])
-                    except e:
-                        self.logger.error("Error calling createLutronDevice(): %s" % (e.message))
-
-                else:
-                    self.logger.error("\t\tUnexpected Output Type: %s (%s)" % (output.attrib['Name'], output.attrib['OutputType']))
-
 
             if self.deviceThreadStopEvent.is_set():
                 self.logger.info("createAllDevices: Stop requested, exiting...")
@@ -1344,7 +1356,6 @@ class Plugin(indigo.PluginBase):
 
 
     def createLutronDevice(self, devType, name, address, props, room, notes = None):
-        self.logger.info("Creating device %s, name = %s, address = %s, props = %s, location = %s, notes = %s" % (devType, name, address, str(props), room, notes))
 
         folderNameDict = {
             RA_MAIN_REPEATER    : "Lutron Repeaters",
@@ -1364,23 +1375,24 @@ class Plugin(indigo.PluginBase):
 
         if self.group_by == "Type":
             folderName = folderNameDict[devType]
+            if folderName in indigo.devices.folders:
+                theFolder = indigo.devices.folders[folderName].id
+            else:
+                theFolder = indigo.devices.folder.create(folderName).id
         elif self.group_by == "Room":
             folderName = "Lutron " + room
+            if folderName in indigo.devices.folders:
+                theFolder = indigo.devices.folders[folderName].id
+            else:
+                theFolder = indigo.devices.folder.create(folderName).id
         else:
-            folderName = "None"
+            folderName = "DEVICES"
             theFolder = 0
-
-        if folderName in indigo.devices.folders:
-            theFolder = indigo.devices.folders[folderName].id
-        else:
-            theFolder = indigo.devices.folder.create(folderName).id
-            
-        name = name + " (" + address + ")"
-        
+                    
         if self.simulated:
-            self.logger.info("Not creating %s device: %s in %s, %s" % (devType, name, folderName, notes))
+            self.logger.info("Not creating %s device: '%s' (%s) in '%s'" % (devType, name, address, folderName))
         else:
-            self.logger.info("Creating %s device: %s in %s, %s" % (devType, name, folderName, notes))
+            self.logger.info("Creating %s device: '%s' (%s) in '%s'" % (devType, name, address, folderName))
             try:
                 newdev = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=devType, props=props, folder=theFolder)
             except Exception, e:
