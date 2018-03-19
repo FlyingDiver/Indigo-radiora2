@@ -128,9 +128,6 @@ class Plugin(indigo.PluginBase):
         self.portEnabled = False
         self.triggers = { }
 
-        self.deviceThread = None
-        self.deviceThreadStopEvent = None
-
     def startup(self):
         self.logger.info(u"Starting up Lutron")
 
@@ -155,11 +152,6 @@ class Plugin(indigo.PluginBase):
         if self.IP:
             self.connIP.close()
             
-        if self.deviceThread:
-            self.logger.info(u"Waiting on Device Creation thread...")
-            self.deviceThreadStopEvent.set()
-            self.deviceThread.join()
-        
     ####################
 
     def triggerStartProcessing(self, trigger):
@@ -1223,9 +1215,8 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u"createAllDevicesMenu failed, no IP connection")
             return False
 
-        self.deviceThread = threading.Thread(target = self.createAllDevices, args = (valuesDict, ))
-        self.deviceThreadStopEvent = threading.Event()
-        self.deviceThread.start()    
+        deviceThread = threading.Thread(target = self.createAllDevices, args = (valuesDict, ))
+        deviceThread.start()    
                 
         return True        
 
@@ -1355,13 +1346,9 @@ class Plugin(indigo.PluginBase):
                                
                         
 
-            if self.deviceThreadStopEvent.is_set():
-                self.logger.info("createAllDevices: Stop requested, exiting...")
-                return False
-                
         self.logger.info(u"createAllDevices completed")
 
-        return True
+        return
 
 
     def createLutronDevice(self, devType, name, address, props, room, notes = None):
