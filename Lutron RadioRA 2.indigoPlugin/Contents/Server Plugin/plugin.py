@@ -1221,18 +1221,21 @@ class Plugin(indigo.PluginBase):
 
         self.group_by = valuesDict["group_by"]
         self.simulated = bool(valuesDict["simulated"])
-        self.create_unused = bool(valuesDict["create_unused"])
+        self.create_unused_keypad = bool(valuesDict["create_unused_keypad"])
+        self.create_unused_phantom = bool(valuesDict["create_unused_phantom"])
         self.use_local = bool(valuesDict["use_local"])
         self.do_query = bool(valuesDict["do_query"])
 
         if self.use_local:
-            self.logger.info(u"Creating Devices from file, Grouping = %s, Simulated = %s, Create Unprogrammed = %s" % (self.group_by, self.simulated, self.create_unused))
+            self.logger.info(u"Creating Devices from file, Grouping = %s, Simulated = %s, Create unprogrammed keypad buttonss = %s, Create unprogrammed phantom buttons = %s" % \
+                (self.group_by, self.simulated, self.create_unused_keypad, self.create_unused_phantom))
             tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
             root = tree.getroot()
             self.logger.info(u"Creating Devices file read completed, parsing data...")
 
         else:
-            self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create Unprogrammed = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_unused))
+            self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create unprogrammed keypad buttonss = %s, Create unprogrammed phantom buttons = %s" % \
+                (self.group_by, self.simulated, self.create_unused_keypad, self.create_unused_phantom))
             login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
             fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
             self.logger.info(u"Creating Devices - starting data fetch...")
@@ -1255,8 +1258,8 @@ class Plugin(indigo.PluginBase):
                             name = "Repeater " + device.attrib['IntegrationID'] + " - Button " + component.attrib['ComponentNumber']
                             button = str(int(component.attrib['ComponentNumber']) + 100)
                             address = device.attrib['IntegrationID'] + "." + button
-                            if not self.create_unused and assignments == 0:
-                                self.logger.debug("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
+                            if not self.create_unused_phantom and assignments == 0:
+                                self.logger.debug("Skipping phantom button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
                                 continue
                             props={ 'repeater': device.attrib['IntegrationID'], 'button': button, 'notes': ""}
                             self.createLutronDevice(RA_PHANTOM_BUTTON, name, address, props, room.attrib['Name'])
@@ -1317,22 +1320,53 @@ class Plugin(indigo.PluginBase):
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
-                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))  
-                            try:                          
-                                engraving = component.find("Button").attrib['Engraving']
-                            except:
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
-                            else:
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + engraving
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                            if not self.create_unused and assignments == 0:
-                                self.logger.debug("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
+                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))  
+ 
+                            if not self.create_unused_keypad and assignments == 0:
+                                self.logger.debug("Skipping keypad button creation, %d PresetAssignments for device %s" % (assignments, address))
                                 continue
+                            
+                            keypadType = device.attrib['DeviceType']
+                            buttonNum = int(component.attrib['ComponentNumber'])
+                            if ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 16):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Top Lower"
+                            elif ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 17):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Top Raise"
+                            elif ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 18):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Bottom Lower"
+                            elif ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 19):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Bottom Raise"
+                            elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 20):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 1 Lower"
+                            elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 21):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 1 Raise"
+                            elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 22):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 2 Lower"
+                            elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 23):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 2 Raise"
+                            elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 24):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 3 Lower"
+                            elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 25):
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 3 Raise"
+                            else:
+                                try:                          
+                                    engraving = component.find("Button").attrib['Engraving']
+                                except:
+                                    name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
+                                else:
+                                    name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + engraving
+                                    
                             props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
                     
-                            # always create button LED
-                    
+                            # create button LED, if needed for the button
+                            
+                            if ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum > 6):
+                                continue
+                            if (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum > 17):
+                                continue
+                                            
                             name = name + " LED"  
                             keypadLED = str(int(component.attrib['ComponentNumber']) + 80)
                             address = device.attrib['IntegrationID'] + "." + keypadLED
@@ -1352,8 +1386,8 @@ class Plugin(indigo.PluginBase):
                             assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
                             name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + component.attrib['ComponentNumber']
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                            if not self.create_unused and assignments == 0:
-                                self.logger.debug("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
+                            if not self.create_unused_keypad and assignments == 0:
+                                self.logger.debug("Skipping visor control button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
                                 continue
                             props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
@@ -1386,7 +1420,7 @@ class Plugin(indigo.PluginBase):
                             else:
                                 name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + engraving
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                            if not self.create_unused and assignments == 0:
+                            if not self.create_unused_keypad and assignments == 0:
                                 self.logger.debug("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
                                 continue
                             props={ 'picoIntegrationID': device.attrib['IntegrationID'], 'picoButton': component.attrib['ComponentNumber'], 'notes': ""}
