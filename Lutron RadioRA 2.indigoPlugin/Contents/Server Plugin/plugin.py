@@ -359,7 +359,7 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"Deleted keypad: " + address)
 
         elif dev.deviceTypeId == RA_FAN:
-            address = dev.pluginProps[RA_FAN]
+            address = dev.pluginProps[PROP_FAN]
             del self.fans[address]
             self.logger.debug(u"Deleted fan: " + address)
 
@@ -705,9 +705,10 @@ class Plugin(indigo.PluginBase):
             cmd = cmd.rstrip() # IP strings are terminated with \n -JL
 
         cmdArray = cmd.split(',')
-        id = cmdArray[2]
+        id = cmdArray[1]
+        button = cmdArray[2]
         action = cmdArray[3]
-        if action == '2': # this is a motion sensor
+        if action == '2':               # this is a motion sensor
             if cmdArray[4] == '3':
                 status = '1'
             elif cmdArray[4] == '4':
@@ -719,29 +720,30 @@ class Plugin(indigo.PluginBase):
         else:
             status = cmdArray[4]
 
-        if id in self.phantomButtons:
-            self.logger.debug(u"Received a phantom button status message: " + cmd)
-            but = self.phantomButtons[id]
-            if status == '0':
-                but.updateStateOnServer("onOffState", False)
-            elif status == '1':
-                but.updateStateOnServer("onOffState", True)
+        keypadid = id + "." + button
 
-        id = cmdArray[1]
-        button = cmdArray[2]
-        keypadid = id+button
+
+        if keypadid in self.phantomButtons:
+            self.logger.debug(u"Received a phantom button status message: " + cmd)
+            dev = self.phantomButtons[keypadid]
+            if status == '0':
+                dev.updateStateOnServer("onOffState", False)
+            elif status == '1':
+                dev.updateStateOnServer("onOffState", True)
 
         if keypadid in self.keypads:
             self.logger.debug(u"Received a keypad button/LED status message: " + cmd)
             dev = self.keypads[keypadid]
-            keypad = self.keypads[keypadid]
             if status == '0':
-                keypad.updateStateOnServer("onOffState", False)
+                dev.updateStateOnServer("onOffState", False)
             elif status == '1':
-                keypad.updateStateOnServer("onOffState", True)
+                dev.updateStateOnServer("onOffState", True)
 
+            # this code broken for new address format and for tabletop keypads (over 10 buttons)
+            
             if dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]: # Also display this LED state on its corresponding button
-                keypadid = keypadid[0:len(keypadid)-2] + keypadid[len(keypadid)-1] # Convert LED ID to button ID
+            
+                keypadid = id + '.' + str(int(button) - 80)         # Convert LED ID to button ID
                 if keypadid in self.keypads:
                     keypad = self.keypads[keypadid]
                     self.logger.debug(u"Updating button status with state of LED for keypadID " + keypadid)
@@ -751,7 +753,7 @@ class Plugin(indigo.PluginBase):
                         keypad.updateStateOnServer("onOffState", True)
                         self.logger.debug(u"Set status to True on Server.")
                 else:
-                    self.logger.error("WARNING: Invalid ID (%s) specified for LED.   Must be in range 81-87.  Please correct and reload the plugin." % keypadid)
+                    self.logger.error("WARNING: Invalid ID (%s) specified for LED.   Must be ID of button + 80.  Please correct and reload the plugin." % keypadid)
                     self.logger.debug(keypadid)
 
             if action == '3': # Check for triggers
@@ -760,32 +762,31 @@ class Plugin(indigo.PluginBase):
 
         if keypadid in self.picos:
             self.logger.debug(u"Received a pico button status message: " + cmd)
-            but = self.picos[keypadid]
+            dev = self.picos[keypadid]
             if status == '0':
-                but.updateStateOnServer("onOffState", False)
+                dev.updateStateOnServer("onOffState", False)
             elif status == '1':
-                but.updateStateOnServer("onOffState", True)
+                dev.updateStateOnServer("onOffState", True)
 
 
         if keypadid in self.ccis:
             self.logger.debug(u"Received a CCI status message: " + cmd)
-            cci = self.ccis[keypadid]
+            dev = self.ccis[keypadid]
             if status == '0':
-                cci.updateStateOnServer("onOffState", False)
+                dev.updateStateOnServer("onOffState", False)
                 self.logger.info(u"Received: CCI %s %s" % (cci.name, "Opened"))
             elif status == '1':
-                cci.updateStateOnServer("onOffState", True)
+                dev.updateStateOnServer("onOffState", True)
                 self.logger.info(u"Received: CCI %s %s" % (cci.name, "Closed"))
 
         if id in self.sensors:
             self.logger.debug(u"Received a sensor status message: " + cmd)
-            but = self.sensors[id]
-            # self.logger.debug(u"Variable But: " + but)
+            dev = self.sensors[id]
             if status == '0':
-                but.updateStateOnServer("onOffState", False)
+                dev.updateStateOnServer("onOffState", False)
                 self.logger.info(u"Received: Motion Sensor %s %s" % (but.name, "vacancy detected"))
             elif status == '1':
-                but.updateStateOnServer("onOffState", True)
+                dev.updateStateOnServer("onOffState", True)
                 self.logger.info(u"Received: Motion Sensor %s %s" % (but.name, "motion detected"))
 
     # IP comm has not yet been tested with _cmdHvacChange().  Currently left as is -vic13
@@ -1325,22 +1326,31 @@ class Plugin(indigo.PluginBase):
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
-                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
-                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + component.attrib['ComponentNumber']
+                            assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))  
+                            try:                          
+                                engraving = component.find("Button").attrib['Engraving']
+                            except:
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
+                            else:
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + engraving
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             if not self.create_unused and assignments == 0:
                                 self.logger.info("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
                                 continue
                             props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
-
-                        elif component.attrib['ComponentType'] == "LED":
-                            button = str(int(component.attrib['ComponentNumber']) - 80)
-                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + button + " LED"
-                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                            props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
+                            
+                            # always create button LED
+                            
+                            name = name + " LED"  
+                            keypadLED = str(int(component.attrib['ComponentNumber']) + 80)
+                            address = device.attrib['IntegrationID'] + "." + keypadLED
+                            props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': keypadLED, "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
 
+                        elif component.attrib['ComponentType'] == "LED":
+                            pass    # LED device created same time as button
+                            
                         else:
                             self.logger.error("Unexpected Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
                                                  
@@ -1378,7 +1388,12 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
                             assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
-                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
+                            try:                          
+                                engraving = component.find("Button").attrib['Engraving']
+                            except:
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
+                            else:
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + engraving
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             if not self.create_unused and assignments == 0:
                                 self.logger.info("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
@@ -1405,7 +1420,8 @@ class Plugin(indigo.PluginBase):
                     self.logger.error("Unexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
                                
                         
-        self.logger.info(u"Creating Devices completed, devices created...")
+        self.logger.info(u"Creating Devices done. Doing query all.")
+        self.queryAllDevices()
         self.threadLock.release()
 
         return
