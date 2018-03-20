@@ -123,7 +123,7 @@
             </Field>
         </ConfigUI>
     </Device>
-    
+        
     <Device type="sensor" id="ra2Sensor">
         <Name>RadioRA 2 Powr Savr Sensor</Name>
         <ConfigUI>
@@ -196,6 +196,15 @@
             </Field>
             <Field type="textField" id="notes" defaultValue="">
                 <Label>Notes:</Label>
+            </Field>
+        </ConfigUI>
+    </Device>
+    
+    <Device type="custom" id="ra2TimeClockEvent">
+        <Name>RadioRA 2 Time Clock Event</Name>
+        <ConfigUI>
+            <Field type="textField" id="event" defaultValue="">
+                <Label>Event Number:</Label>
             </Field>
         </ConfigUI>
     </Device>

@@ -28,6 +28,9 @@
 					<Option value="Type">Device Type</Option>
 				</List>
 			</Field>            
+			<Field id="do_query" type="checkbox" defaultValue="false">
+				<Label>Query all devices after creation:</Label>
+			</Field>            
 			<Field id="simulated" type="checkbox" defaultValue="true">
 				<Label>Simulate only:</Label>
 			</Field>            
