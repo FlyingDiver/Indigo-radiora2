@@ -16,14 +16,24 @@
         </States>
     </Device>
     
-    <Device type="relay" id="ra2PhantomButton">
-        <Name>RadioRA 2 Phantom Button/LED</Name>
+    <Device type="custom" id="ra2TimeClockEvent">
+    	<Name>RadioRA 2 Time Clock Event</Name>
         <ConfigUI>
+            <Field type="textField" id="eventNumber" defaultValue="">
+                <Label>Event Number:</Label>
+            </Field>
+        </ConfigUI>
+    </Device>
+    
+    <Device type="relay" id="ra2PhantomButton">
+        <Name>RadioRA 2 Phantom Button</Name>
+        <ConfigUI>
+            <Field id="isButton" type="checkbox" hidden="true" defaultValue="True"/>
             <Field type="textField" id="repeater" defaultValue="1">
                 <Label>Integration ID:</Label>
             </Field>
             <Field type="textField" id="button" defaultValue="101">
-                <Label>Button/LED Number (101-200):</Label>
+                <Label>Button Number (101-200):</Label>
             </Field>
             <Field type="textField" id="notes" defaultValue="">
                 <Label>Notes:</Label>
@@ -61,8 +71,9 @@
     <Device type="relay" id="ra2Keypad">
         <Name>RadioRA 2 Keypad</Name>
         <ConfigUI>
+            <Field id="isButton" type="checkbox" hidden="true" defaultValue="True"/>
             <Field type="menu" id="listType" defaultValue="button">
-                <Label>Type:</Label>
+               <Label>Type:</Label>
                 <List>
                     <Option value="button">Keypad Button</Option>
                     <Option value="LED">Keypad LED</Option>
@@ -73,7 +84,7 @@
             </Field>
 
             <Field type="textField" id="keypadButton" defaultValue="1">>
-                <Label>Button ID (1-7) or LED ID (81-87):</Label>
+                <Label>Button ID (1-17) or LED ID (81-97):</Label>
             </Field>
             <Field type="checkbox" id="keypadButtonDisplayLEDState" defaultValue="false" visibleBindingId="listType" visibleBindingValue="LED">
                 <Label>Display LED state instead of button press status:</Label>
@@ -81,22 +92,6 @@
             <Field id="LEDhelp" type="label" enabledBindingId="keypadButtonDisplayLEDState" alignWithControl="keypadButtonDisplayLEDState" visibleBindingId="keypadButtonDisplayLEDState" visibleBindingValue="true" fontColor="orange">
                 <Label>Display LED state option selected.  Please make sure a button corresponding to this LED has also been defined in Indigo.  For example, if you added LED 81, make sure you also added Button 1.  LED 82 corresponds to Button 2, etc.</Label>
             </Field>
-            <Field id="dummyHelp1" type="label">
-                <Label>     </Label>
-            </Field>
-            <Field id="dummyHelp2" type="label">
-                <Label>     </Label>
-            </Field>
-            <Field id="dummyHelp3" type="label">
-                <Label>     </Label>
-            </Field>
-            <Field id="dummyHelp4" type="label">
-                <Label>     </Label>
-            </Field>
-            <Field id="dummyHelp5" type="label">
-                <Label>     </Label>
-            </Field>
-            
         </ConfigUI>
     </Device>
     
@@ -188,6 +183,7 @@
     <Device type="relay" id="ra2Pico">
         <Name>RadioRA 2 Pico Button</Name>
         <ConfigUI>
+            <Field id="isButton" type="checkbox" hidden="true" defaultValue="True"/>
             <Field type="textField" id="picoIntegrationID" defaultValue="123">
                 <Label>Pico Integration ID:</Label>
             </Field>

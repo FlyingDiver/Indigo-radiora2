@@ -70,8 +70,10 @@ RA_CCO = "ra2CCO"
 RA_CCI = "ra2CCI"
 RA_SHADE = "ra2MotorizedShade"
 RA_PICO = "ra2Pico"
+RA_TIMECLOCK_EVENT = "ra2TimeClockEvent"
 PROP_REPEATER = "repeater"
 PROP_BUTTON = "button"
+PROP_ISBUTTON = "isButton"
 PROP_ZONE = "zone"
 PROP_SWITCH = "switch"
 PROP_KEYPAD = "keypad"
@@ -244,11 +246,17 @@ class Plugin(indigo.PluginBase):
     def deviceStartComm(self, dev):
         if dev.deviceTypeId == RA_MAIN_REPEATER:
             pass
-                        
+
+        elif dev.deviceTypeId == RA_TIMECLOCK_EVENT:
+            pass
+                                    
         elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
             if dev.pluginProps.get(PROP_REPEATER, None) == None:
                 self.update_device_property(dev, PROP_REPEATER, new_value = "1")
                 self.logger.info(u"%s: Added repeater property" % (dev.name))
+            if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
+                self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
+                self.logger.info(u"%s: Added isButton property" % (dev.name))
 
             address = dev.pluginProps[PROP_REPEATER] + "." + dev.pluginProps[PROP_BUTTON]
             self.update_device_property(dev, "address", new_value = address)
@@ -287,6 +295,9 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"Watching thermostat: " + address)
 
         elif dev.deviceTypeId == RA_KEYPAD:
+            if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
+                self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
+                self.logger.info(u"%s: Added isButton property" % (dev.name))
             address = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT]
             self.update_device_property(dev, "address", new_value = address)
             if int(dev.pluginProps[PROP_KEYPADBUT]) > 80:
@@ -321,6 +332,9 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"Watching CCO: " + address)
 
         elif dev.deviceTypeId == RA_PICO:
+            if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
+                self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
+                self.logger.info(u"%s: Added isButton property" % (dev.name))
             address = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON]
             self.picos[address] = dev
             self.update_device_property(dev, "address", new_value = address)
@@ -333,6 +347,9 @@ class Plugin(indigo.PluginBase):
         if dev.deviceTypeId == RA_MAIN_REPEATER:
             pass
                         
+        elif dev.deviceTypeId == RA_TIMECLOCK_EVENT:
+            pass
+                                    
         elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
             address = dev.pluginProps[PROP_REPEATER] + "." + dev.pluginProps[PROP_BUTTON]
             del self.phantomButtons[address]
@@ -1235,7 +1252,7 @@ class Plugin(indigo.PluginBase):
 
         self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create Unprogrammed = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_unused))
 
-        if use_local:
+        if self.use_local:
             tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
             root = tree.getroot()
         else:
@@ -1404,7 +1421,17 @@ class Plugin(indigo.PluginBase):
                 else:
                     self.logger.error("Unexpected Device Type: %s (%s)" % (device.attrib['Name'], device.attrib['DeviceType']))
                                
-                        
+        self.logger.info(u"Creating Devices, done with Area devices...")
+
+        for event in root.findall('Timeclocks/Timeclock/TimeclockEvents/TimeClockEvent'):
+            self.logger.debug("TimeclockEvent: %s (%s)" % (event.attrib['Name'], event.attrib['EventNumber']))
+        
+            name = "Time Clock Event - " + event.attrib['Name']
+            address = "Event." + event.attrib['EventNumber']
+            props={ 'eventNumber': event.attrib['EventNumber']}
+#            self.createLutronDevice(RA_TIMECLOCK_EVENT, name, address, props, "VIRTUAL")
+
+                       
         self.logger.info(u"Creating Devices completed, devices created...")
         self.threadLock.release()
 
@@ -1415,6 +1442,7 @@ class Plugin(indigo.PluginBase):
 
         folderNameDict = {
             RA_MAIN_REPEATER    : "Lutron Repeaters",
+            RA_TIMECLOCK_EVENT  : "Lutron Time Clock Events",
             RA_PHANTOM_BUTTON   : "Lutron Phantom Buttons",
             RA_DIMMER           : "Lutron Dimmers",
             RA_SWITCH           : "Lutron Switches",

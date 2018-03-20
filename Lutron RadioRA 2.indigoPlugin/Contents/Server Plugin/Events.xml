@@ -34,7 +34,15 @@
 				<Label>Component ID:</Label>
 			</Field>
  		</ConfigUI>
-   </Event>
+	</Event>
+	<Event id="anyButtonPress"  deviceFilter="self, props.isButton">
+		<Name>Button Press</Name>
+ 		<ConfigUI>
+            <Field type="menu" id="buttonPressed" deviceFilter="self, props.isButton">
+				<Label>Device:</Label>
+			</Field>
+ 		</ConfigUI>
+    </Event>
 </Events>
 
 
