@@ -1235,7 +1235,7 @@ class Plugin(indigo.PluginBase):
 
         self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create Unprogrammed = %s" % (self.pluginPrefs["ip_address"], self.group_by, self.simulated, self.create_unused))
 
-        if use_local:
+        if self.use_local:
             tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
             root = tree.getroot()
         else:
