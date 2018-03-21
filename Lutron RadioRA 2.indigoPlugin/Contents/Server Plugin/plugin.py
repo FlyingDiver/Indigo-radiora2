@@ -1265,14 +1265,14 @@ class Plugin(indigo.PluginBase):
         self.do_query = bool(valuesDict["do_query"])
 
         if self.use_local:
-            self.logger.info(u"Creating Devices from file, Grouping = %s, Simulated = %s, Create unprogrammed keypad buttonss = %s, Create unprogrammed phantom buttons = %s" % \
+            self.logger.info(u"Creating Devices from file, Grouping = %s, Simulated = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
                 (self.group_by, self.simulated, self.create_unused_keypad, self.create_unused_phantom))
             tree = ET.parse('/Users/jkeenan/Projects/Indigo PlugIns/Lutron/DbXmlInfo.xml')
             root = tree.getroot()
             self.logger.info(u"Creating Devices file read completed, parsing data...")
 
         else:
-            self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create unprogrammed keypad buttonss = %s, Create unprogrammed phantom buttons = %s" % \
+            self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
                 (self.group_by, self.simulated, self.create_unused_keypad, self.create_unused_phantom))
             login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
             fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
@@ -1293,7 +1293,12 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
                             assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
-                            name = "Repeater " + device.attrib['IntegrationID'] + " - Button " + component.attrib['ComponentNumber']
+                            name = "Phantom Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            try:                          
+                                engraving = component.find("Button").attrib['Engraving']
+                                name = name + " - " + engraving
+                            except:
+                                pass
                             button = str(int(component.attrib['ComponentNumber']) + 100)
                             address = device.attrib['IntegrationID'] + "." + button
                             if not self.create_unused_phantom and assignments == 0:
@@ -1315,32 +1320,32 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug("\tOutput: %s (%s) %s" % (output.attrib['Name'], output.attrib['IntegrationID'], output.attrib['OutputType']))
 
                 if output.attrib['OutputType'] == "INC" or output.attrib['OutputType'] == "MLV" or output.attrib['OutputType'] == "AUTO_DETECT":
-                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    name = room.attrib['Name'] + " - Dimmer " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
                     props={ 'zone': output.attrib['IntegrationID'], 'fadeTime': "1", 'notes': ""}
                     self.createLutronDevice(RA_DIMMER, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
                     
                 elif output.attrib['OutputType'] == "NON_DIM":
-                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    name = room.attrib['Name'] + " - Dimmer " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
                     props={ 'switch': output.attrib['IntegrationID'], 'notes': ""}
                     self.createLutronDevice(RA_SWITCH, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
                         
                 elif output.attrib['OutputType'] == "SYSTEM_SHADE":
-                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    name = room.attrib['Name'] + " - Shade " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
                     props={ 'shade': output.attrib['IntegrationID'], 'notes': ""}
                     self.createLutronDevice(RA_SHADE, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CEILING_FAN_TYPE":
-                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    name = room.attrib['Name'] + " -  Fan " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
                     props={ 'fan': output.attrib['IntegrationID'], 'notes': ""}
                     self.createLutronDevice(RA_FAN, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_PULSED":
-                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    name = room.attrib['Name'] + " -  VCRX CCO " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
                     props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "momentary", 'notes': ""}
                     self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_MAINTAINED":
-                    name = room.attrib['Name'] + " - " + output.attrib['Name']
+                    name = room.attrib['Name'] + " -  VCRX CCO " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
                     props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "sustained", 'notes': "", 'SupportsStatusRequest': "False"}
                     self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
@@ -1368,32 +1373,32 @@ class Plugin(indigo.PluginBase):
                             keypadType = device.attrib['DeviceType']
                             buttonNum = int(component.attrib['ComponentNumber'])
                             if ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 16):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Top Lower"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Top Lower"
                             elif ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 17):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Top Raise"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Top Raise"
                             elif ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 18):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Bottom Lower"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Bottom Lower"
                             elif ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 19):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Bottom Raise"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Bottom Raise"
                             elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 20):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 1 Lower"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Column 1 Lower"
                             elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 21):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 1 Raise"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Column 1 Raise"
                             elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 22):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 2 Lower"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Column 2 Lower"
                             elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 23):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 2 Raise"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Column 2 Raise"
                             elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 24):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 3 Lower"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Column 3 Lower"
                             elif (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum == 25):
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Column 3 Raise"
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber'] + " - Column 3 Raise"
                             else:
+                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                                 try:                          
                                     engraving = component.find("Button").attrib['Engraving']
+                                    name = name + " - " + engraving
                                 except:
-                                    name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
-                                else:
-                                    name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + engraving
+                                    pass
                                     
                             props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
@@ -1422,7 +1427,12 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
                             assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
-                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + component.attrib['ComponentNumber']
+                            name = room.attrib['Name'] + " - VCRX Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            try:                          
+                                engraving = component.find("Button").attrib['Engraving']
+                                name = name + " - " + engraving
+                            except:
+                                pass
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             if not self.create_unused_keypad and assignments == 0:
                                 self.logger.debug("Skipping visor control button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
@@ -1430,15 +1440,19 @@ class Plugin(indigo.PluginBase):
                             props = { 'listType': "button", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
 
-                        elif component.attrib['ComponentType'] == "LED":
-                            button = str(int(component.attrib['ComponentNumber']) - 80)
-                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + button + " LED"
-                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
-                            props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': component.attrib['ComponentNumber'], "keypadButtonDisplayLEDState": "false" }
+                            # create button LED, if needed for the button
+
+                            name = name + " LED"  
+                            keypadLED = str(int(component.attrib['ComponentNumber']) + 80)
+                            address = device.attrib['IntegrationID'] + "." + keypadLED
+                            props = { 'listType': "LED", 'keypad': device.attrib['IntegrationID'], 'keypadButton': keypadLED, "keypadButtonDisplayLEDState": "false" }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
 
+                        elif component.attrib['ComponentType'] == "LED":
+                            pass
+                            
                         elif component.attrib['ComponentType'] == "CCI":
-                            name = room.attrib['Name'] + " - CCI " + device.attrib['Name'] + " - Input " + component.attrib['ComponentNumber']
+                            name = room.attrib['Name'] + " - VCRX CCI Input " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             props = { 'cciIntegrationID': device.attrib['IntegrationID'], 'component': component.attrib['ComponentNumber'], 'notes': "", "SupportsStatusRequest": "False" }
                             self.createLutronDevice(RA_CCI, name, address, props, room.attrib['Name'])
@@ -1451,12 +1465,12 @@ class Plugin(indigo.PluginBase):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
                             assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
+                            name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - Button " + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             try:                          
                                 engraving = component.find("Button").attrib['Engraving']
+                                name = name + " - " + engraving
                             except:
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + component.find('Button').get('Name')
-                            else:
-                                name = room.attrib['Name'] + " - " + device.attrib['Name'] + " - " + engraving
+                                pass
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             if not self.create_unused_keypad and assignments == 0:
                                 self.logger.debug("Skipping button creation, %d PresetAssignments: '%s' (%s)" % (assignments, name, address))
@@ -1467,17 +1481,11 @@ class Plugin(indigo.PluginBase):
                         else:
                             self.logger.error("Unknown Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
                                          
-                elif device.attrib['DeviceType'] == "MOTION_SENSOR" or device.attrib['DeviceType'] == "CCI":
-                    for component in device.findall('Components/Component'):
-                        self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
-                        if component.attrib['ComponentType'] == "CCI":
-                            name = room.attrib['Name'] + " - Motion Sensor " + device.attrib['Name']
-                            address = device.attrib['IntegrationID']
-                            props = { 'sensor': address, 'notes': "", "SupportsStatusRequest": "False" }
-                            self.createLutronDevice(RA_SENSOR, name, address, props, room.attrib['Name'])
-
-                        else:
-                            self.logger.error("Unknown Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
+                elif device.attrib['DeviceType'] == "MOTION_SENSOR":
+                    name = room.attrib['Name'] + " - Motion Sensor " + device.attrib['IntegrationID']
+                    address = device.attrib['IntegrationID']
+                    props = { 'sensor': address, 'notes': "", "SupportsStatusRequest": "False" }
+                    self.createLutronDevice(RA_SENSOR, name, address, props, room.attrib['Name'])
                                          
                 elif device.attrib['DeviceType'] == "TEMPERATURE_SENSOR":
                     pass
@@ -1488,22 +1496,19 @@ class Plugin(indigo.PluginBase):
         self.logger.info("Finding Timeclock events...")
         for event in root.iter('TimeClockEvent'):
             self.logger.debug("TimeClockEvent: %s (%s)" % (event.attrib['Name'], event.attrib['EventNumber']))
-            name = "Event - " + event.attrib['Name']
+            name = "Event " + event.attrib['EventNumber'] + " - " + event.attrib['Name']
             address = "Event." + event.attrib['EventNumber']
             props = { 'event': event.attrib['EventNumber']}
             self.createLutronDevice(RA_TIMECLOCKEVENT, name, address, props, "HVAC")
             
         self.logger.info("Finding HVAC devices...")
         for hvac in root.iter('HVAC'):
-            try:
-                self.logger.debug("HVAC: %s (%s)" % (hvac.attrib['Name'], hvac.attrib['IntegrationID']))
-                name = "HVAC - " + hvac.attrib['Name']
-                address = hvac.attrib['IntegrationID']
-                props = { 'thermo': address, 'notes': ""}
-                self.createLutronDevice(RA_THERMO, name, address, props, "TimeClock")
-            except:
-                self.logger.debug("Error HVAC")
-                              
+            self.logger.debug("HVAC: %s (%s)" % (hvac.attrib['Name'], hvac.attrib['IntegrationID']))
+            name = "HVAC " + hvac.attrib['IntegrationID'] + " - " + hvac.attrib['Name']
+            address = hvac.attrib['IntegrationID']
+            props = { 'thermo': address, 'notes': ""}
+            self.createLutronDevice(RA_THERMO, name, address, props, "TimeClock")
+                     
                         
         if self.do_query:
             self.logger.info(u"Creating Devices done. Doing query all.")
