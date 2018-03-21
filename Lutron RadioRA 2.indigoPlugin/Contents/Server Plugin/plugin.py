@@ -1188,17 +1188,14 @@ class Plugin(indigo.PluginBase):
     def sendRawCommand(self, pluginAction, dimmerDevice):
 
         sendCmd =  indigo.activePlugin.substitute(pluginAction.props["commandString"])
-
         self.logger.info(u"Sending Raw Command: \"%s\"" % sendCmd)
         self._sendCommand(sendCmd)
 
     def sendRawCommandMenu(self, valuesDict, typeId):
 
         sendCmd =  indigo.activePlugin.substitute(valuesDict["commandString"])
-
         self.logger.info(u"Sending Raw Command (Menu): \"%s\"" % sendCmd)
         self._sendCommand(sendCmd)
-
         return True
 
 
@@ -1210,7 +1207,6 @@ class Plugin(indigo.PluginBase):
             
         deviceThread = threading.Thread(target = self.createAllDevices, args = (valuesDict, ))
         deviceThread.start()    
-                
         return True        
 
     def createAllDevices(self, valuesDict):
@@ -1500,7 +1496,6 @@ class Plugin(indigo.PluginBase):
             if dev.address == address:
                 self.logger.debug("Not creating duplicate device: '%s' (%s)" % (name, address))
                 return
-                
             
         if self.group_by == "Type":
             folderName = folderNameDict[devType]
@@ -1523,7 +1518,7 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.info("Creating %s device: '%s' (%s) in '%s'" % (devType, name, address, folderName))
             try:
-                newdev = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=devType, props=props, folder=theFolder)
+                indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=devType, props=props, folder=theFolder)
             except Exception, e:
                 self.logger.error("Error calling indigo.device.create(): %s" % (e.message))
                                                     
