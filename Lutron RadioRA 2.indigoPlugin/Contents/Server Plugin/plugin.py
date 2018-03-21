@@ -291,7 +291,7 @@ class Plugin(indigo.PluginBase):
             self.update_device_property(dev, "address", new_value = address)
             
         elif dev.deviceTypeId == RA_KEYPAD:
-            if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
+            if (dev.pluginProps.get(PROP_ISBUTTON, None) == None) and (int(dev.pluginProps[PROP_KEYPADBUT]) < 80):
                 self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
                 self.logger.info(u"%s: Added isButton property" % (dev.name))
             address = dev.pluginProps[PROP_KEYPAD] + "." + dev.pluginProps[PROP_KEYPADBUT]
@@ -1214,6 +1214,32 @@ class Plugin(indigo.PluginBase):
         self._sendCommand(sendCmd)
         return True
 
+    ########################################
+
+    def pickButton(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        retList = []
+        for dev in indigo.devices.iter("self"):
+            if dev.pluginProps.get(PROP_ISBUTTON, None):
+                retList.append((dev.id, dev.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    def pickEvent(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        retList = []
+        for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
+            retList.append((dev.id, dev.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    def pickGroup(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        retList = []
+        for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
+            retList.append((dev.id, dev.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    ########################################
+
 
     def createAllDevicesMenu(self, valuesDict, typeId):
 
@@ -1469,12 +1495,15 @@ class Plugin(indigo.PluginBase):
             
         self.logger.info("Finding HVAC devices...")
         for hvac in root.iter('HVAC'):
-            self.logger.debug("HVAC: %s (%s)" % (hvac.attrib['Name'], hvac.attrib['IntegrationID']))
-            name = "HVAC - " + hvac.attrib['Name']
-            address = hvac.attrib['IntegrationID']
-            props = { 'thermo': address, 'notes': ""}
-            self.createLutronDevice(RA_THERMO, name, address, props, "TimeClock")
-                     
+            try:
+                self.logger.debug("HVAC: %s (%s)" % (hvac.attrib['Name'], hvac.attrib['IntegrationID']))
+                name = "HVAC - " + hvac.attrib['Name']
+                address = hvac.attrib['IntegrationID']
+                props = { 'thermo': address, 'notes': ""}
+                self.createLutronDevice(RA_THERMO, name, address, props, "TimeClock")
+            except:
+                self.logger.debug("Error HVAC")
+                              
                         
         if self.do_query:
             self.logger.info(u"Creating Devices done. Doing query all.")

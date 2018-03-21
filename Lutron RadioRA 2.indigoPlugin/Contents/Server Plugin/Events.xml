@@ -3,17 +3,19 @@
     <Event id="timeClockEvent">
         <Name>Time Clock Event</Name>
         <ConfigUI>
-            <Field id="eventNumber" type="textfield">
-                <Label>Event Number:</Label>
-            </Field>
+            <Field id="eventID" type="menu">
+                <Label>Select Timeclock Event:</Label>
+                <List class="self" filter="" method="pickEvent"  dynamicReload="true"/>
+            </Field>            
         </ConfigUI>
    </Event>
     <Event id="groupEvent">
         <Name>Group Event</Name>
         <ConfigUI>
-            <Field id="groupNumber" type="textfield">
+            <Field id="groupNumber" type="menu">
                 <Label>Group (Room) Number:</Label>
-            </Field>
+                <List class="self" filter="" method="pickGroup"  dynamicReload="true"/>
+            </Field>            
             <Field type="menu" id="occupancyPopUp" defaultValue="occupied">
                 <Label>Becomes:</Label>
                 <List>
@@ -27,22 +29,12 @@
    <Event id="keypadButtonPress">
         <Name>Keypad Button Press</Name>
  		<ConfigUI>
-			<Field id="deviceID" type="textfield">
-				<Label>Device ID:</Label>
-			</Field>
-			<Field id="componentID" type="textfield">
-				<Label>Component ID:</Label>
-			</Field>
+            <Field id="buttonID" type="menu">
+                <Label>Select Button:</Label>
+                <List class="self" filter="" method="pickButton"  dynamicReload="true"/>
+            </Field>            
  		</ConfigUI>
 	</Event>
-	<Event id="anyButtonPress"  deviceFilter="self, props.isButton">
-		<Name>Button Press</Name>
- 		<ConfigUI>
-            <Field type="menu" id="buttonPressed" deviceFilter="self, props.isButton">
-				<Label>Device:</Label>
-			</Field>
- 		</ConfigUI>
-    </Event>
 </Events>
 
 

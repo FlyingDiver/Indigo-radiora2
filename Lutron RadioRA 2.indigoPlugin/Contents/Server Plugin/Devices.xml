@@ -25,6 +25,15 @@
         </ConfigUI>
     </Device>
     
+    <Device type="custom" id="ra2Group">
+    	<Name>RadioRA 2 Room Group</Name>
+        <ConfigUI>
+            <Field type="textField" id="groupNumber" defaultValue="">
+                <Label>Group Number:</Label>
+            </Field>
+        </ConfigUI>
+    </Device>
+    
     <Device type="relay" id="ra2PhantomButton">
         <Name>RadioRA 2 Phantom Button</Name>
         <ConfigUI>
@@ -192,15 +201,6 @@
             </Field>
             <Field type="textField" id="notes" defaultValue="">
                 <Label>Notes:</Label>
-            </Field>
-        </ConfigUI>
-    </Device>
-    
-    <Device type="custom" id="ra2TimeClockEvent">
-        <Name>RadioRA 2 Time Clock Event</Name>
-        <ConfigUI>
-            <Field type="textField" id="event" defaultValue="">
-                <Label>Event Number:</Label>
             </Field>
         </ConfigUI>
     </Device>
