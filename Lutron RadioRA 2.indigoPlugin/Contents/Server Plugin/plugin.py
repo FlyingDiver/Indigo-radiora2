@@ -501,6 +501,7 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.debug(u"username failure.")
         self.logger.debug(u"End of connection process.")
+        self.timeout = 5   # Reset the timeout to something more reasonable.
 
 
 #########################################
