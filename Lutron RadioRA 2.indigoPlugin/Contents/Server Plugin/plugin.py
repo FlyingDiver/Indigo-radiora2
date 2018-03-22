@@ -161,84 +161,74 @@ class Plugin(indigo.PluginBase):
     ####################
 
     def triggerStartProcessing(self, trigger):
-        self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
-        self.logger.debug("%s" % str(trigger))
         assert trigger.id not in self.triggers
-        self.triggers[trigger.id] = trigger
+        self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
+        if trigger.pluginTypeId == "timeClockEvent":
+            triggerProps = {"name" : trigger.name, "triggerType" : "timeClockEvent", "eventNumber" : trigger.pluginProps["eventNumber"], "trigger" : trigger}
+                        
+        elif  trigger.pluginTypeId == "keypadButtonPress":
+            buttonID = trigger.pluginProps.get("buttonID", None)
+            if buttonID:
+                parts = buttonID.split(".")
+                triggerProps = {"name" : trigger.name, "triggerType" : "keypadButtonPress", "deviceID" : parts[0], "componentID" : parts[1], "trigger" : trigger}
+            else:
+                triggerProps = {"name" : trigger.name, "triggerType" : "keypadButtonPress", "deviceID" : trigger.pluginProps["deviceID"], "componentID" : trigger.pluginProps["componentID"], "trigger" : trigger}  
+                
+        else:
+            self.logger.error("Unknown Trigger type %s for %s" % (trigger.pluginTypeId, trigger.name))
+                     
+        self.logger.debug("triggerProps: %s" % str(triggerProps))
+        self.triggers[trigger.id] = triggerProps
 
     def triggerStopProcessing(self, trigger):
-        self.logger.debug(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
-        self.logger.debug("%s" % str(trigger))
         assert trigger.id in self.triggers
+        self.logger.debug(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
         del self.triggers[trigger.id]
 
     def clockTriggerCheck(self, info):
 
         self.logger.info(u"Clock Trigger check: %s" % (info))
 
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
+        for triggerId, triggerProps in sorted(self.triggers.iteritems()):
 
-            if "timeClockEvent" != trigger.pluginTypeId:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+            if "timeClockEvent" != triggerProps["triggerType"]:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
                 continue
 
-            eventNumber = trigger.pluginProps["eventNumber"]
+            eventNumber = triggerProps["eventNumber"]
             if eventNumber != info:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong event: %s" % (triggerProps["name"], triggerId, info))
                 continue
 
-            self.logger.debug(u"\tExecuting Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
-            indigo.trigger.execute(trigger)
-
-    def groupTriggerCheck(self, groupID, status):
-
-        self.logger.info(u"Group Trigger check: %s, %s" % (groupID, status))
-
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
-
-            if "groupEvent" != trigger.pluginTypeId:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-                continue
-
-            groupNumber = trigger.pluginProps["groupNumber"]
-            if groupNumber != groupID:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, groupID))
-                continue
-
-            occupancy = trigger.pluginProps["occupancyPopUp"]
-            if occupancy != status:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong state: %s" % (trigger.name, trigger.id, groupID))
-                continue
-
-            self.logger.debug(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
-            indigo.trigger.execute(trigger)
+            self.logger.debug(u"\tExecuting Trigger %s (%s), event: %s" % (triggerProps["name"], triggerId, info))
+            indigo.trigger.execute(triggerProps["trigger"])
 
     def keypadTriggerCheck(self, devID, compID):
 
         self.logger.info(u"keyPad Trigger devID: %s, compID: %s" % (devID, compID))
 
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
-            type = trigger.pluginTypeId
-            try:
-                deviceID = trigger.pluginProps["deviceID"]
-            except KeyError:
-                self.logger.debug(u"Trigger %s (%s), Type: %s does not have deviceID" % (trigger.name, trigger.id, type))
+        for triggerId, triggerProps in sorted(self.triggers.iteritems()):
 
-            try:
-                componentID = trigger.pluginProps["componentID"]
-            except KeyError:
-                self.logger.debug(u"Trigger %s (%s), Type: %s does not have componentID" % (trigger.name, trigger.id, type))
-
-            if "keypadButtonPress" != type:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+            if "keypadButtonPress" != triggerProps["triggerType"]:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
                 continue
+
+            try:
+                deviceID = triggerProps["deviceID"]
+            except KeyError:
+                self.logger.debug(u"Trigger %s (%s), Type: %s does not have deviceID" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
+
+            try:
+                componentID = triggerProps["componentID"]
+            except KeyError:
+                self.logger.debug(u"Trigger %s (%s), Type: %s does not have componentID" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
 
             if not (deviceID == devID and componentID == compID):
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (triggerProps["name"], triggerId, devID, compID))
                 continue
 
-            self.logger.debug(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
-            indigo.trigger.execute(trigger)
+            self.logger.debug(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (triggerProps["name"], triggerId, devID, compID))
+            indigo.trigger.execute(triggerProps["trigger"])
 
     ####################
 
@@ -254,9 +244,6 @@ class Plugin(indigo.PluginBase):
         if dev.deviceTypeId == RA_MAIN_REPEATER:
             pass
 
-        elif dev.deviceTypeId == RA_TIMECLOCKEVENT:
-            pass
-                                    
         elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
             if dev.pluginProps.get(PROP_REPEATER, None) == None:
                 self.update_device_property(dev, PROP_REPEATER, new_value = "1")
@@ -348,9 +335,6 @@ class Plugin(indigo.PluginBase):
         if dev.deviceTypeId == RA_MAIN_REPEATER:
             pass
                         
-        elif dev.deviceTypeId == RA_TIMECLOCKEVENT:
-            pass
-                                    
         elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
             address = dev.pluginProps[PROP_REPEATER] + "." + dev.pluginProps[PROP_BUTTON]
             del self.phantomButtons[address]
@@ -1224,21 +1208,15 @@ class Plugin(indigo.PluginBase):
         retList = []
         for dev in indigo.devices.iter("self"):
             if dev.pluginProps.get(PROP_ISBUTTON, None):
-                retList.append((dev.id, dev.name))
+                retList.append((dev.address, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
     def pickEvent(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         retList = []
         for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
-            retList.append((dev.id, dev.name))
-        retList.sort(key=lambda tup: tup[1])
-        return retList
-
-    def pickGroup(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        retList = []
-        for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
-            retList.append((dev.id, dev.name))
+            event = dev.pluginProps["eventNumber"]
+            retList.append((event, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
