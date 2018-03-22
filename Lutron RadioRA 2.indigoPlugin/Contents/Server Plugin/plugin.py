@@ -161,13 +161,11 @@ class Plugin(indigo.PluginBase):
 
     def triggerStartProcessing(self, trigger):
         self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
-        self.logger.debug("%s" % str(trigger))
         assert trigger.id not in self.triggers
         self.triggers[trigger.id] = trigger
 
     def triggerStopProcessing(self, trigger):
         self.logger.debug(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
-        self.logger.debug("%s" % str(trigger))
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
@@ -314,10 +312,9 @@ class Plugin(indigo.PluginBase):
             ccoType = dev.pluginProps[PROP_CCO_TYPE]
             if ccoType == "momentary":
                 dev.updateStateOnServer("onOffState", False)
-            # To do - set SupportsStatusRequest to true if it is a sustained contact CCO
-            #         haven't figured out a way to do that without hanging the UI when a new CCO is added
-            self.logger.debug(u"Watching CCO: " + address)
-
+            else:
+                self.update_device_property(dev, "SupportsStatusRequest", new_value = True)
+            
         elif dev.deviceTypeId == RA_PICO:
             address = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON]
             self.picos[address] = dev
@@ -1302,13 +1299,13 @@ class Plugin(indigo.PluginBase):
                     self.createLutronDevice(RA_FAN, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_PULSED":
-                    name = room.attrib['Name'] + " -  VCRX CCO " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
-                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "momentary", 'notes': ""}
+                    name = room.attrib['Name'] + " -  VCRX CCO Momentary " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
+                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "momentary", 'notes': "", 'SupportsStatusRequest': "False"}
                     self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_MAINTAINED":
-                    name = room.attrib['Name'] + " -  VCRX CCO " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
-                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "sustained", 'notes': "", 'SupportsStatusRequest': "False"}
+                    name = room.attrib['Name'] + " -  VCRX CCO Sustained " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
+                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "sustained", 'notes': "", 'SupportsStatusRequest': "True"}
                     self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "HVAC":
