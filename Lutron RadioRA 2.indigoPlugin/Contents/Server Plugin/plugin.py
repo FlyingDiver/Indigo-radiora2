@@ -162,77 +162,82 @@ class Plugin(indigo.PluginBase):
 
     def triggerStartProcessing(self, trigger):
         self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
+        self.logger.debug("%s" % str(trigger))
         assert trigger.id not in self.triggers
         self.triggers[trigger.id] = trigger
 
     def triggerStopProcessing(self, trigger):
-        self.debugLog(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+        self.logger.debug(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
+        self.logger.debug("%s" % str(trigger))
         assert trigger.id in self.triggers
         del self.triggers[trigger.id]
 
     def clockTriggerCheck(self, info):
 
+        self.logger.info(u"Clock Trigger check: %s" % (info))
+
         for triggerId, trigger in sorted(self.triggers.iteritems()):
-            type = trigger.pluginTypeId
-            try:
-                eventNumber = trigger.pluginProps["eventNumber"]
-            except KeyError:
-                self.debugLog(u"Trigger %s (%s), Type: %s does not have eventNumber" % (trigger.name, trigger.id, type))
 
-            if "timeClockEvent" != type:
-                self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+            if "timeClockEvent" != trigger.pluginTypeId:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
                 continue
 
+            eventNumber = trigger.pluginProps["eventNumber"]
             if eventNumber != info:
-                self.debugLog(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, info))
                 continue
 
-            self.debugLog(u"\tExecuting Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
+            self.logger.debug(u"\tExecuting Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
             indigo.trigger.execute(trigger)
 
-    def groupTriggerCheck(self, info):
+    def groupTriggerCheck(self, groupID, status):
+
+        self.logger.info(u"Group Trigger check: %s, %s" % (groupID, status))
 
         for triggerId, trigger in sorted(self.triggers.iteritems()):
-            type = trigger.pluginTypeId
-            try:
-                groupNumber = trigger.pluginProps["groupNumber"]
-            except KeyError:
-                self.debugLog(u"Trigger %s (%s), Type: %s does not have groupNumber" % (trigger.name, trigger.id, type))
 
-            if "groupEvent" != type:
-                self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+            if "groupEvent" != trigger.pluginTypeId:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
                 continue
 
-            if groupNumber != info:
-                self.debugLog(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, info))
+            groupNumber = trigger.pluginProps["groupNumber"]
+            if groupNumber != groupID:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, groupID))
                 continue
 
-            self.debugLog(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
+            occupancy = trigger.pluginProps["occupancyPopUp"]
+            if occupancy != status:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong state: %s" % (trigger.name, trigger.id, groupID))
+                continue
+
+            self.logger.debug(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
             indigo.trigger.execute(trigger)
 
     def keypadTriggerCheck(self, devID, compID):
+
+        self.logger.info(u"keyPad Trigger devID: %s, compID: %s" % (devID, compID))
 
         for triggerId, trigger in sorted(self.triggers.iteritems()):
             type = trigger.pluginTypeId
             try:
                 deviceID = trigger.pluginProps["deviceID"]
             except KeyError:
-                self.debugLog(u"Trigger %s (%s), Type: %s does not have deviceID" % (trigger.name, trigger.id, type))
+                self.logger.debug(u"Trigger %s (%s), Type: %s does not have deviceID" % (trigger.name, trigger.id, type))
 
             try:
                 componentID = trigger.pluginProps["componentID"]
             except KeyError:
-                self.debugLog(u"Trigger %s (%s), Type: %s does not have componentID" % (trigger.name, trigger.id, type))
+                self.logger.debug(u"Trigger %s (%s), Type: %s does not have componentID" % (trigger.name, trigger.id, type))
 
             if "keypadButtonPress" != type:
-                self.debugLog(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, type))
                 continue
 
             if not (deviceID == devID and componentID == compID):
-                self.debugLog(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
                 continue
 
-            self.debugLog(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
+            self.logger.debug(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, devID, compID))
             indigo.trigger.execute(trigger)
 
     ####################
@@ -745,8 +750,6 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer("onOffState", False)
             elif status == '1':
                 dev.updateStateOnServer("onOffState", True)
-
-            # this code broken for new address format and for tabletop keypads (over 10 buttons)
             
             if dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]: # Also display this LED state on its corresponding button
             
@@ -764,7 +767,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(keypadid)
 
             if action == '3': # Check for triggers
-                self.debugLog(u"Received a Keypad Button press message, checking triggers: " + cmd)
+                self.logger.debug(u"Received a Keypad Button press message, checking triggers: " + cmd)
                 self.keypadTriggerCheck(id, button)
 
         if keypadid in self.picos:
@@ -843,7 +846,7 @@ class Plugin(indigo.PluginBase):
         id = cmdArray[1]
         action = cmdArray[2]
         status = cmdArray[3]
-        self.clockTriggerCheck(status)
+        self.groupTriggerCheck(id, status)
 
 
     ########################################
