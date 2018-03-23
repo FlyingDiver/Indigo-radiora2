@@ -203,16 +203,35 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"\tExecuting Trigger %s (%s), event: %s" % (triggerProps["name"], triggerId, info))
             indigo.trigger.execute(triggerProps["trigger"])
 
+    def groupTriggerCheck(self, groupID, status):
+
+        self.logger.info(u"Group Trigger check: %s, %s" % (groupID, status))
+
+        for triggerId, trigger in sorted(self.triggers.iteritems()):
+
+            if "groupEvent" != trigger.pluginTypeId:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                continue
+
+            groupNumber = trigger.pluginProps["groupNumber"]
+            if groupNumber != groupID:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, groupID))
+                continue
+
+            occupancy = trigger.pluginProps["occupancyPopUp"]
+            if occupancy != status:
+                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong state: %s" % (trigger.name, trigger.id, groupID))
+                continue
+
+            self.logger.debug(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
+            indigo.trigger.execute(trigger)
+
     def keypadTriggerCheck(self, devID, compID):
 
         self.logger.info(u"keyPad Trigger devID: %s, compID: %s" % (devID, compID))
 
-        for triggerId, triggerProps in sorted(self.triggers.iteritems()):
-
-            if "keypadButtonPress" != triggerProps["triggerType"]:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
-                continue
-
+        for triggerId, trigger in sorted(self.triggers.iteritems()):
+            type = trigger.pluginTypeId
             try:
                 deviceID = triggerProps["deviceID"]
             except KeyError:
@@ -311,10 +330,9 @@ class Plugin(indigo.PluginBase):
             ccoType = dev.pluginProps[PROP_CCO_TYPE]
             if ccoType == "momentary":
                 dev.updateStateOnServer("onOffState", False)
-            # To do - set SupportsStatusRequest to true if it is a sustained contact CCO
-            #         haven't figured out a way to do that without hanging the UI when a new CCO is added
-            self.logger.debug(u"Watching CCO: " + address)
-
+            else:
+                self.update_device_property(dev, "SupportsStatusRequest", new_value = True)
+            
         elif dev.deviceTypeId == RA_PICO:
             if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
                 self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
@@ -1322,13 +1340,13 @@ class Plugin(indigo.PluginBase):
                     self.createLutronDevice(RA_FAN, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_PULSED":
-                    name = room.attrib['Name'] + " -  VCRX CCO " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
-                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "momentary", 'notes': ""}
+                    name = room.attrib['Name'] + " -  VCRX CCO Momentary " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
+                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "momentary", 'notes': "", 'SupportsStatusRequest': "False"}
                     self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_MAINTAINED":
-                    name = room.attrib['Name'] + " -  VCRX CCO " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
-                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "sustained", 'notes': "", 'SupportsStatusRequest': "False"}
+                    name = room.attrib['Name'] + " -  VCRX CCO Sustained " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
+                    props={ 'ccoIntegrationID': output.attrib['IntegrationID'], 'ccoType': "sustained", 'notes': "", 'SupportsStatusRequest': "True"}
                     self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "HVAC":
