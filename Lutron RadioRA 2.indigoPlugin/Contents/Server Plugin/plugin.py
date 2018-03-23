@@ -108,7 +108,7 @@ class Plugin(indigo.PluginBase):
         try:
             self.logLevel = int(self.pluginPrefs[u"logLevel"])
         except:
-            self.logLevel = logging.WARNING
+            self.logLevel = logging.INFO
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
 
@@ -590,12 +590,6 @@ class Plugin(indigo.PluginBase):
         except AttributeError:
             rtn = (True, valuesDict)
 
-        updateFrequency = int(valuesDict['updateFrequency'])
-        if (updateFrequency < 0) or (updateFrequency > 24):
-            errorDict['updateFrequency'] = u"Update frequency is invalid - enter a valid number (between 0 and 24)"
-            self.logger.debug(u"updateFrequency out of range: " + valuesDict['updateFrequency'])
-
-
         try:
             if valuesDict["configDone"]:
                 self.runstartup = False
@@ -620,25 +614,9 @@ class Plugin(indigo.PluginBase):
             try:
                 self.logLevel = int(valuesDict[u"logLevel"])
             except:
-                self.logLevel = logging.WARNING
+                self.logLevel = logging.INFO
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
-
-#     def didDeviceCommPropertyChange(self, origDev, newDev):
-#         # Return True if a plugin related property changed from
-#         # origDev to newDev. Examples would be serial port,
-#         # IP address, etc. By default we assume all properties
-#         # are comm related, but plugin can subclass to provide
-#         # more specific/optimized testing. The return val of
-#         # this method will effect when deviceStartComm() and
-#         # deviceStopComm() are called.
-#         
-#         if origDev.pluginProps != newDev.pluginProps:
-#             return True
-#         
-#         return False
-#    
-   
 
 
     ########################################
@@ -681,7 +659,7 @@ class Plugin(indigo.PluginBase):
             self.connSerial.write(str(cmd))
 
     def _cmdOutputChange(self,cmd):
-        self.logger.debug(u"Received an Output message: " + cmd)
+        self.logger.threaddebug(u"Received an Output message: " + cmd)
         cmdArray = cmd.split(',')
         id = cmdArray[1]
         action = cmdArray[2]
@@ -700,7 +678,7 @@ class Plugin(indigo.PluginBase):
                 else:
                     zone.updateStateOnServer("onOffState", True)
                     zone.updateStateOnServer("brightnessLevel", int(level))
-                self.logger.info(u"Received: Dimmer " + zone.name + " level set to " + str(level))
+                self.logger.debug(u"Received: Dimmer " + zone.name + " level set to " + str(level))
             elif id in self.shades:
                 shade = self.shades[id]
                 if int(level) == 0:
@@ -708,15 +686,15 @@ class Plugin(indigo.PluginBase):
                 else:
                     shade.updateStateOnServer("onOffState", True)
                     shade.updateStateOnServer("brightnessLevel", int(level))
-                self.logger.info(u"Received: Shade " + shade.name + " opening set to " + str(level))
+                self.logger.debug(u"Received: Shade " + shade.name + " opening set to " + str(level))
             elif id in self.switches:
                 switch = self.switches[id]
                 if int(level) == 0:
                     switch.updateStateOnServer("onOffState", False)
-                    self.logger.info(u"Received: Switch %s %s" % (switch.name, "turned Off"))
+                    self.logger.debug(u"Received: Switch %s %s" % (switch.name, "turned Off"))
                 else:
                     switch.updateStateOnServer("onOffState", True)
-                    self.logger.info(u"Received: Switch %s %s" % (switch.name, "turned On"))
+                    self.logger.debug(u"Received: Switch %s %s" % (switch.name, "turned On"))
             elif id in self.ccos:
                 cco = self.ccos[id]
                 ccoType = cco.pluginProps[PROP_CCO_TYPE]
@@ -726,9 +704,9 @@ class Plugin(indigo.PluginBase):
                     else:
                      cco.updateStateOnServer("onOffState", True)
                 if level == 0.0:
-                    self.logger.info(u"Received: CCO %s %s" % (cco.name, "Opened"))
+                    self.logger.debug(u"Received: CCO %s %s" % (cco.name, "Opened"))
                 else:
-                    self.logger.info(u"Received: CCO %s %s" % (cco.name, "Closed"))
+                    self.logger.debug(u"Received: CCO %s %s" % (cco.name, "Closed"))
             elif id in self.fans:
                 fan = self.fans[id]
                 if int(level) == 0:
@@ -741,28 +719,33 @@ class Plugin(indigo.PluginBase):
                         fan.updateStateOnServer("speedIndex", 2)
                     else:
                         fan.updateStateOnServer("speedIndex", 3)
-                self.logger.info(u"Received: Fan " + fan.name + " speed set to " + str(level))
+                self.logger.debug(u"Received: Fan " + fan.name + " speed set to " + str(level))
                 return
         elif action == '2':  # start raising
+            self.logger.debug(u"Received Action 2 for Device " + cmd)
             return
         elif action == '3':  # start lowering
+            self.logger.debug(u"Received Action 3 for Device " + cmd)
             return
         elif action == '4':  # stop raising/lowering
+            self.logger.debug(u"Received Action 4 for Device " + cmd)
             return
         elif action == '5':  # start flash
+            self.logger.debug(u"Received Action 5 for Device " + cmd)
             return
         elif action == '6':  # pulse
+            self.logger.debug(u"Received Action 6 for Device " + cmd)
             return
         elif action == '29':  # Lutron firmware 7.5 added an undocumented 29 action code; ignore for now
             return
         elif action == '30':  # Lutron firmware ??? added an undocumented 30 action code; ignore for now
             return
         else:
-            self.logger.debug(u"Received Unknown Action Code:  %s" % action)
+            self.logger.warning(u"Received Unknown Action Code:  %s" % action)
         return
 
     def _cmdDeviceChange(self,cmd):
-        self.logger.debug(u"Received a Device message: " + cmd)
+        self.logger.threaddebug(u"Received a Device message: " + cmd)
 
         if self.IP:
             cmd = cmd.rstrip() # IP strings are terminated with \n -JL
@@ -901,11 +884,10 @@ class Plugin(indigo.PluginBase):
 
 
     ########################################
-    # Relay / Dimmer / /Shade / CCO / CCI Action callback
+    # Relay / Dimmer / Shade / CCO / CCI Action callback
     ########################################
     def actionControlDimmerRelay(self, action, dev):
-        # Original change by Ramias.  \r is added only for serial I/O.  We use sendCmd()
-        #
+
         sendCmd = ""
 
         ###### TURN ON ######
@@ -949,8 +931,6 @@ class Plugin(indigo.PluginBase):
                 else:
                     sendCmd = ("#OUTPUT," + cco + ",1,1")
 
-            self.logger.info(u"sent \"%s\" %s" % (dev.name, "on"))
-
         ###### TURN OFF ######
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
             if dev.deviceTypeId == RA_PHANTOM_BUTTON:
@@ -991,7 +971,6 @@ class Plugin(indigo.PluginBase):
                     sendCmd = ("#OUTPUT," + cco + ",6")
                 else:
                     sendCmd = ("#OUTPUT," + cco + ",1,0")
-            self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "off"))
 
         ###### TOGGLE ######
         elif action.deviceAction == indigo.kDeviceAction.Toggle:
@@ -1049,7 +1028,6 @@ class Plugin(indigo.PluginBase):
                         sendCmd = ("#OUTPUT," + cco + ",1,0")
                     else:
                         sendCmd = ("#OUTPUT," + cco + ",1,1")
-            self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "toggle"))
 
         ###### SET BRIGHTNESS ######
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
@@ -1057,12 +1035,10 @@ class Plugin(indigo.PluginBase):
                 newBrightness = action.actionValue
                 zone = dev.pluginProps[PROP_ZONE]
                 sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
-                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
             elif dev.deviceTypeId == RA_SHADE:
                 newBrightness = action.actionValue
                 shade = dev.pluginProps[PROP_SHADE]
                 sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
-                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
         ###### BRIGHTEN BY ######
         elif action.deviceAction == indigo.kDimmerRelayAction.BrightenBy:
@@ -1073,11 +1049,9 @@ class Plugin(indigo.PluginBase):
             if dev.deviceTypeId == RA_DIMMER:
                 zone = dev.pluginProps[PROP_ZONE]
                 sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
-                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
             elif dev.deviceTypeId == RA_SHADE:
                 shade = dev.pluginProps[PROP_SHADE]
                 sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
-                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
         ###### DIM BY ######
         elif action.deviceAction == indigo.kDimmerRelayAction.DimBy:
@@ -1088,11 +1062,9 @@ class Plugin(indigo.PluginBase):
             if dev.deviceTypeId == RA_DIMMER:
                 zone = dev.pluginProps[PROP_ZONE]
                 sendCmd = ("#OUTPUT," + zone + ",1," + str(newBrightness))
-                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set brightness", newBrightness))
             elif dev.deviceTypeId == RA_SHADE:
                 shade = dev.pluginProps[PROP_SHADE]
                 sendCmd = ("#OUTPUT," + shade + ",1," + str(newBrightness))
-                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set shade open to", newBrightness))
 
         ###### STATUS REQUEST ######
         elif action.deviceAction == indigo.kDeviceAction.RequestStatus:
@@ -1128,7 +1100,7 @@ class Plugin(indigo.PluginBase):
 
 
         self._sendCommand(sendCmd)
-        self.logger.debug(u"Sent: \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
+        self.logger.debug(u"actionControlDimmerRelay sent: \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
 
     ######################
     # Sensor Action callback
@@ -1141,26 +1113,26 @@ class Plugin(indigo.PluginBase):
     ######################
     def actionControlSpeedControl(self, action, dev):
 
+        sendCmd = ""
+
         ###### SET SPEED ######
         if action.speedControlAction == indigo.kSpeedControlAction.SetSpeedIndex:
             if dev.deviceTypeId == RA_FAN:
                 newSpeed = action.actionValue
                 fan = dev.pluginProps[PROP_FAN]
-                self.logger.info(u"Sending: \"%s\" %s to %d" % (dev.name, "set fan speed", newSpeed))
                 if newSpeed == 0:
-                    self._sendCommand("#OUTPUT," + fan + ",1,0")
+                    sendCmd = "#OUTPUT," + fan + ",1,0"
                 elif newSpeed == 1:
-                    self._sendCommand("#OUTPUT," + fan + ",1,25")
+                    sendCmd = "#OUTPUT," + fan + ",1,25"
                 elif newSpeed == 2:
-                    self._sendCommand("#OUTPUT," + fan + ",1,75")
+                    sendCmd = "#OUTPUT," + fan + ",1,75"
                 else:
-                    self._sendCommand("#OUTPUT," + fan + ",1,100")
+                    sendCmd = "#OUTPUT," + fan + ",1,100"
 
         ###### STATUS REQUEST ######
         elif action.speedControlAction == indigo.kSpeedControlAction.RequestStatus:
-                self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "status request"))
-                integration_id = dev.pluginProps[PROP_FAN]
-                self._sendCommand("?OUTPUT," + integration_id + ",1,")
+            integration_id = dev.pluginProps[PROP_FAN]
+            sendCmd = "?OUTPUT," + integration_id + ",1,"
 
         ###### CYCLE SPEED ######
         # Future enhancement
@@ -1171,11 +1143,18 @@ class Plugin(indigo.PluginBase):
         #elif action.speedControlAction == indigo.kSpeedControlAction.toggle:
         #self.logger.info(u"sent \"%s\" %s" % (dev.name, "cycle speed"))
 
+        self._sendCommand(sendCmd)
+        self.logger.debug(u"actionControlSpeedControl sent: \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
+
+
     ######################
     # HVAC Action callback
     ######################
 
     def actionControlThermostat(self, action, dev):
+
+        sendCmd = ""
+
         integration_id = dev.pluginProps[PROP_THERMO]
         currentCoolSetpoint = dev.coolSetpoint
         currentHeatSetpoint = dev.heatSetpoint
@@ -1184,63 +1163,74 @@ class Plugin(indigo.PluginBase):
         if action.thermostatAction == indigo.kThermostatAction.DecreaseCoolSetpoint:
             newCoolSetpoint = float(currentCoolSetpoint) - 1
             newHeatSetpoint = float(currentHeatSetpoint)
-            self._sendCommand("#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint))
+            sendCmd = "#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint)
+            
         elif action.thermostatAction == indigo.kThermostatAction.IncreaseCoolSetpoint:
             newCoolSetpoint = float(currentCoolSetpoint) + 1
             newHeatSetpoint = float(currentHeatSetpoint)
-            self._sendCommand("#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint))
+            sendCmd = "#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint)
+            
         elif action.thermostatAction == indigo.kThermostatAction.DecreaseHeatSetpoint:
             newCoolSetpoint = float(currentCoolSetpoint)
             newHeatSetpoint = float(currentHeatSetpoint) - 1
-            self._sendCommand("#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint))
+            sendCmd = "#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint)
+            
         elif action.thermostatAction == indigo.kThermostatAction.IncreaseHeatSetpoint:
             newCoolSetpoint = float(currentCoolSetpoint)
             newHeatSetpoint = float(currentHeatSetpoint) + 1
-            self._sendCommand("#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint))
+            sendCmd = "#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint)
+            
         elif action.thermostatAction == indigo.kThermostatAction.SetHeatSetpoint:
             newCoolSetpoint = float(currentCoolSetpoint)
             newHeatSetpoint = action.actionValue
             dev.updateStateOnServer("setpointHeat", newHeatSetpoint)
-            self._sendCommand("#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint) +"\r")
+            sendCmd = "#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint) +"\r"
+            
         elif action.thermostatAction == indigo.kThermostatAction.SetCoolSetpoint:
             newCoolSetpoint = action.actionValue
             dev.updateStateOnServer("setpointCool", newCoolSetpoint)
             newHeatSetpoint = float(currentHeatSetpoint)
-            self._sendCommand("#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint) +"\r")
+            sendCmd = "#HVAC," + integration_id + ",2," + str(newHeatSetpoint) + "," + str(newCoolSetpoint) +"\r"
 
         ###### SET HVAC MODE ######
         elif action.thermostatAction == indigo.kThermostatAction.SetHvacMode:
             mode = action.actionMode
             if mode == indigo.kHvacMode.Off:
-                self._sendCommand("#HVAC," + integration_id + ",3,1")
-                self.logger.info(u"sent \"%s\" %s" % (dev.name, "set hvac mode to Off"))
+                sendCmd = "#HVAC," + integration_id + ",3,1"
             elif mode == indigo.kHvacMode.Heat:
-                self._sendCommand("#HVAC," + integration_id + ",3,2")
-                self.logger.info(u"sent \"%s\" %s" % (dev.name, "set hvac mode to Heat"))
+                sendCmd = "#HVAC," + integration_id + ",3,2"
             elif mode == indigo.kHvacMode.Cool:
-                self._sendCommand("#HVAC," + integration_id + ",3,3")
-                self.logger.info(u"sent \"%s\" %s" % (dev.name, "set hvac mode to Cool"))
+                sendCmd = "#HVAC," + integration_id + ",3,3"
             elif mode == indigo.kHvacMode.HeatCool:
-                self._sendCommand("#HVAC," + integration_id + ",3,4")
-                self.logger.info(u"sent \"%s\" %s" % (dev.name, "set hvac mode to Auto"))
+                sendCmd = "#HVAC," + integration_id + ",3,4"
 
         ###### SET FAN MODE ######
         elif action.thermostatAction == indigo.kThermostatAction.SetFanMode:
             mode = action.actionMode
             if mode == indigo.kFanMode.Auto:
-                self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "set fan mode to Auto"))
-                self._sendCommand("#HVAC," + integration_id + ",4,1")
+                sendCmd = "#HVAC," + integration_id + ",4,1"
             elif mode == indigo.kFanMode.AlwaysOn:
-                self.logger.info(u"Sending: \"%s\" %s" % (dev.name, "set fan mode to Always On"))
-                self._sendCommand("#HVAC," + integration_id + ",4,2")
+                sendCmd = "#HVAC," + integration_id + ",4,2"
 
         ###### STATUS REQUEST ######
         elif action.thermostatAction == indigo.kThermostatAction.RequestStatusAll:
-            self.logger.debug(u"Sending: \"%s\" %s" % (dev.name, "status request"))
-            self._sendCommand("?HVAC," + integration_id + ",1,") # get temperature
-            self._sendCommand("?HVAC," + integration_id + ",2,") # get heat and cool setpoints
-            self._sendCommand("?HVAC," + integration_id + ",3,") # get operating mode
-            self._sendCommand("?HVAC," + integration_id + ",4,") # get fan mode
+            sendCmd = "?HVAC," + integration_id + ",1," # get temperature
+            self._sendCommand(sendCmd)
+            self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
+            
+            sendCmd = "?HVAC," + integration_id + ",2," # get heat and cool setpoints
+            self._sendCommand(sendCmd)
+            self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
+            
+            sendCmd = "?HVAC," + integration_id + ",3," # get operating mode
+            self._sendCommand(sendCmd)
+            self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
+
+            sendCmd = "?HVAC," + integration_id + ",4," # get fan mode
+
+        self._sendCommand(sendCmd)
+        self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
+
 
 
     ########################################
