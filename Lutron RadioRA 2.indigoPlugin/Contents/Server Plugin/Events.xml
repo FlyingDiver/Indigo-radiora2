@@ -3,7 +3,7 @@
 	<Event id="timeClockEvent">
         <Name>Time Clock Event</Name>
         <ConfigUI>
-            <Field id="event" type="menu">
+            <Field id="eventNumber" type="menu">
                 <Label>Select Timeclock Event:</Label>
                 <List class="self" filter="" method="pickEvent"  dynamicReload="true"/>
             </Field>            
@@ -12,11 +12,11 @@
     <Event id="groupEvent">
         <Name>Group Event</Name>
         <ConfigUI>
-            <Field id="group" type="menu">
+            <Field id="groupNumber" type="menu">
                 <Label>Group (Room) Number:</Label>
                 <List class="self" filter="" method="pickGroup"  dynamicReload="true"/>
             </Field>
-            <Field type="menu" id="occupancy" defaultValue="occupied">
+            <Field type="menu" id="occupancyPopUp" defaultValue="occupied">
                 <Label>Becomes:</Label>
                 <List>
                     <Option value="3">Occupied</Option>
@@ -35,5 +35,4 @@
  		</ConfigUI>
 	</Event>
 </Events>
-
 
