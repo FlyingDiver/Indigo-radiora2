@@ -1,15 +1,31 @@
 <?xml version="1.0"?>
 <Events>
-    <Event id="timeClockEvent">
+	<Event id="timeClockEvent">
         <Name>Time Clock Event</Name>
         <ConfigUI>
-            <Field id="eventNumber" type="menu">
+            <Field id="event" type="menu">
                 <Label>Select Timeclock Event:</Label>
                 <List class="self" filter="" method="pickEvent"  dynamicReload="true"/>
             </Field>            
         </ConfigUI>
+	</Event>
+    <Event id="groupEvent">
+        <Name>Group Event</Name>
+        <ConfigUI>
+            <Field id="group" type="menu">
+                <Label>Group (Room) Number:</Label>
+                <List class="self" filter="" method="pickGroup"  dynamicReload="true"/>
+            </Field>
+            <Field type="menu" id="occupancy" defaultValue="occupied">
+                <Label>Becomes:</Label>
+                <List>
+                    <Option value="3">Occupied</Option>
+                    <Option value="4">Unoccupied</Option>
+                </List>
+            </Field>            
+        </ConfigUI>
    </Event>
-   <Event id="keypadButtonPress">
+  <Event id="keypadButtonPress">
         <Name>Keypad Button Press</Name>
  		<ConfigUI>
             <Field id="buttonID" type="menu">

@@ -71,6 +71,7 @@ RA_CCI = "ra2CCI"
 RA_SHADE = "ra2MotorizedShade"
 RA_PICO = "ra2Pico"
 RA_TIMECLOCKEVENT = "ra2TimeClockEvent"
+RA_GROUP = "ra2Group"
 PROP_REPEATER = "repeater"
 PROP_BUTTON = "button"
 PROP_ISBUTTON = "isButton"
@@ -84,6 +85,7 @@ PROP_SENSOR = "sensor"
 PROP_NOTES = "notes"
 PROP_AREA = "area"
 PROP_EVENT = "event"
+PROP_GROUP = "group"
 PROP_KEYPADBUT_DISPLAY_LED_STATE = "keypadButtonDisplayLEDState"
 PROP_CCO_INTEGRATION_ID = "ccoIntegrationID"
 PROP_CCO_TYPE = "ccoType"
@@ -127,6 +129,7 @@ class Plugin(indigo.PluginBase):
         self.shades = {}
         self.picos = {}
         self.events = {}
+        self.groups = {}
         self.runstartup = False
         self.IP = False     # Default to serial I/O, not IP -vic13
         self.portEnabled = False
@@ -164,7 +167,10 @@ class Plugin(indigo.PluginBase):
         assert trigger.id not in self.triggers
         self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
         if trigger.pluginTypeId == "timeClockEvent":
-            triggerProps = {"name" : trigger.name, "triggerType" : "timeClockEvent", "eventNumber" : trigger.pluginProps["eventNumber"], "trigger" : trigger}
+            triggerProps = {"name" : trigger.name, "triggerType" : "timeClockEvent", "event" : trigger.pluginProps["event"], "trigger" : trigger}
+                        
+        elif trigger.pluginTypeId == "groupEvent":
+            triggerProps = {"name" : trigger.name, "triggerType" : "groupEvent", "group" : trigger.pluginProps["group"], "trigger" : trigger}
                         
         elif  trigger.pluginTypeId == "keypadButtonPress":
             buttonID = trigger.pluginProps.get("buttonID", None)
@@ -187,66 +193,77 @@ class Plugin(indigo.PluginBase):
 
     def clockTriggerCheck(self, info):
 
-        self.logger.info(u"Clock Trigger check: %s" % (info))
+        self.logger.info(u"Clock Trigger check, event %s" % (info))
 
-        for triggerId, triggerProps in sorted(self.triggers.iteritems()):
+        for triggerId, triggerProps in self.triggers.iteritems():
 
             if "timeClockEvent" != triggerProps["triggerType"]:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
+                self.logger.info(u"\tSkipping Trigger %s (%s), wrong type: %s" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
                 continue
 
-            eventNumber = triggerProps["eventNumber"]
-            if eventNumber != info:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong event: %s" % (triggerProps["name"], triggerId, info))
+            try:
+                event = trigger.triggerProps["event"]
+            except:
+                self.logger.error(u"\t Trigger %s does not contain event: %s" % str(triggerProps))
                 continue
 
-            self.logger.debug(u"\tExecuting Trigger %s (%s), event: %s" % (triggerProps["name"], triggerId, info))
+            if event != info:
+                self.logger.info(u"\tSkipping Trigger %s (%s), wrong event: %s" % (triggerProps["name"], triggerId, event))
+                continue
+
+            self.logger.info(u"\tExecuting Trigger %s (%s), event: %s" % (triggerProps["name"], triggerId, info))
             indigo.trigger.execute(triggerProps["trigger"])
 
     def groupTriggerCheck(self, groupID, status):
 
-        self.logger.info(u"Group Trigger check: %s, %s" % (groupID, status))
+        self.logger.info(u"Group Trigger check, group %s, %s" % (groupID, status))
 
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
+        for triggerId, triggerProps in self.triggers.iteritems():
 
-            if "groupEvent" != trigger.pluginTypeId:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+            if "groupEvent" != triggerProps["triggerType"]:
+                self.logger.info(u"\tSkipping Trigger %s (%s), wrong type: %s" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
                 continue
 
-            groupNumber = trigger.pluginProps["groupNumber"]
-            if groupNumber != groupID:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong group: %s" % (trigger.name, trigger.id, groupID))
+            try:
+                group = trigger.triggerProps["group"]
+            except:
+                self.logger.error(u"\t Trigger %s does not contain group: %s" % str(triggerProps))
+                continue
+                
+            if group != groupID:
+                self.logger.info(u"\tSkipping Trigger %s (%s), wrong group: %s" % (triggerProps["name"], triggerId, groupID))
                 continue
 
-            occupancy = trigger.pluginProps["occupancyPopUp"]
+            occupancy = trigger.pluginProps["occupancy"]
             if occupancy != status:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong state: %s" % (trigger.name, trigger.id, groupID))
+                self.logger.info(u"\tSkipping Trigger %s (%s), wrong state: %s" % (triggerProps["name"], triggerId, occupancy))
                 continue
 
-            self.logger.debug(u"\tExecuting Trigger %s (%s), group %s" % (trigger.name, trigger.id, groupNumber))
-            indigo.trigger.execute(trigger)
+            self.logger.info(u"\tExecuting Trigger %s (%s), group %s, status %s" % (triggerProps["name"], triggerId, groupID, status))
+            indigo.trigger.execute(triggerProps["trigger"])
 
     def keypadTriggerCheck(self, devID, compID):
 
-        self.logger.info(u"keyPad Trigger devID: %s, compID: %s" % (devID, compID))
+        self.logger.info(u"keyPad Trigger check, devID: %s, compID: %s" % (devID, compID))
 
-        for triggerId, trigger in sorted(self.triggers.iteritems()):
-            type = trigger.pluginTypeId
-            try:
-                deviceID = triggerProps["deviceID"]
-            except KeyError:
-                self.logger.debug(u"Trigger %s (%s), Type: %s does not have deviceID" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
+        for triggerId, triggerProps in self.triggers.iteritems():
 
-            try:
-                componentID = triggerProps["componentID"]
-            except KeyError:
-                self.logger.debug(u"Trigger %s (%s), Type: %s does not have componentID" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
-
-            if not (deviceID == devID and componentID == compID):
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (triggerProps["name"], triggerId, devID, compID))
+            if "keypadButtonPress" != triggerProps["triggerType"]:
+                self.logger.info(u"\tSkipping Trigger %s (%s), wrong type: %s" % (triggerProps["name"], triggerId, triggerProps["triggerType"]))
                 continue
 
-            self.logger.debug(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (triggerProps["name"], triggerId, devID, compID))
+            try:
+                deviceID = triggerProps["deviceID"]
+                componentID = triggerProps["componentID"]
+            except:
+                self.logger.error(u"\t Trigger %s does not contain deviceID or componentID: %s" % str(triggerProps))
+                continue
+                
+            if not (deviceID == devID and componentID == compID):
+                self.logger.info(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (triggerProps["name"], triggerId, devID, compID))
+                continue
+
+            self.logger.info(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (triggerProps["name"], deviceID, devID, componentID))
             indigo.trigger.execute(triggerProps["trigger"])
 
     ####################
@@ -346,6 +363,11 @@ class Plugin(indigo.PluginBase):
             self.events[address] = dev
             self.update_device_property(dev, "address", new_value = address)
 
+        elif dev.deviceTypeId == RA_GROUP:
+            address = dev.pluginProps[PROP_GROUP]
+            self.groups[address] = dev
+            self.update_device_property(dev, "address", new_value = address)
+
         else:
             self.logger.error(u"deviceStartComm: Unknown device type:" + dev.deviceTypeId)
         
@@ -396,6 +418,10 @@ class Plugin(indigo.PluginBase):
         elif dev.deviceTypeId == RA_PICO:
             address = dev.pluginProps[PROP_PICO_INTEGRATION_ID] + "." + dev.pluginProps[PROP_PICOBUTTON]
             del self.picos[address]
+
+        elif dev.deviceTypeId == RA_GROUP:
+            address = dev.pluginProps[PROP_GROUP]
+            del self.groups[address]
 
         elif dev.deviceTypeId == RA_TIMECLOCKEVENT:
             address = "Event." + dev.pluginProps[PROP_EVENT]
@@ -590,6 +616,22 @@ class Plugin(indigo.PluginBase):
                 self.logLevel = logging.WARNING
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(u"logLevel = " + str(self.logLevel))
+
+#     def didDeviceCommPropertyChange(self, origDev, newDev):
+#         # Return True if a plugin related property changed from
+#         # origDev to newDev. Examples would be serial port,
+#         # IP address, etc. By default we assume all properties
+#         # are comm related, but plugin can subclass to provide
+#         # more specific/optimized testing. The return val of
+#         # this method will effect when deviceStartComm() and
+#         # deviceStopComm() are called.
+#         
+#         if origDev.pluginProps != newDev.pluginProps:
+#             return True
+#         
+#         return False
+#    
+   
 
 
     ########################################
@@ -1233,8 +1275,16 @@ class Plugin(indigo.PluginBase):
     def pickEvent(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         retList = []
         for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
-            event = dev.pluginProps["eventNumber"]
+            event = dev.pluginProps["event"]
             retList.append((event, dev.name))
+        retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    def pickGroup(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        retList = []
+        for dev in indigo.devices.iter("self.ra2Group"):
+            group = dev.pluginProps["group"]
+            retList.append((group, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
@@ -1272,14 +1322,13 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u"Creating Devices file read completed, parsing data...")
 
         else:
+            ip_address = self.pluginPrefs["ip_address"]
             self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Simulated = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
-                (self.group_by, self.simulated, self.create_unused_keypad, self.create_unused_phantom))
-            login = 'http://' + self.pluginPrefs["ip_address"] + '/login?login=lutron&password=lutron'
-            fetch = 'http://' + self.pluginPrefs["ip_address"] + '/DbXmlInfo.xml'
+                (ip_address, self.group_by, self.simulated, self.create_unused_keypad, self.create_unused_phantom))
             self.logger.info(u"Creating Devices - starting data fetch...")
             s = requests.Session()
-            r = s.get(login)
-            r = s.get(fetch)
+            r = s.get('http://' + ip_address + '/login?login=lutron&password=lutron')
+            r = s.get('http://' + ip_address + '/DbXmlInfo.xml')
             root = ET.fromstring(r.text)        
             self.logger.info(u"Creating Devices fetch completed, parsing data...")
         
@@ -1325,7 +1374,7 @@ class Plugin(indigo.PluginBase):
                     self.createLutronDevice(RA_DIMMER, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
                     
                 elif output.attrib['OutputType'] == "NON_DIM":
-                    name = room.attrib['Name'] + " - Dimmer " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
+                    name = room.attrib['Name'] + " - Switch " + output.attrib['IntegrationID'] + " - " + output.attrib['Name']
                     props={ 'switch': output.attrib['IntegrationID'], 'notes': ""}
                     self.createLutronDevice(RA_SWITCH, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
                         
@@ -1486,7 +1535,15 @@ class Plugin(indigo.PluginBase):
                     address = device.attrib['IntegrationID']
                     props = { 'sensor': address, 'notes': "", "SupportsStatusRequest": "False" }
                     self.createLutronDevice(RA_SENSOR, name, address, props, room.attrib['Name'])
-                                         
+                    
+                    # Create a Group (Room) device for every room that has a motion sensors
+                    
+                    name = room.attrib['Name'] + " - Group " + room.attrib['IntegrationID']
+                    address = room.attrib['IntegrationID']
+                    props = { 'group': address, 'notes': "", "SupportsStatusRequest": "False" }
+                    if not address in self.groups:
+                        self.createLutronDevice(RA_GROUP, name, address, props, room.attrib['Name'])
+                   
                 elif device.attrib['DeviceType'] == "TEMPERATURE_SENSOR":
                     pass
                                                              
@@ -1536,6 +1593,7 @@ class Plugin(indigo.PluginBase):
             RA_CCI              : "Lutron Sensors",
             RA_SHADE            : "Lutron Shades",
             RA_PICO             : "Lutron Keypad Buttons",
+            RA_GROUP            : "Lutron Room Groups",
             RA_TIMECLOCKEVENT   : "Lutron Timeclock Events"
         }
 

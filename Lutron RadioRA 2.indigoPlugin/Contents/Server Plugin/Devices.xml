@@ -28,7 +28,7 @@
     <Device type="custom" id="ra2Group">
     	<Name>RadioRA 2 Room Group</Name>
         <ConfigUI>
-            <Field type="textField" id="groupNumber" defaultValue="">
+            <Field type="textField" id="group" defaultValue="">
                 <Label>Group Number:</Label>
             </Field>
         </ConfigUI>
