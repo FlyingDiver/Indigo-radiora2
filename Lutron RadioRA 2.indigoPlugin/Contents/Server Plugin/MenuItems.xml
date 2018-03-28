@@ -20,6 +20,10 @@
         <CallbackMethod>createAllDevicesMenu</CallbackMethod>
         <ButtonTitle>Create</ButtonTitle>
         <ConfigUI>
+			<Field id="warning_note" type="label">
+				<Label>Warning:  This procedure creates new devices and makes changes to your existing devices.  Backing up your Indigo database before proceeding is highly recommended!</Label>
+			</Field>
+    		<Field id="separator0" type="separator" />
 			<Field id="group_by" type="menu" defaultValue="Type">
 				<Label>Group New Devices By:</Label>
 				<List>
@@ -37,19 +41,15 @@
 			<Field id="create_unused_note" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Checking these boxes will create buttons for all keypads or repeaters, even those not programmed.  This includes the raise/lower buttons.</Label>
 			</Field>
-			<Field id="do_query" type="checkbox" defaultValue="false">
-				<Label>Query all devices after creation:</Label>
-			</Field>            
-    		<Field id="separator0" type="separator" />
-			<Field id="simulated" type="checkbox" defaultValue="true">
-				<Label>Simulate only:</Label>
-			</Field>            
-			<Field id="simulated_note" type="label" fontSize="small" fontColor="darkgray">
-				<Label>Checking this box will log all devices to be created, without actually creating them.</Label>
+			<Field type="checkbox" id="showDeveloper" defaultValue="false">
+        		<Label>Show Developer Options:</Label>
+				<Description>(Not for Plugin Users)</Description>
 			</Field>
-    		<Field id="separator1" type="separator" />
-			<Field id="use_local" type="checkbox" defaultValue="false">
-				<Label>Use local file (developer only):</Label>
+			<Field id="use_local" type="checkbox" defaultValue="false" visibleBindingId="showDeveloper" visibleBindingValue="true">>
+				<Label>Use XML file:</Label>
+			</Field>            
+			<Field id="xmlFileName" type="textfield" defaultValue="~/DbXmlInfo.xml" visibleBindingId="showDeveloper" visibleBindingValue="true">>
+				<Label>File Name:</Label>
 			</Field>            
         </ConfigUI>
     </MenuItem>

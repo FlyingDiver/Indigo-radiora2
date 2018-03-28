@@ -27,13 +27,6 @@
     <Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
         <Label>Password:</Label>
     </Field>
-    <Field id="sep1" type="separator"/>
-    <Field id="updateFrequency" type="textfield" defaultValue="24">
-        <Label>Check for plugin update frequency (hours):</Label>
-    </Field>
-    <Field id="updateNote" type="label" fontSize="small" fontColor="darkgray">
-        <Label>The plugin will not check for updates if the frequency is set to zero.</Label>
-    </Field>
     <Field id="simpleSeparator2" type="separator"/>
     <Field id="logLevel" type="menu" defaultValue="30">
         <Label>Event Logging Level:</Label>

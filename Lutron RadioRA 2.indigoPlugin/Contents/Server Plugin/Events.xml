@@ -10,10 +10,10 @@
         </ConfigUI>
 	</Event>
     <Event id="groupEvent">
-        <Name>Group Event</Name>
+        <Name>Room (Group) Event</Name>
         <ConfigUI>
             <Field id="groupNumber" type="menu">
-                <Label>Group (Room) Number:</Label>
+                <Label>Room Group:</Label>
                 <List class="self" filter="" method="pickGroup"  dynamicReload="true"/>
             </Field>
             <Field type="menu" id="occupancyPopUp" defaultValue="occupied">
@@ -28,8 +28,13 @@
   <Event id="keypadButtonPress">
         <Name>Keypad Button Press</Name>
  		<ConfigUI>
+            <Field id="room" type="menu">
+                <Label>Room:</Label>
+                <List class="self" filter="" method="roomListGenerator"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="buttonID" type="menu">
-                <Label>Select Button:</Label>
+                <Label>Button:</Label>
                 <List class="self" filter="" method="pickButton"  dynamicReload="true"/>
             </Field>            
  		</ConfigUI>
