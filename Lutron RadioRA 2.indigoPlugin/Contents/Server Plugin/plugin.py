@@ -140,7 +140,7 @@ class Plugin(indigo.PluginBase):
         self.portEnabled = False
         self.triggers = { }
         
-        self.roomTree = {}
+        self.roomButtonTree = {}
         
         self.threadLock = threading.Lock()  # for background data fetch
 
@@ -187,14 +187,14 @@ class Plugin(indigo.PluginBase):
 
         elif trigger.pluginTypeId == "timeClockEvent":
             try:
-                event = trigger.pluginProps["eventNumber"]
+                event = trigger.pluginProps["event"]
             except:
                 self.logger.error(u"\tTimeclock Event Trigger %s (%s) does not contain event: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
                 return
         
         elif trigger.pluginTypeId == "groupEvent":
             try:
-                event = trigger.pluginProps["groupNumber"]
+                group = trigger.pluginProps["group"]
             except:
                 self.logger.error(u"\tGroup Trigger %s (%s) does not contain group: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
                 return
@@ -220,15 +220,15 @@ class Plugin(indigo.PluginBase):
         for triggerId, trigger in self.triggers.iteritems():
 
             if "timeClockEvent" != trigger.pluginTypeId:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
                 continue
 
-            event = trigger.pluginProps["eventNumber"]
+            event = trigger.pluginProps["event"]
             if event != info:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, event))
+                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, event))
                 continue
 
-            self.logger.debug(u"\tExecuting Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
+            self.logger.debug(u"Executing Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
             indigo.trigger.execute(trigger)
 
     def groupTriggerCheck(self, groupID, status):
@@ -238,16 +238,16 @@ class Plugin(indigo.PluginBase):
         for triggerId, trigger in self.triggers.iteritems():
 
             if "groupEvent" != trigger.pluginTypeId:
-                self.logger.info(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
                 continue
 
-            group = trigger.pluginProps["groupNumber"]
+            group = trigger.pluginProps["group"]
             occupancy = trigger.pluginProps["occupancyPopUp"]
             if (group != groupID) or (occupancy != status):
-                self.logger.info(u"\tSkipping Trigger %s (%s), wrong group or stats: %s, %s" % (trigger.name, trigger.id, group, occupancy))
+                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong group or stats: %s, %s" % (trigger.name, trigger.id, group, occupancy))
                 continue
 
-            self.logger.info(u"\tExecuting Trigger %s (%s), group %s, status %s" % (trigger.name, trigger.id, groupID, status))
+            self.logger.info(u"Executing Trigger %s (%s), group %s, status %s" % (trigger.name, trigger.id, groupID, status))
             indigo.trigger.execute(trigger)
 
     def keypadTriggerCheck(self, devID, compID):
@@ -257,7 +257,7 @@ class Plugin(indigo.PluginBase):
         for triggerId, trigger in self.triggers.iteritems():
 
             if "keypadButtonPress" != trigger.pluginTypeId:
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
                 continue
 
             try:
@@ -274,10 +274,10 @@ class Plugin(indigo.PluginBase):
                     continue
 
             if (deviceID != devID) or (componentID != compID):
-                self.logger.debug(u"\tSkipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, deviceID, componentID))
+                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, deviceID, componentID))
                 continue
 
-            self.logger.debug(u"\tExecuting Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, deviceID, componentID))
+            self.logger.debug(u"Executing Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, deviceID, componentID))
             indigo.trigger.execute(trigger)
             
     ####################
@@ -386,19 +386,18 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.error(u"deviceStartComm: Unknown device type:" + dev.deviceTypeId)
             return
-            
-        try:
-            roomName = dev.pluginProps[PROP_ROOM]
-        except:
-            roomName = "Unknown"
         
-        try:
-            room = self.roomTree[roomName]
-        except:
-            room = {}
-            self.roomTree[roomName] = room
-        
-        self.roomTree[roomName][address] = dev.name
+        if (dev.pluginProps.get(PROP_ISBUTTON, None)):      # it's a button, so put it in the tree
+            try:
+                roomName = dev.pluginProps[PROP_ROOM]
+            except:
+                roomName = "Unknown"
+            try:
+                room = self.roomButtonTree[roomName]
+            except:
+                room = {}
+                self.roomButtonTree[roomName] = room
+            self.roomButtonTree[roomName][address] = dev.name
         
         
     def deviceStopComm(self, dev):
@@ -665,7 +664,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"Main repeater serial interface configured" + cmd)
             elif 'GNET' in cmd:
                 #command prompt is ready
-                self.logger.debug(u"Command prompt received. Device is ready.")
+                self.logger.threaddebug(u"Command prompt received. Device is ready.")
             elif cmd != "!":
                 self.logger.error(u"Unrecognized command: " + cmd)
 
@@ -819,18 +818,16 @@ class Plugin(indigo.PluginBase):
                 keypadid = id + '.' + str(int(button) - 80)         # Convert LED ID to button ID
                 if keypadid in self.keypads:
                     keypad = self.keypads[keypadid]
-                    self.logger.debug(u"Updating button status with state of LED for keypadID " + keypadid)
+                    self.logger.debug(u"Updating button status with state of LED ({}) for keypadID {}".format(status, keypadid))
                     if int(status) == 0:
                         keypad.updateStateOnServer("onOffState", False)
                     elif int(status) == 1:
                         keypad.updateStateOnServer("onOffState", True)
-                        self.logger.debug(u"Set status to True on Server.")
                 else:
                     self.logger.error("WARNING: Invalid ID (%s) specified for LED.   Must be ID of button + 80.  Please correct and reload the plugin." % keypadid)
                     self.logger.debug(keypadid)
 
             if action == '3': # Check for triggers
-                self.logger.debug(u"Received a Keypad Button press message, checking triggers: " + cmd)
                 self.keypadTriggerCheck(id, button)
 
         if keypadid in self.picos:
@@ -841,6 +838,8 @@ class Plugin(indigo.PluginBase):
             elif status == '1':
                 dev.updateStateOnServer("onOffState", True)
 
+            if action == '3': # Check for triggers
+                self.keypadTriggerCheck(id, button)
 
         if keypadid in self.ccis:
             self.logger.debug(u"Received a CCI status message: " + cmd)
@@ -1292,8 +1291,8 @@ class Plugin(indigo.PluginBase):
 
     def roomListGenerator(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         retList = []
-        for room in self.roomTree:
-            self.logger.debug(u"roomListGenerator adding: {} {}".format(room, room))         
+        for room in self.roomButtonTree:
+            self.logger.threaddebug(u"roomListGenerator adding: {} {}".format(room, room))         
             retList.append((room, room))
         
         retList.sort(key=lambda tup: tup[1])
@@ -1306,9 +1305,9 @@ class Plugin(indigo.PluginBase):
         except:
             return retList
             
-        for button in self.roomTree[room]:
-            self.logger.debug(u"pickButton adding: {} {}".format(button, self.roomTree[room][button]))         
-            retList.append((button, self.roomTree[room][button]))
+        for button in self.roomButtonTree[room]:
+            self.logger.threaddebug(u"pickButton adding: {} {}".format(button, self.roomButtonTree[room][button]))         
+            retList.append((button, self.roomButtonTree[room][button]))
          
         retList.sort(key=lambda tup: tup[1])
         return retList
@@ -1317,6 +1316,7 @@ class Plugin(indigo.PluginBase):
         retList = []
         for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
             event = dev.pluginProps["event"]
+            self.logger.threaddebug(u"pickEvent adding: {}".format(event))         
             retList.append((event, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
@@ -1325,6 +1325,7 @@ class Plugin(indigo.PluginBase):
         retList = []
         for dev in indigo.devices.iter("self.ra2Group"):
             group = dev.pluginProps["group"]
+            self.logger.threaddebug(u"pickGroup adding: {}".format(group))         
             retList.append((group, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
@@ -1356,6 +1357,8 @@ class Plugin(indigo.PluginBase):
         self.group_by = valuesDict["group_by"]
         self.create_unused_keypad = bool(valuesDict["create_unused_keypad"])
         self.create_unused_phantom = bool(valuesDict["create_unused_phantom"])
+        self.create_event_triggers = bool(valuesDict["create_event_triggers"])
+        self.create_group_triggers = bool(valuesDict["create_group_triggers"])
 
         if bool(valuesDict["use_local"]):
             xmlFile = os.path.expanduser(valuesDict["xmlFileName"])         
@@ -1420,7 +1423,10 @@ class Plugin(indigo.PluginBase):
                             button = str(int(component.attrib['ComponentNumber']) + 100)
                             address = device.attrib['IntegrationID'] + "." + button
 
-                            buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            try:
+                                buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            except:
+                                buttonType = "Unknown"
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_REPEATER : device.attrib['IntegrationID'], 
@@ -1553,7 +1559,10 @@ class Plugin(indigo.PluginBase):
                                 except:
                                     pass
 
-                            buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            try:
+                                buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            except:
+                                buttonType = "Unknown"
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_LIST_TYPE : "button", 
@@ -1580,7 +1589,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_LIST_TYPE : "LED", 
                                 PROP_KEYPAD : device.attrib['IntegrationID'], 
                                 PROP_KEYPADBUT : keypadLED, 
-                                PROP_KEYPADBUT_DISPLAY_LED_STATE : "false" 
+                                PROP_KEYPADBUT_DISPLAY_LED_STATE : "False" 
                             }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
 
@@ -1594,7 +1603,6 @@ class Plugin(indigo.PluginBase):
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
-
                             assignments = len(component.findall('Button/Actions/Action/Presets/Preset/PresetAssignments/PresetAssignment'))                            
                             if not self.create_unused_keypad and assignments == 0:
                                 continue
@@ -1607,7 +1615,10 @@ class Plugin(indigo.PluginBase):
                                 pass
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
 
-                            buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            try:
+                                buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            except:
+                                buttonType = "Unknown"
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_LIST_TYPE : "button", 
@@ -1615,15 +1626,17 @@ class Plugin(indigo.PluginBase):
                                 PROP_KEYPADBUT : component.attrib['ComponentNumber'], 
                                 PROP_KEYPADBUT_DISPLAY_LED_STATE : "false", 
                                 PROP_BUTTONTYPE : buttonType,
-                                PROP_ISBUTTON : "True"}
+                                PROP_ISBUTTON : "True"
+                            }
                             self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
-
+                                
                             # create button LED, if needed for the button
 
                             name = name + " LED"  
                             keypadLED = str(int(component.attrib['ComponentNumber']) + 80)
                             address = device.attrib['IntegrationID'] + "." + keypadLED
                             props = {
+                                PROP_ROOM : room.attrib['Name'], 
                                 PROP_LIST_TYPE : "LED", 
                                 PROP_KEYPAD : device.attrib['IntegrationID'], 
                                 PROP_KEYPADBUT : keypadLED, 
@@ -1665,7 +1678,10 @@ class Plugin(indigo.PluginBase):
                                 pass
                             address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
 
-                            buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            try:
+                                buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
+                            except:
+                                buttonType = "Unknown"
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_PICO_INTEGRATION_ID : device.attrib['IntegrationID'], 
@@ -1699,6 +1715,42 @@ class Plugin(indigo.PluginBase):
                     if not address in self.groups:
                         self.createLutronDevice(RA_GROUP, name, address, props, room.attrib['Name'])
                    
+                    if self.create_group_triggers:
+        
+                        trigger_exists = False
+                        for triggerId, trigger in self.triggers.iteritems():
+                            if  (trigger.pluginTypeId == "groupEvent") and (trigger.pluginProps["group"] == address):
+                                trigger_exists = True
+                                break
+            
+                        if not trigger_exists:
+                            if "Lutron" in indigo.triggers.folders:
+                                theFolder = indigo.triggers.folders["Lutron"].id
+                            else:
+                                self.logger.debug("Creating Trigger Folder: '%s'" % ("Lutron"))            
+                                theFolder = indigo.triggers.folder.create("Lutron").id
+        
+                            triggerName = "{} Occupied".format(name)
+                            self.logger.info("Creating groupEvent trigger: '%s' (%s)" % (triggerName, address))
+                            indigo.pluginEvent.create(name=triggerName, 
+                                description="", 
+                                folder=theFolder,
+                                pluginId="com.jimandnoreen.indigoplugin.lutron-radiora2",
+                                pluginTypeId="groupEvent",
+                                props={"group" : address, "occupancyPopUp": "3"}
+                            )
+                        
+                            triggerName = "{} Unoccupied".format(name)
+                            self.logger.info("Creating groupEvent trigger: '%s' (%s)" % (triggerName, address))
+                            indigo.pluginEvent.create(name=triggerName, 
+                                description="", 
+                                folder=theFolder,
+                                pluginId="com.jimandnoreen.indigoplugin.lutron-radiora2",
+                                pluginTypeId="groupEvent",
+                                props={"group" : address, "occupancyPopUp": "4"}
+                            )
+ 
+ 
                 elif device.attrib['DeviceType'] == "TEMPERATURE_SENSOR":
                     pass
                                                              
@@ -1713,7 +1765,32 @@ class Plugin(indigo.PluginBase):
             props = {
                 'event': event.attrib['EventNumber']
             }
-            self.createLutronDevice(RA_TIMECLOCKEVENT, name, address, props, "HVAC")
+            self.createLutronDevice(RA_TIMECLOCKEVENT, name, address, props, "TimeClock")
+            
+            if self.create_event_triggers:
+                trigger_exists = False
+                for triggerId, trigger in self.triggers.iteritems():
+                    if  (trigger.pluginTypeId == "timeClockEvent") and (trigger.pluginProps["event"] == event.attrib['EventNumber']):
+                        trigger_exists = True
+                        break
+                
+                if not trigger_exists:
+                    if "Lutron" in indigo.triggers.folders:
+                        theFolder = indigo.triggers.folders["Lutron"].id
+                    else:
+                        self.logger.debug("Creating Trigger Folder: '%s'" % ("Lutron"))            
+                        theFolder = indigo.triggers.folder.create("Lutron").id
+            
+                    triggerName = "{} Trigger".format(name)
+                    self.logger.info("Creating timeClockEvent trigger: '%s' (%s)" % (triggerName, event.attrib['EventNumber']))
+                    indigo.pluginEvent.create(name=triggerName, 
+                        description="", 
+                        folder=theFolder,
+                        pluginId="com.jimandnoreen.indigoplugin.lutron-radiora2",
+                        pluginTypeId="timeClockEvent",
+                        props={"event" : event.attrib['EventNumber']}
+                    )
+            
             
         self.logger.info("Finding HVAC devices...")
         for hvac in root.iter('HVAC'):
@@ -1723,7 +1800,7 @@ class Plugin(indigo.PluginBase):
             props = {
                 'thermo': address
             }
-            self.createLutronDevice(RA_THERMO, name, address, props, "TimeClock")
+            self.createLutronDevice(RA_THERMO, name, address, props, "HVAC")
                      
                         
         self.logger.info(u"Creating Devices done.")        
@@ -1756,9 +1833,12 @@ class Plugin(indigo.PluginBase):
         
         for dev in indigo.devices.iter("self"):
             if dev.address == address:
-                self.logger.debug("Adding properties to device: '%s' (%s)" % (name, address))            
-                self.update_device_property(dev, PROP_ROOM, new_value = room)
-                return dev
+                if dev.pluginProps.get(PROP_ROOM, None):
+                    return dev
+                else:
+                    self.logger.debug("Adding ROOM property to device: '{}' ({})".format(name, address))            
+                    self.update_device_property(dev, PROP_ROOM, new_value = room)
+                    return dev
             
         # Pick the folder for this device, create it if necessary
         
@@ -1767,12 +1847,14 @@ class Plugin(indigo.PluginBase):
             if folderName in indigo.devices.folders:
                 theFolder = indigo.devices.folders[folderName].id
             else:
+                self.logger.debug("Creating Device Folder: '%s'" % (folderName))            
                 theFolder = indigo.devices.folder.create(folderName).id
         elif self.group_by == "Room":
             folderName = "Lutron " + room
             if folderName in indigo.devices.folders:
                 theFolder = indigo.devices.folders[folderName].id
             else:
+                self.logger.debug("Creating Device Folder: '%s'" % (folderName))            
                 theFolder = indigo.devices.folder.create(folderName).id
         else:
             folderName = "DEVICES"

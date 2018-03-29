@@ -41,6 +41,12 @@
 			<Field id="create_unused_note" type="label" fontSize="small" fontColor="darkgray">
 				<Label>Checking these boxes will create buttons for all keypads or repeaters, even those not programmed.  This includes the raise/lower buttons.</Label>
 			</Field>
+			<Field id="create_event_triggers" type="checkbox" defaultValue="false">
+				<Label>Create Triggers for all Timeclock Events:</Label>
+			</Field>            
+			<Field id="create_group_triggers" type="checkbox" defaultValue="false">
+				<Label>Create Triggers for all Room Groups:</Label>
+			</Field>            
 			<Field type="checkbox" id="showDeveloper" defaultValue="false">
         		<Label>Show Developer Options:</Label>
 				<Description>(Not for Plugin Users)</Description>

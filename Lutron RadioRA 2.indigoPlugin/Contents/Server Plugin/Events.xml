@@ -3,7 +3,7 @@
 	<Event id="timeClockEvent">
         <Name>Time Clock Event</Name>
         <ConfigUI>
-            <Field id="eventNumber" type="menu">
+            <Field id="event" type="menu">
                 <Label>Select Timeclock Event:</Label>
                 <List class="self" filter="" method="pickEvent"  dynamicReload="true"/>
             </Field>            
@@ -12,7 +12,7 @@
     <Event id="groupEvent">
         <Name>Room (Group) Event</Name>
         <ConfigUI>
-            <Field id="groupNumber" type="menu">
+            <Field id="group" type="menu">
                 <Label>Room Group:</Label>
                 <List class="self" filter="" method="pickGroup"  dynamicReload="true"/>
             </Field>

@@ -19,7 +19,7 @@
     <Device type="custom" id="ra2TimeClockEvent">
     	<Name>RadioRA 2 Time Clock Event</Name>
         <ConfigUI>
-            <Field type="textField" id="eventNumber" defaultValue="">
+            <Field type="textField" id="event" defaultValue="">
                 <Label>Event Number:</Label>
             </Field>
         </ConfigUI>
