@@ -1376,7 +1376,7 @@ class Plugin(indigo.PluginBase):
         else:
             ip_address = self.pluginPrefs["ip_address"]
             self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
-                (self.group_by, self.create_unused_keypad, self.create_unused_phantom))
+                (ip_address, self.group_by, self.create_unused_keypad, self.create_unused_phantom))
             self.logger.info(u"Creating Devices - starting data fetch...")
             try:
                 s = requests.Session()
@@ -1384,7 +1384,7 @@ class Plugin(indigo.PluginBase):
                 r = s.get('http://' + ip_address + '/DbXmlInfo.xml')
                 root = ET.fromstring(r.text)        
             except:
-                self.logger.error(u"Unable to parse XML file: {}".format(xmlFile))
+                self.logger.error(u"Unable to parse XML data from repeater.")
                 self.threadLock.release()
                 return
 
