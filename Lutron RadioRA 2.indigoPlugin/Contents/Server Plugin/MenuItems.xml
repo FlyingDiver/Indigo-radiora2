@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <MenuItems>
     <MenuItem id="queryAll">
-        <Name>Query All Devices Now</Name>
+        <Name>Query All Devices</Name>
         <CallbackMethod>queryAllDevices</CallbackMethod>
     </MenuItem>
     <MenuItem id="sendCommand">

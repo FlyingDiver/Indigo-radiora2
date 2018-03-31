@@ -538,19 +538,23 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"validateDeviceConfigUi: forced PROP_KEYPADBUT_DISPLAY_LED_STATE to False for keypad # %s, button # %s" % (valuesDict[PROP_KEYPAD], valuesDict[PROP_KEYPADBUT]))
 
         elif typeId == RA_LINKEDDEVICE:                        
-            buttonDevice = indigo.devices[int(valuesDict['buttonDevice'])]
-            valuesDict['buttonAddress'] = buttonDevice.address
-
-            parts = buttonDevice.address.split(".")
-            deviceID =  parts[0]
-            componentID = parts[1]
-            buttonLEDAddress = "{}.{}".format(deviceID, int(componentID)+80)
-            valuesDict['buttonLEDAddress'] = buttonLEDAddress
-            buttonLEDDevice = self.keypads[buttonLEDAddress]
-            valuesDict['buttonLEDDevice'] = buttonLEDDevice.id
+            try:
+                buttonDevice = indigo.devices[int(valuesDict['buttonDevice'])]
+                valuesDict['buttonAddress'] = buttonDevice.address
+            except:
+                self.logger.debug(u"validateDeviceConfigUi: buttonDevice not found: {}".format(valuesDict['buttonDevice']))
+                errorsDict['buttonAddress'] = "Invalid Button Device - ID not found"
+            else:
+                parts = buttonDevice.address.split(".")
+                deviceID =  parts[0]
+                componentID = parts[1]
+                buttonLEDAddress = "{}.{}".format(deviceID, int(componentID)+80)
+                valuesDict['buttonLEDAddress'] = buttonLEDAddress
+                buttonLEDDevice = self.keypads[buttonLEDAddress]
+                valuesDict['buttonLEDDevice'] = buttonLEDDevice.id
             
-            self.logger.debug(u"New Linked Device: buttonAddress = {}, buttonLEDAddress = {}, buttonDevice = {}, buttonLEDDevice = {},  controlledDevice = {}"\
-                .format(valuesDict['buttonAddress'], valuesDict['buttonLEDAddress'], valuesDict['buttonDevice'], valuesDict['buttonLEDDevice'], valuesDict['controlledDevice']))
+                self.logger.debug(u"New Linked Device: buttonAddress = {}, buttonLEDAddress = {}, buttonDevice = {}, buttonLEDDevice = {},  controlledDevice = {}"\
+                    .format(valuesDict['buttonAddress'], valuesDict['buttonLEDAddress'], valuesDict['buttonDevice'], valuesDict['buttonLEDDevice'], valuesDict['controlledDevice']))
         
         if len(errorsDict) > 0:
             return (False, valuesDict, errorsDict)
@@ -741,11 +745,13 @@ class Plugin(indigo.PluginBase):
                 self._cmdTimeClock(cmd)
             elif "~MONITORING" in cmd:
                 self.logger.debug(u"Main repeater serial interface configured" + cmd)
+            elif "~ERROR" in cmd:
+                self.logger.debug(u"{} received".format(cmd))
             elif 'GNET' in cmd:
                 #command prompt is ready
                 self.logger.threaddebug(u"Command prompt received. Device is ready.")
             elif cmd != "!":
-                self.logger.error(u"Unrecognized command: " + cmd)
+                self.logger.debug(u"Unrecognized command: " + cmd)
 
 
     def _sendCommand(self, cmd):
