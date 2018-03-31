@@ -49,12 +49,11 @@
 			</Field>            
 			<Field type="checkbox" id="showDeveloper" defaultValue="false">
         		<Label>Show Developer Options:</Label>
-				<Description>(Not for Plugin Users)</Description>
 			</Field>
-			<Field id="use_local" type="checkbox" defaultValue="false" visibleBindingId="showDeveloper" visibleBindingValue="true">>
+			<Field id="use_local" type="checkbox" defaultValue="false" visibleBindingId="showDeveloper" visibleBindingValue="true">
 				<Label>Use XML file:</Label>
 			</Field>            
-			<Field id="xmlFileName" type="textfield" defaultValue="~/DbXmlInfo.xml" visibleBindingId="showDeveloper" visibleBindingValue="true">>
+			<Field id="xmlFileName" type="textfield" defaultValue="~/DbXmlInfo.xml" visibleBindingId="showDeveloper" visibleBindingValue="true">
 				<Label>File Name:</Label>
 			</Field>            
         </ConfigUI>

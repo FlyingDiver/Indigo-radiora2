@@ -200,4 +200,28 @@
             </Field>
         </ConfigUI>
     </Device>
+    
+    <Device type="custom" id="ra2LinkedDevice">
+        <Name>Linked Device</Name>
+        <ConfigUI>
+            <Field id="room" type="menu">
+                <Label>Controlling Keypad Room:</Label>
+                <List class="self" filter="" method="roomListGenerator"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="buttonDevice" type="menu">
+                <Label>Controlling Keypad Button:</Label>
+                <List class="self" filter="" method="pickButton"  dynamicReload="true"/>
+            </Field>            
+			<Field id="controlledDevice" type="menu">
+				<Label>Controlled Device:</Label>
+				<List method="controllableDevices" dynamicReload="true" class="self" filter="" />
+                <CallbackMethod>menuChanged</CallbackMethod>
+			</Field>
+			<Field id="buttonAddress" type="textField" defaultValue="" hidden="true" />
+			<Field id="buttonLEDAddress" type="textField" defaultValue="" hidden="true" />
+<!--			<Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
+			<Field id="SupportsStatusRequest" type="checkbox" defaultValue="false" hidden="true" /> -->
+        </ConfigUI>
+    </Device>
 </Devices>
