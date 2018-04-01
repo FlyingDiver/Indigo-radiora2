@@ -1,23 +1,59 @@
 <?xml version="1.0"?>
 <MenuItems>
+    <MenuItem id="manageLinkedDevices">
+        <Name>Manage Linked Devices...</Name>
+        <ButtonTitle>Done</ButtonTitle>
+        <ConfigUI>
+            <Field id="room" type="menu">
+                <Label>Controlling Keypad Room:</Label>
+                <List class="self" filter="" method="roomListGenerator"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="buttonDevice" type="menu">
+                <Label>Controlling Keypad Button:</Label>
+                <List class="self" filter="" method="pickKeypadButton"  dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>            
+			<Field id="controlledDevice" type="menu">
+				<Label>Controlled Device:</Label>
+				<List method="controllableDevices" dynamicReload="true" class="self" filter="" />
+                <CallbackMethod>menuChanged</CallbackMethod>
+			</Field>
+			<Field id="linkName" type="textfield">
+				<Label>Link Name:</Label>
+			</Field>
+            <Field id="addLinkedDevice" type="button">
+                <Label/>
+                <Title>Add/Update Device</Title>
+                <CallbackMethod>addLinkedDevice</CallbackMethod>
+            </Field>
+            <Field id="sep1" type="separator"/>
+            <Field id="publishedLabel" type="label" fontColor="darkgray">
+                <Label>This is the list of Linked Devices.</Label>
+            </Field>
+            <Field id="listLinkedDevices" type="list" rows="15">
+                <Label>Linked devices:</Label>
+                <List class="self" method="listLinkedDevices" dynamicReload="true"/>
+            </Field>
+            <Field id="deleteLinkedDevices" type="button">
+                <Label/>
+                <Title>Delete Link(s)</Title>
+                <CallbackMethod>deleteLinkedDevices</CallbackMethod>
+            </Field>
+        </ConfigUI>
+    </MenuItem>
+    <MenuItem id="listDevices">
+        <CallbackMethod>logLinkedDevices</CallbackMethod>
+        <Name>Print Linked Device List to Log</Name>
+    </MenuItem>
+    <MenuItem id="titleSeparator1" type="separator" />
     <MenuItem id="queryAll">
         <Name>Query All Devices</Name>
         <CallbackMethod>queryAllDevices</CallbackMethod>
     </MenuItem>
-    <MenuItem id="sendCommand">
-        <Name>Send Raw Command</Name>
-        <CallbackMethod>sendRawCommandMenu</CallbackMethod>
-        <ButtonTitle>Send</ButtonTitle>
-        <ConfigUI>
-            <Field id="commandString" type="textfield">
-                <Label>Command String:</Label>
-            </Field>
-        </ConfigUI>
-    </MenuItem>
-    <MenuItem id="titleSeparator1" type="separator" />
     <MenuItem id="createAll">
-        <Name>Create Devices from Repeater</Name>
-        <CallbackMethod>createAllDevicesMenu</CallbackMethod>
+        <Name>Create Devices from RRA2 Repeater</Name>
+        <CallbackMethod>createRRA2DevicesMenu</CallbackMethod>
         <ButtonTitle>Create</ButtonTitle>
         <ConfigUI>
 			<Field id="warning_note" type="label">

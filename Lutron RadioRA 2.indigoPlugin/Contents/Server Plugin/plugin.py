@@ -53,7 +53,7 @@ import telnetlib
 import time
 import select       # was getting errors on the select.error exception in runConcurrentThread
 import logging
-
+import json
 import os
 import requests
 import xml.etree.ElementTree as ET
@@ -143,7 +143,6 @@ class Plugin(indigo.PluginBase):
         self.triggers = { }
         
         self.roomButtonTree = {}
-        self.linkedDeviceList = {}
         
         self.threadLock = threading.Lock()  # for background data fetch
 
@@ -155,6 +154,14 @@ class Plugin(indigo.PluginBase):
         except KeyError:
             self.logger.warning(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
             return
+
+        savedList = indigo.activePlugin.pluginPrefs.get(u"linkedDevices", None)
+        if savedList:
+            self.linkedDeviceList = json.loads(savedList)
+        else:
+            self.linkedDeviceList = {}        
+        self.logLinkedDevices()
+
 
         if self.IP:
             self.ipStartup()
@@ -182,30 +189,35 @@ class Plugin(indigo.PluginBase):
     def deviceDeleted(self, delDevice):
         indigo.PluginBase.deviceDeleted(self, delDevice)
 
-        for linkDeviceId, linkDevice in self.linkedDeviceList.iteritems():
-            buttonDevice = int(linkDevice.pluginProps["buttonDevice"])
-            buttonLEDDevice = int(linkDevice.pluginProps["buttonLEDDevice"])
-            controlledDevice = int(linkDevice.pluginProps["controlledDevice"])
-            if (delDevice.id == buttonDevice) or (delDevice.id == buttonLEDDevice) or (delDevice.id == controlledDevice):
-                self.logger.debug(u"A linked device ({}) has been deleted.  Disabling {}".format(controlledDevice, linkDevice.name))
-                indigo.device.enable(linkDevice, value=False)   #disable it
+        for linkID in self.linkedDeviceList.keys():
+            linkItem = self.linkedDeviceList[linkID]
+            if (delDevice.id == int(linkItem["buttonDevice"])) or (delDevice.id == int(linkItem["buttonLEDDevice"])) or (delDevice.id == int(linkItem["controlledDevice"])):
+                self.logger.info(u"A linked device ({}) has been deleted.  Deleting link: {}".format(delDevice.name, linkItem["name"]))
+                del self.linkedDeviceList[linkID]
+                self.logLinkedDevices()
 
+                indigo.activePlugin.pluginPrefs[u"linkedDevices"] = json.dumps(self.linkedDeviceList)
+                
 
     def deviceUpdated(self, oldDevice, newDevice):
         indigo.PluginBase.deviceUpdated(self, oldDevice, newDevice)
 
-        for linkDeviceId, linkDevice in self.linkedDeviceList.iteritems():
-            controlledDevice = indigo.devices[int(linkDevice.pluginProps["controlledDevice"])]
-            buttonDevice = indigo.devices[int(linkDevice.pluginProps["buttonDevice"])]
+        for linkName, linkItem in self.linkedDeviceList.iteritems():
+            controlledDevice = indigo.devices[int(linkItem["controlledDevice"])]
+            buttonDevice = indigo.devices[int(linkItem["buttonDevice"])]
             
             if oldDevice.id == controlledDevice.id:
 
                 self.logger.debug(u"A linked device ({}) has been updated: {}".format(controlledDevice.name, controlledDevice.onState))
-                buttonLEDDevice = indigo.devices[int(linkDevice.pluginProps["buttonLEDDevice"])]
-                if controlledDevice.onState:
-                    indigo.device.turnOn(buttonLEDDevice.id)
+                try:
+                    buttonLEDDevice = indigo.devices[int(linkItem["buttonLEDDevice"])]
+                except:
+                    pass
                 else:
-                    indigo.device.turnOff(buttonLEDDevice.id)
+                    if controlledDevice.onState:
+                        indigo.device.turnOn(buttonLEDDevice.id)
+                    else:
+                        indigo.device.turnOff(buttonLEDDevice.id)
                     
           
     ####################
@@ -328,9 +340,9 @@ class Plugin(indigo.PluginBase):
         
         triggerAddress = "{}.{}".format(devID, compID)
         self.logger.debug(u"triggerAddress: {}".format(triggerAddress))
-        for linkDeviceId, linkDevice in self.linkedDeviceList.iteritems():
-            controlledDevice = indigo.devices[int(linkDevice.pluginProps["controlledDevice"])]
-            buttonAddress = linkDevice.pluginProps["buttonAddress"]
+        for linkID, linkItem in self.linkedDeviceList.iteritems():
+            controlledDevice = indigo.devices[int(linkItem["controlledDevice"])]
+            buttonAddress = linkItem["buttonAddress"]
             self.logger.debug(u"buttonAddress: {}".format(buttonAddress))
             if buttonAddress == triggerAddress:
                 indigo.device.toggle(controlledDevice.id)
@@ -441,10 +453,24 @@ class Plugin(indigo.PluginBase):
             self.update_device_property(dev, "address", new_value = address)
 
         elif dev.deviceTypeId == RA_LINKEDDEVICE:
-            self.linkedDeviceList[dev.id] = dev
+        
+            # migrate devices then delete them
+            
+            buttonDeviceId = int(dev.pluginProps["buttonDevice"])
+            buttonLEDDeviceId = int(dev.pluginProps["buttonLEDDevice"])
+            controlledDeviceId = int(dev.pluginProps["controlledDevice"])
+            buttonAddress = dev.pluginProps["buttonAddress"]
+
+            linkID = "{}-{}".format(buttonDeviceId, controlledDeviceId)
+            linkItem = {"name" : linkID, "buttonDevice" : buttonDeviceId, "buttonLEDDevice" : buttonLEDDeviceId, "controlledDevice" : controlledDeviceId, "buttonAddress" : buttonAddress}
+            self.logger.debug(u"Adding linkItem {}: {}".format(linkID, linkItem))
+            self.linkedDeviceList[linkID] = linkItem
+            self.logLinkedDevices()
+            indigo.activePlugin.pluginPrefs[u"linkedDevices"] = json.dumps(self.linkedDeviceList)
+            indigo.device.delete(dev.id)
 
         else:
-            self.logger.error(u"deviceStartComm: Unknown device type:" + dev.deviceTypeId)
+            self.logger.error(u"deviceStartComm: Unknown device type: {}".format(dev.deviceTypeId))
             return
         
         if (dev.pluginProps.get(PROP_ISBUTTON, None)):      # it's a button, so put it in the tree
@@ -521,7 +547,8 @@ class Plugin(indigo.PluginBase):
             del self.events[address]
 
         elif dev.deviceTypeId == RA_LINKEDDEVICE:
-            del self.linkedDeviceList[dev.id]
+            pass
+#            del self.linkedDeviceList[dev.id]
 
         else:
             self.logger.error(u"deviceStopComm: Unknown device type:" + dev.deviceTypeId)
@@ -545,6 +572,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug(u"validateDeviceConfigUi: buttonDevice not found: {}".format(valuesDict['buttonDevice']))
                 errorsDict['buttonAddress'] = "Invalid Button Device - ID not found"
             else:
+                self.logger.debug(u"validateDeviceConfigUi: buttonDevice.address = {}".format(buttonDevice.address))
                 parts = buttonDevice.address.split(".")
                 deviceID =  parts[0]
                 componentID = parts[1]
@@ -912,7 +940,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.error("WARNING: Invalid ID (%s) specified for LED.   Must be ID of button + 80.  Please correct and reload the plugin." % keypadid)
                     self.logger.debug(keypadid)
 
-            if action == '3': # Check for triggers
+            if action == '3': # Check for triggers and linked devices
                 self.keypadTriggerCheck(id, button)
                 
 
@@ -924,7 +952,7 @@ class Plugin(indigo.PluginBase):
             elif status == '1':
                 dev.updateStateOnServer("onOffState", True)
 
-            if action == '3': # Check for triggers
+            if action == '3': # Check for triggers and linked devices
                 self.keypadTriggerCheck(id, button)
 
         if keypadid in self.ccis:
@@ -1378,19 +1406,13 @@ class Plugin(indigo.PluginBase):
     def sendRawCommand(self, pluginAction, dimmerDevice):
 
         sendCmd =  indigo.activePlugin.substitute(pluginAction.props["commandString"])
-        self.logger.info(u"Sending Raw Command: \"%s\"" % sendCmd)
+        self.logger.debug(u"Sending Raw Command: \"%s\"" % sendCmd)
         self._sendCommand(sendCmd)
-
-    def sendRawCommandMenu(self, valuesDict, typeId):
-
-        sendCmd =  indigo.activePlugin.substitute(valuesDict["commandString"])
-        self.logger.info(u"Sending Raw Command (Menu): \"%s\"" % sendCmd)
-        self._sendCommand(sendCmd)
-        return True
         
     ########################################
 
     def roomListGenerator(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.threaddebug(u"roomListGenerator, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
         for room in self.roomButtonTree:
             self.logger.threaddebug(u"roomListGenerator adding: {} {}".format(room, room))         
@@ -1399,21 +1421,25 @@ class Plugin(indigo.PluginBase):
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def pickButton(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+    def pickKeypadButton(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.threaddebug(u"pickKeypadButton, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
         try:
             room = valuesDict["room"]
         except:
             return retList
+        if len(room) == 0:
+            return retList
             
         for buttonId in self.roomButtonTree[room]:
-            self.logger.threaddebug(u"pickButton adding: {} ({})".format(buttonId, self.roomButtonTree[room][buttonId]))         
+            self.logger.threaddebug(u"pickKeypadButton adding: {} ({})".format(buttonId, self.roomButtonTree[room][buttonId]))         
             retList.append((buttonId, self.roomButtonTree[room][buttonId]))
          
         retList.sort(key=lambda tup: tup[1])
         return retList
 
     def pickEvent(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.threaddebug(u"pickEvent, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
         for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
             event = dev.pluginProps["event"]
@@ -1423,6 +1449,7 @@ class Plugin(indigo.PluginBase):
         return retList
 
     def pickGroup(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.threaddebug(u"pickGroup, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
         for dev in indigo.devices.iter("self.ra2Group"):
             group = dev.pluginProps["group"]
@@ -1432,6 +1459,7 @@ class Plugin(indigo.PluginBase):
         return retList
 
     def controllableDevices(self, filter="", valuesDict=None, typeId="", targetId=0):
+        self.logger.threaddebug(u"controllableDevices, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
         for dev in indigo.devices:
             if hasattr(dev, "onState"):
@@ -1440,26 +1468,91 @@ class Plugin(indigo.PluginBase):
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def menuChanged(self, valuesDict, typeId, devId):
+    def menuChanged(self, valuesDict, typeId=None, devId=None):
+        self.logger.threaddebug(u"menuChanged, typeId = {}, valuesDict = {}".format(typeId, valuesDict))
         return valuesDict
 
     ########################################
+    # This is the method that's called by the Add Linked Device button in the config dialog.
+    ########################################
+    def addLinkedDevice(self, valuesDict, typeId=None, devId=None):
+        self.logger.debug(u"addLinkedDevice, typeId = {}, devId = {}, valuesDict = {}".format(typeId, devId, valuesDict))
+        
+        buttonDeviceId = valuesDict["buttonDevice"]
+        controlledDeviceId = valuesDict["controlledDevice"]
+        linkName = valuesDict["linkName"]
 
+        try:
+            buttonDevice = indigo.devices[int(buttonDeviceId)]
+            buttonAddress = buttonDevice.address
+        except:
+            self.logger.debug(u"addLinkedDevice: buttonDevice not found: {}".format(valuesDict['buttonDevice']))
+            return
 
-    def createAllDevicesMenu(self, valuesDict, typeId):
+        parts = buttonAddress.split(".")
+        deviceID =  parts[0]
+        componentID = parts[1]
+        buttonLEDAddress = "{}.{}".format(deviceID, int(componentID)+80)
+        try:
+            buttonLEDDeviceId = unicode(self.keypads[buttonLEDAddress].id)
+        except:
+            buttonLEDDeviceId = "0"     
+        linkID = "{}-{}".format(buttonDeviceId, controlledDeviceId)
+        linkItem = {"name" : linkName, "buttonDevice" : buttonDeviceId, "buttonLEDDevice" : buttonLEDDeviceId, "controlledDevice" : controlledDeviceId, "buttonAddress" : buttonAddress}
+        self.logger.info(u"Adding linkItem {}: {}".format(linkID, linkItem))
+        self.linkedDeviceList[linkID] = linkItem
+        self.logLinkedDevices()
+        
+        indigo.activePlugin.pluginPrefs[u"linkedDevices"] = json.dumps(self.linkedDeviceList)
+
+    ########################################
+    # This is the method that's called by the Delete Device button
+    ########################################
+    def deleteLinkedDevices(self, valuesDict, typeId=None, devId=None):
+        self.logger.debug(u"deleteLinkedDevices, typeId = {}, devId = {}, valuesDict = {}".format(typeId, devId, valuesDict))
+        
+        for item in valuesDict["listLinkedDevices"]:
+            self.logger.info(u"deleting device {}".format(item))
+            del self.linkedDeviceList[item]
+
+        self.logLinkedDevices()
+        indigo.activePlugin.pluginPrefs[u"linkedDevices"] = json.dumps(self.linkedDeviceList)
+        
+    def listLinkedDevices(self, filter="", valuesDict=None, typeId="", targetId=0):
+        self.logger.debug(u"listLinkedDevices, filter = {}, typeId = {}, targetId = {}, valuesDict = {}".format(filter, typeId, targetId, valuesDict))
+        returnList = list()
+        for linkID, linkItem in self.linkedDeviceList.iteritems():
+            returnList.append((linkID, linkItem["name"]))
+        return sorted(returnList, key= lambda item: item[1])
+
+    ########################################
+    
+    def logLinkedDevices(self):
+        if len(self.linkedDeviceList) == 0:
+            self.logger.info(u"No linked Devices")
+            return
+            
+        fstring = u"{:^25} {:^25} {:^20} {:^20} {:^20} {:^20}"
+        self.logger.info(fstring.format("Link ID", "Link Name", "buttonDevice", "buttonLEDDevice", "controlledDevice", "buttonAddress"))
+        for linkID, linkItem in self.linkedDeviceList.iteritems():
+             self.logger.info(fstring.format(linkID, linkItem["name"], linkItem["buttonDevice"], linkItem["buttonLEDDevice"], linkItem["controlledDevice"], linkItem["buttonAddress"]))
+            
+    ########################################
+
+    def createRRA2DevicesMenu(self, valuesDict, typeId):
 
         if not self.IP:
             self.logger.warning(u"Unable to create devices, no IP connection to repeater.")
             return False
             
-        deviceThread = threading.Thread(target = self.createAllDevices, args = (valuesDict, ))
+        deviceThread = threading.Thread(target = self.createRRA2Devices, args = (valuesDict, ))
         deviceThread.start()    
         return True        
 
-    def createAllDevices(self, valuesDict):
+    def createRRA2Devices(self, valuesDict):
         
         if not self.threadLock.acquire(False):
-            self.logger.warning(u"Unable to create devices, process already running.")
+            self.logger.warning(u"Unable to create RRA2 devices, process already running.")
             return
 
         # set up variables based on options selected
@@ -1485,7 +1578,7 @@ class Plugin(indigo.PluginBase):
 
         else:
             ip_address = self.pluginPrefs["ip_address"]
-            self.logger.info(u"Creating Devices from repeater at %s, Grouping = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
+            self.logger.info(u"Creating RRA2 Devices from repeater at %s, Grouping = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
                 (ip_address, self.group_by, self.create_unused_keypad, self.create_unused_phantom))
             self.logger.info(u"Creating Devices - starting data fetch...")
             try:
