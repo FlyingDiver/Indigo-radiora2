@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <Devices>
+<!--
     <Device type="custom" id="ra2MainRepeater">
     	<Name>RadioRA 2 Main Repeater</Name>
         <ConfigUI>
@@ -15,7 +16,7 @@
             </State>
         </States>
     </Device>
-    
+-->    
     <Device type="custom" id="ra2TimeClockEvent">
     	<Name>RadioRA 2 Time Clock Event</Name>
         <ConfigUI>

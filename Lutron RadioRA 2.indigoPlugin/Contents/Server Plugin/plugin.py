@@ -59,7 +59,6 @@ import requests
 import xml.etree.ElementTree as ET
 import threading
 
-RA_MAIN_REPEATER = "ra2MainRepeater"
 RA_PHANTOM_BUTTON = "ra2PhantomButton"
 RA_DIMMER = "ra2Dimmer"
 RA_SWITCH = "ra2Switch"
@@ -103,6 +102,8 @@ PROP_PICOBUTTON = "picoButton"
 PROP_BUTTONTYPE = "ButtonType"
 PROP_OUTPUTTYPE = "OutputType"
 
+DOUBLE_CLICK_DELAY = 1.0
+
 ########################################
 class Plugin(indigo.PluginBase):
 ########################################
@@ -143,6 +144,8 @@ class Plugin(indigo.PluginBase):
         self.triggers = { }
         
         self.roomButtonTree = {}
+        self.lastKeyTime = time.time()
+        self.lastKeyAddress = ""
         
         self.threadLock = threading.Lock()  # for background data fetch
 
@@ -346,8 +349,14 @@ class Plugin(indigo.PluginBase):
             self.logger.debug(u"buttonAddress: {}".format(buttonAddress))
             if buttonAddress == triggerAddress:
                 indigo.device.toggle(controlledDevice.id)
-                        
         
+        # and check for double tap
+        
+        if (triggerAddress == self.lastKeyAddress) and (time.time() < (self.lastKeyTime + DOUBLE_CLICK_DELAY)):
+            self.logger.debug(u"Double tap on button: {}".format(triggerAddress))
+            
+        self.lastKeyAddress = triggerAddress
+        self.lastKeyTime = time.time()
             
     ####################
 
@@ -360,11 +369,7 @@ class Plugin(indigo.PluginBase):
     ########################################
 
     def deviceStartComm(self, dev):
-        if dev.deviceTypeId == RA_MAIN_REPEATER:
-            address = dev.pluginProps[PROP_DEVICE]
-            self.update_device_property(dev, "address", new_value = address)
-
-        elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
+        if dev.deviceTypeId == RA_PHANTOM_BUTTON:
             if dev.pluginProps.get(PROP_REPEATER, None) == None:
                 self.update_device_property(dev, PROP_REPEATER, new_value = "1")
                 self.logger.info(u"%s: Added repeater property" % (dev.name))
@@ -487,10 +492,7 @@ class Plugin(indigo.PluginBase):
         
         
     def deviceStopComm(self, dev):
-        if dev.deviceTypeId == RA_MAIN_REPEATER:
-            pass
-                        
-        elif dev.deviceTypeId == RA_PHANTOM_BUTTON:
+        if dev.deviceTypeId == RA_PHANTOM_BUTTON:
             try:
                 repeater = dev.pluginProps[PROP_REPEATER]
             except:
@@ -1601,14 +1603,6 @@ class Plugin(indigo.PluginBase):
             for device in room.findall('DeviceGroups/Device'):
                 self.logger.debug("\tDevice: %s (%s,%s)" % (device.attrib['Name'], device.attrib['IntegrationID'], device.attrib['DeviceType']))
                 if device.attrib['DeviceType'] == "MAIN_REPEATER":
-                    name = "Repeater {:03}".format(int(device.attrib['IntegrationID']))
-                    address = device.attrib['IntegrationID']
-                    props = {
-                        PROP_ROOM : room.attrib['Name'], 
-                        PROP_DEVICE : device.attrib['IntegrationID']
-                    }
-                    self.createLutronDevice(RA_MAIN_REPEATER, name, address, props, room.attrib['Name'])
-
                     for component in device.findall('Components/Component'):
                         self.logger.debug("\t\tComponent: %s (%s)" % (component.attrib['ComponentNumber'], component.attrib['ComponentType']))
                         if component.attrib['ComponentType'] == "BUTTON":
@@ -2014,7 +2008,6 @@ class Plugin(indigo.PluginBase):
     def createLutronDevice(self, devType, name, address, props, room):
 
         folderNameDict = {
-            RA_MAIN_REPEATER    : "Lutron Repeaters",
             RA_PHANTOM_BUTTON   : "Lutron Phantom Buttons",
             RA_DIMMER           : "Lutron Dimmers",
             RA_SWITCH           : "Lutron Switches",

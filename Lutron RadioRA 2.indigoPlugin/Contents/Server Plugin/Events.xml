@@ -9,7 +9,7 @@
             </Field>            
         </ConfigUI>
 	</Event>
-    <Event id="groupEvent">
+	<Event id="groupEvent">
         <Name>Room (Group) Event</Name>
         <ConfigUI>
             <Field id="group" type="menu">
@@ -24,10 +24,17 @@
                 </List>
             </Field>            
         </ConfigUI>
-   </Event>
-  <Event id="keypadButtonPress">
+	</Event>
+	<Event id="keypadButtonPress">
         <Name>Keypad Button Press</Name>
  		<ConfigUI>
+            <Field type="menu" id="clicks" defaultValue="single">
+                <Label>Presses:</Label>
+                <List>
+                    <Option value="single">Single</Option>
+                    <Option value="double">Double</Option>
+                </List>
+            </Field>            
             <Field id="room" type="menu">
                 <Label>Room:</Label>
                 <List class="self" filter="" method="roomListGenerator"/>
@@ -35,7 +42,7 @@
             </Field>
             <Field id="buttonID" type="menu">
                 <Label>Button:</Label>
-                <List class="self" filter="" method="pickButton"  dynamicReload="true"/>
+                <List class="self" filter="" method="pickKeypadButton"  dynamicReload="true"/>
             </Field>            
  		</ConfigUI>
 	</Event>
