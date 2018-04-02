@@ -1,22 +1,5 @@
 <?xml version="1.0"?>
 <Devices>
-<!--
-    <Device type="custom" id="ra2MainRepeater">
-    	<Name>RadioRA 2 Main Repeater</Name>
-        <ConfigUI>
-            <Field id="device"   type="textField"               defaultValue="1">
-                <Label>Integration ID:</Label>
-            </Field>
-        </ConfigUI>
-       	<States>
-        	<State id="serialNumber">
-                <ValueType>String</ValueType>
-                <TriggerLabel>Serial Number</TriggerLabel>
-                <ControlPageLabel>Serial Number</ControlPageLabel>
-            </State>
-        </States>
-    </Device>
--->    
     <Device type="custom" id="ra2TimeClockEvent">
     	<Name>RadioRA 2 Time Clock Event</Name>
         <ConfigUI>

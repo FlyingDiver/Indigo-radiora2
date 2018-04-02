@@ -31,8 +31,9 @@
             <Field type="menu" id="clicks" defaultValue="single">
                 <Label>Presses:</Label>
                 <List>
-                    <Option value="single">Single</Option>
-                    <Option value="double">Double</Option>
+                    <Option value="1">Single</Option>
+                    <Option value="2">Double</Option>
+                    <Option value="3">Triple</Option>
                 </List>
             </Field>            
             <Field id="room" type="menu">
