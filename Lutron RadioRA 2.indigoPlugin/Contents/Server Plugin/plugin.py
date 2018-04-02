@@ -141,7 +141,9 @@ class Plugin(indigo.PluginBase):
         self.runstartup = False
         self.IP = False     # Default to serial I/O, not IP -vic13
         self.portEnabled = False
-        self.triggers = { }
+        self.eventTriggers = { }
+        self.groupTriggers = { }
+        self.buttonTriggers = { }
         
         self.roomButtonTree = {}
         self.lastKeyTime = time.time()
@@ -226,9 +228,7 @@ class Plugin(indigo.PluginBase):
     ####################
 
     def triggerStartProcessing(self, trigger):
-                                      
-        # do sanity checking on Triggers
-          
+                                                
         if  trigger.pluginTypeId == "keypadButtonPress":
             try:
                 deviceID = trigger.pluginProps["deviceID"]
@@ -240,87 +240,99 @@ class Plugin(indigo.PluginBase):
                     self.logger.error("keypadButtonPress Trigger  %s (%s) missing deviceID/componentID/buttonID: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
                     return
 
+            self.logger.debug("Adding Button Trigger %s (%d)" % (trigger.name, trigger.id))
+            self.buttonTriggers[trigger.id] = trigger
+
+
         elif trigger.pluginTypeId == "timeClockEvent":
             try:
                 event = trigger.pluginProps["event"]
             except:
-                self.logger.error(u"\tTimeclock Event Trigger %s (%s) does not contain event: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
+                self.logger.error(u"Timeclock Event Trigger %s (%s) does not contain event: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
                 return
+
+            self.logger.debug("Adding Event Trigger %s (%d)" % (trigger.name, trigger.id))
+            self.eventTriggers[trigger.id] = trigger
         
         elif trigger.pluginTypeId == "groupEvent":
             try:
                 group = trigger.pluginProps["group"]
             except:
-                self.logger.error(u"\tGroup Trigger %s (%s) does not contain group: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
+                self.logger.error(u"Group Trigger %s (%s) does not contain group: %s" % (trigger.name, trigger.id, str(trigger.pluginProps)))
                 return
         
+            self.logger.debug("Adding Group Trigger %s (%d)" % (trigger.name, trigger.id))
+            self.groupTriggers[trigger.id] = trigger
+        
         else:
-            self.logger.error(u"\t Trigger %s (%s) is unknown type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-            return
+            self.logger.error(u"triggerStartProcessing: Trigger %s (%s) is unknown type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
                       
-        self.logger.debug("Adding Trigger %s (%d)" % (trigger.name, trigger.id))
-        self.triggers[trigger.id] = trigger
-
-
+                      
     def triggerStopProcessing(self, trigger):
 
         self.logger.debug(u"Removing Trigger %s (%d)" % (trigger.name, trigger.id))
-        del self.triggers[trigger.id]
+        if  trigger.pluginTypeId == "keypadButtonPress":
+            del self.buttonTriggers[trigger.id]
+        elif  trigger.pluginTypeId == "timeClockEvent":
+            del self.eventTriggers[trigger.id]
+        elif  trigger.pluginTypeId == "groupEvent":
+            del self.groupTriggers[trigger.id]
+        else:
+            self.logger.error(u"triggerStopProcessing: Trigger %s (%s) is unknown type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
+                      
 
 
-    def clockTriggerCheck(self, info):
+    def eventTriggerCheck(self, info):
 
-        self.logger.debug(u"Clock Trigger check, event %s" % (info))
+        self.logger.debug(u"eventTriggerCheck: event %s" % (info))
 
-        for triggerId, trigger in self.triggers.iteritems():
-
-            if "timeClockEvent" != trigger.pluginTypeId:
-                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-                continue
+        for triggerId, trigger in self.eventTriggers.iteritems():
 
             event = trigger.pluginProps["event"]
             if event != info:
-                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, event))
+                self.logger.threaddebug(u"eventTriggerCheck: Skipping Trigger %s (%s), wrong event: %s" % (trigger.name, trigger.id, event))
                 continue
 
-            self.logger.debug(u"Executing Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
+            self.logger.debug(u"eventTriggerCheck: Executing Trigger %s (%s), event: %s" % (trigger.name, trigger.id, info))
             indigo.trigger.execute(trigger)
 
     def groupTriggerCheck(self, groupID, status):
 
-        self.logger.debug(u"Group Trigger check, group %s %s" % (groupID, status))
+        self.logger.debug(u"groupTriggerCheck: group %s %s" % (groupID, status))
 
-        for triggerId, trigger in self.triggers.iteritems():
-
-            if "groupEvent" != trigger.pluginTypeId:
-                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-                continue
+        for triggerId, trigger in self.groupTriggers.iteritems():
 
             group = trigger.pluginProps["group"]
             occupancy = trigger.pluginProps["occupancyPopUp"]
             if (group != groupID) or (occupancy != status):
-                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong group or stats: %s, %s" % (trigger.name, trigger.id, group, occupancy))
+                self.logger.threaddebug(u"groupTriggerCheck: Skipping Trigger %s (%s), wrong group or stats: %s, %s" % (trigger.name, trigger.id, group, occupancy))
                 continue
 
-            self.logger.info(u"Executing Trigger %s (%s), group %s, status %s" % (trigger.name, trigger.id, groupID, status))
+            self.logger.info(u"groupTriggerCheck: Executing Trigger %s (%s), group %s, status %s" % (trigger.name, trigger.id, groupID, status))
             indigo.trigger.execute(trigger)
 
-    def keypadTriggerCheck(self, devID, compID):
+    def buttonTriggerCheck(self, devID, compID):
 
-        self.logger.debug(u"keyPad Trigger check, devID: %s, compID: %s" % (devID, compID))
+        self.logger.debug(u"buttonTriggerCheck: devID: %s, compID: %s" % (devID, compID))
         
-        # First look for triggers that match this button
+        # check for linked devices
+        
+        triggerAddress = "{}.{}".format(devID, compID)
+        for linkID, linkItem in self.linkedDeviceList.iteritems():
+            controlledDevice = indigo.devices[int(linkItem["controlledDevice"])]
+            buttonAddress = linkItem["buttonAddress"]
+            if buttonAddress == triggerAddress:
+                self.logger.debug(u"Linked Device Match, buttonAddress: {}, controlledDevice: {}".format(buttonAddress, controlledDevice.id))
+                indigo.device.toggle(controlledDevice.id)
 
-        for triggerId, trigger in self.triggers.iteritems():
+        # Look for triggers that match this button
 
-            if "keypadButtonPress" != trigger.pluginTypeId:
-                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong type: %s" % (trigger.name, trigger.id, trigger.pluginTypeId))
-                continue
+        for triggerId, trigger in self.buttonTriggers.iteritems():
 
             try:
                 deviceID = trigger.pluginProps["deviceID"]
                 componentID = trigger.pluginProps["componentID"]
-                self.logger.threaddebug(u"Using deviceID = {}, componentID = {}".format(deviceID, componentID))
+                self.logger.threaddebug(u"buttonTriggerCheck: Using deviceID = {}, componentID = {}".format(deviceID, componentID))
             except:
                 try:
                     buttonID = trigger.pluginProps["buttonID"]
@@ -328,32 +340,23 @@ class Plugin(indigo.PluginBase):
                     parts = buttonAddress.split(".")
                     deviceID =  parts[0]
                     componentID = parts[1]
-                    self.logger.threaddebug(u"Using buttonID = {} ==> {}.{}".format(deviceID, componentID))
+                    self.logger.threaddebug(u"buttonTriggerCheck: deviceID = {}, componentID = {}".format(deviceID, componentID))
                 except:
+                    self.logger.threaddebug(u"buttonTriggerCheck: Error matching keypress trigger.pluginProps = {}".format(trigger.pluginProps))
                     continue
 
             if (deviceID != devID) or (componentID != compID):
-                self.logger.threaddebug(u"Skipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, deviceID, componentID))
+                self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger %s (%s), wrong keypad button: %s, %s" % (trigger.name, trigger.id, deviceID, componentID))
                 continue
 
-            self.logger.debug(u"Executing Trigger %s (%s), keypad button: %s, %s" % (trigger.name, trigger.id, deviceID, componentID))
+            self.logger.debug(u"buttonTriggerCheck: Executing Trigger %s (%s), keypad button: %s.%s" % (trigger.name, trigger.id, deviceID, componentID))
             indigo.trigger.execute(trigger)
             
-        # check for linked devices as well
-        
-        triggerAddress = "{}.{}".format(devID, compID)
-        self.logger.debug(u"triggerAddress: {}".format(triggerAddress))
-        for linkID, linkItem in self.linkedDeviceList.iteritems():
-            controlledDevice = indigo.devices[int(linkItem["controlledDevice"])]
-            buttonAddress = linkItem["buttonAddress"]
-            self.logger.debug(u"buttonAddress: {}".format(buttonAddress))
-            if buttonAddress == triggerAddress:
-                indigo.device.toggle(controlledDevice.id)
         
         # and check for double tap
         
         if (triggerAddress == self.lastKeyAddress) and (time.time() < (self.lastKeyTime + DOUBLE_CLICK_DELAY)):
-            self.logger.debug(u"Double tap on button: {}".format(triggerAddress))
+            self.logger.info(u"Double tap on button: {}".format(triggerAddress))
             
         self.lastKeyAddress = triggerAddress
         self.lastKeyTime = time.time()
@@ -943,7 +946,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(keypadid)
 
             if action == '3': # Check for triggers and linked devices
-                self.keypadTriggerCheck(id, button)
+                self.buttonTriggerCheck(id, button)
                 
 
         if keypadid in self.picos:
@@ -955,7 +958,7 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer("onOffState", True)
 
             if action == '3': # Check for triggers and linked devices
-                self.keypadTriggerCheck(id, button)
+                self.buttonTriggerCheck(id, button)
 
         if keypadid in self.ccis:
             self.logger.debug(u"Received a CCI status message: " + cmd)
@@ -1016,7 +1019,7 @@ class Plugin(indigo.PluginBase):
         id = cmdArray[1]
         action = cmdArray[2]
         event = cmdArray[3]
-        self.clockTriggerCheck(event)
+        self.eventTriggerCheck(event)
 
     def _cmdGroup(self,cmd):
         self.logger.debug(u"Received a Group message  " + cmd)
