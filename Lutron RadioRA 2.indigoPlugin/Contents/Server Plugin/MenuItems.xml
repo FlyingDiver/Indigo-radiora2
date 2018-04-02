@@ -94,4 +94,47 @@
 			</Field>            
         </ConfigUI>
     </MenuItem>
+    <MenuItem id="createFromCaseta">
+        <Name>Create Devices from Caséta Smart Bridge Pro</Name>
+        <CallbackMethod>createCasetaDevicesMenu</CallbackMethod>
+        <ButtonTitle>Create</ButtonTitle>
+        <ConfigUI>
+			<Field id="warning_note" type="label">
+				<Label>Warning:  This procedure creates new devices and makes changes to your existing devices.  Backing up your Indigo database before proceeding is highly recommended!</Label>
+			</Field>
+			<Field id="how_to" type="label">
+				<Label>Generate a Lutron Integration Report using the Advanced Settings in the mobile application.  Copy and paste the body of the emailed report into the text field below.</Label>
+			</Field>
+    		<Field id="separator0" type="separator" />
+			<Field id="group_by" type="menu" defaultValue="Type">
+				<Label>Group New Devices By:</Label>
+				<List>
+					<Option value="None">No Folders</Option>
+					<Option value="Room">Device Location</Option>
+					<Option value="Type">Device Type</Option>
+				</List>
+			</Field>            
+			<Field id="create_bridge_buttons" type="checkbox" defaultValue="false">
+				<Label>Create Smart Bridge buttons:</Label>
+			</Field>            
+            <Field id="jsonText" type="textfield">
+                <Label>JSON Data from Email:
+    			
+    			
+    			
+    			
+    			
+    	
+    	
+    	
+    			
+    			
+    			
+    			
+    			
+    			
+    			</Label>
+            </Field>
+        </ConfigUI>
+    </MenuItem>
 </MenuItems>

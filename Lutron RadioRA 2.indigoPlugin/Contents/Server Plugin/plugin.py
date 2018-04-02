@@ -1563,6 +1563,73 @@ class Plugin(indigo.PluginBase):
             
     ########################################
 
+    def createCasetaDevicesMenu(self, valuesDict, typeId):
+
+        deviceThread = threading.Thread(target = self.createCasetaDevices, args = (valuesDict, ))
+        deviceThread.start()    
+        return True        
+
+    def createCasetaDevices(self, valuesDict):
+
+        if not self.threadLock.acquire(False):
+            self.logger.warning(u"Unable to create devices, process already running.")
+            return
+
+        self.group_by = valuesDict["group_by"]
+        self.create_bridge_buttons = valuesDict["create_bridge_buttons"]
+        self.jsonText = valuesDict["jsonText"]
+
+        self.logger.info(u"Creating Devices from JSON data, Grouping = {}".format(self.group_by))
+
+        casetaData = json.loads(self.jsonText)
+        
+        for device in casetaData["LIPIdList"]["Devices"]:
+            self.logger.info(u"Caseta Device '{}' ({}), Buttons = {}".format(device["Name"], device["ID"], len(device["Buttons"])))
+ 
+            if device["ID"] == 1 and not self.create_bridge_buttons:
+                self.logger.debug(u"Skipping Smart Bridge button creation")
+                continue
+                
+            try:
+                areaName = device["Area"]["Name"]
+            except:
+                areaName = "Bridge"
+                
+            for button in device["Buttons"]:
+            
+                address = "{}.{}".format(device["ID"], button["Number"])
+                name = "{} - {} ({})".format(areaName, device["Name"], address)
+                props = {
+                    PROP_ROOM : areaName, 
+                    PROP_LIST_TYPE : "button", 
+                    PROP_PICO_INTEGRATION_ID : str(device["ID"]), 
+                    PROP_PICOBUTTON : str(button["Number"]), 
+                    PROP_BUTTONTYPE : "Unknown",
+                    PROP_ISBUTTON : "True"
+                }
+                self.createLutronDevice(RA_PICO, name, address, props, areaName)                    
+           
+        for zone in casetaData["LIPIdList"]["Zones"]:
+            self.logger.info(u"Caseta Zone '{}' ({}), Area = {}".format(zone["Name"], zone["ID"], zone["Area"]["Name"]))
+
+            try:
+                areaName = zone["Area"]["Name"]
+            except:
+                areaName = "Unknown"
+                
+            name = "{} - {} ({})".format(areaName, zone["Name"], zone["ID"])
+            props = {
+                PROP_ROOM : areaName, 
+                PROP_ZONE : zone["ID"],
+                PROP_OUTPUTTYPE: "AUTO_DETECT"
+            }
+            self.createLutronDevice(RA_DIMMER, name, zone["ID"], props, areaName)
+   
+        self.logger.info(u"Creating Devices done.")        
+        self.threadLock.release()
+        return
+
+
     def createRRA2DevicesMenu(self, valuesDict, typeId):
 
         if not self.IP:
@@ -1576,7 +1643,7 @@ class Plugin(indigo.PluginBase):
     def createRRA2Devices(self, valuesDict):
         
         if not self.threadLock.acquire(False):
-            self.logger.warning(u"Unable to create RRA2 devices, process already running.")
+            self.logger.warning(u"Unable to create devices, process already running.")
             return
 
         # set up variables based on options selected
