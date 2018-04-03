@@ -3,8 +3,11 @@
     <Device type="custom" id="ra2TimeClockEvent">
     	<Name>RadioRA 2 Time Clock Event</Name>
         <ConfigUI>
-            <Field type="textField" id="event" defaultValue="">
+            <Field id="event" type="textField" defaultValue="">
                 <Label>Event Number:</Label>
+            </Field>
+            <Field id="notes" type="textField" defaultValue="">
+                <Label>Notes:</Label>
             </Field>
         </ConfigUI>
     </Device>
@@ -12,8 +15,11 @@
     <Device type="custom" id="ra2Group">
     	<Name>RadioRA 2 Room Group</Name>
         <ConfigUI>
-            <Field type="textField" id="group" defaultValue="">
+            <Field id="group" type="textField" defaultValue="">
                 <Label>Group Number:</Label>
+            </Field>
+            <Field id="notes" type="textField" defaultValue="">
+                <Label>Notes:</Label>
             </Field>
         </ConfigUI>
     </Device>
@@ -22,13 +28,13 @@
         <Name>RadioRA 2 Phantom Button</Name>
         <ConfigUI>
             <Field id="isButton" type="checkbox"  defaultValue="True" hidden="true"/>
-            <Field id="repeater" type="textField" defaultValue="">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Repeater Integration ID:</Label>
             </Field>
-            <Field type="textField" id="button" defaultValue="">
+            <Field id="componentID" type="textField" defaultValue="">
                 <Label>Button Number (101-200):</Label>
             </Field>
-            <Field type="textField" id="notes" defaultValue="">
+            <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
         </ConfigUI>
@@ -37,7 +43,7 @@
     <Device type="dimmer" id="ra2Dimmer">
         <Name>RadioRA 2 Dimmer</Name>
         <ConfigUI>
-            <Field id="zone"     type="textField" defaultValue="">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
             <Field id="notes" type="textField" defaultValue="">
@@ -49,10 +55,10 @@
     <Device type="relay" id="ra2Switch">
         <Name>RadioRA 2 Switch</Name>
         <ConfigUI>
-            <Field id="switch"   type="textField" defaultValue="1">
+            <Field id="integrationID"   type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
-            <Field id="notes"    type="textField" defaultValue="">
+            <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
         </ConfigUI>
@@ -69,10 +75,10 @@
                     <Option value="LED">Keypad LED</Option>
                 </List>
             </Field>
-            <Field id="keypad" type="textField" defaultValue="">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
-            <Field id="keypadButton" type="textField" defaultValue="1">>
+            <Field id="componentID" type="textField" defaultValue="">>
                 <Label>Button ID (1-17) or LED ID (81-97):</Label>
             </Field>
             <Field id="keypadButtonDisplayLEDState" type="checkbox" defaultValue="false" visibleBindingId="listType" visibleBindingValue="LED">
@@ -87,10 +93,10 @@
     <Device id="ra2Fan" type="speedcontrol">
         <Name>RadioRA 2 Fan</Name>
         <ConfigUI>
-            <Field type="textField" id="fan" defaultValue="1">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
-            <Field type="textField" id="notes" defaultValue="">
+            <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
         </ConfigUI>
@@ -99,10 +105,10 @@
     <Device id="ra2Thermo" type="thermostat">
         <Name>RadioRA 2 Thermostat</Name>
         <ConfigUI>
-            <Field type="textField" id="thermo" defaultValue="1">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Thermostat Integration ID:</Label>
             </Field>
-            <Field type="textField" id="notes" defaultValue="">
+            <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
         </ConfigUI>
@@ -111,56 +117,56 @@
     <Device id="ra2Sensor" type="sensor">
         <Name>RadioRA 2 Powr Savr Sensor</Name>
         <ConfigUI>
-            <Field type="textField" id="sensor" defaultValue="1">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Sensor Integration ID:</Label>
             </Field>
-            <Field type="textField" id="notes" defaultValue="">
+            <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
-            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False">
-            </Field>
+            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         </ConfigUI>
     </Device>
     
     <Device id="ra2CCO" type="relay">
         <Name>RadioRA 2 CCO</Name>
         <ConfigUI>
-            <Field type="textField" id="ccoIntegrationID" defaultValue="1">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID (Not the same as VCRX Integration ID):</Label>
             </Field>
-            <Field type="menu" id="ccoType" defaultValue="momentary">
+            <Field id="ccoType" type="menu" defaultValue="momentary">
                 <Label>Type:</Label>
                 <List>
                     <Option value="momentary">Momentary</Option>
                     <Option value="sustained">Sustained</Option>
                 </List>
             </Field>
-            <Field type="textField" id="notes" defaultValue="">
+            <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
-            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False">
-            </Field>
+            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         </ConfigUI>
     </Device>
     
     <Device id="ra2CCI" type="sensor">
         <Name>RadioRA 2 CCI</Name>
         <ConfigUI>
-            <Field id="cciIntegrationID" type="textField" defaultValue="1">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>VCRX Integration ID:</Label>
             </Field>
-            <Field id="component" type="textField" defaultValue="32">>
+            <Field id="componentID" type="textField" defaultValue="32">>
                 <Label>Component Number (input 1 is 32, input 2 is 33):</Label>
             </Field>
-            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False">
+            <Field id="notes" type="textField" defaultValue="">
+                <Label>Notes:</Label>
             </Field>
+            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         </ConfigUI>
     </Device>
     
     <Device id="ra2MotorizedShade" type="dimmer">
         <Name>RadioRA 2 Motorized Shade</Name>
         <ConfigUI>
-            <Field id="shade" type="textField" defaultValue="1">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
             <Field id="notes" type="textField" defaultValue="">
@@ -173,10 +179,10 @@
         <Name>RadioRA 2 Pico Button</Name>
         <ConfigUI>
             <Field id="isButton"     type="checkbox" defaultValue="True" hidden="true"/>
-            <Field id="picoIntegrationID" type="textField" defaultValue="123">
+            <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Pico Integration ID:</Label>
             </Field>
-            <Field id="picoButton" type="textField" defaultValue="2">
+            <Field id="componentID" type="textField" defaultValue="2">
                 <Label>Button Number (2-4 and 5=raise 6=lower for most Picos, 8-11 for 4-button Pico):</Label>
             </Field>
             <Field id="notes" type="textField" defaultValue="">
