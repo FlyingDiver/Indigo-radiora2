@@ -1,7 +1,7 @@
 # Lutron RadioRA 2 / Caséta Plugin
 Indigo plugin for Lutron RadioRa 2 and  Caséta
 
-##Installation
+## Installation
 
 1. Download the plugin zip file and double-click it to expand. Double-click the Lutron RadioRA 2 plugin to install it.
 
@@ -15,7 +15,7 @@ Indigo plugin for Lutron RadioRa 2 and  Caséta
 
 
 
-##Usage
+## Usage
 
 1. Starting with version 7.2.0, this Plugin will automatically created Indigo devices to match your existing RadioRa2 and Caséta installation.  See the Wiki for more details.  This works for switches, dimmers, keypads, motion sensors, VCRX, and HVAC interfaces.
 
@@ -25,7 +25,7 @@ Indigo plugin for Lutron RadioRa 2 and  Caséta
 
 4. Creating devices manually does require the Integration ID (and Component ID). 
 
-##Plugin Limitations
+## Plugin Limitations
 
 1. The Lutron fan switches have four fan speeds (low, medium, medium-high, and high) but only three of these speeds are selectable from the Indigo GUI.
 
