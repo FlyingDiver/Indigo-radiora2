@@ -31,7 +31,7 @@
             <Field id="publishedLabel" type="label" fontColor="darkgray">
                 <Label>This is the list of Linked Devices.</Label>
             </Field>
-            <Field id="listLinkedDevices" type="list" rows="15">
+            <Field id="linkedDeviceList" type="list" rows="15">
                 <Label>Linked devices:</Label>
                 <List class="self" method="listLinkedDevices" dynamicReload="true"/>
             </Field>
