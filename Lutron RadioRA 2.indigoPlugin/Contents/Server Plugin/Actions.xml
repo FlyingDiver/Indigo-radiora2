@@ -5,14 +5,14 @@
 		<Name>Set Fan Speed</Name>
 		<CallbackMethod>setFanSpeed</CallbackMethod>
 		<ConfigUI>
-            <Field id="fanSpeed" type="menu"     defaultValue="0">
+            <Field id="fanSpeed" type="menu"     defaultValue=0>
                <Label>Speed:</Label>
                 <List>
-                    <Option value="0">Off</Option>
-                    <Option value="1">Low</Option>
-                    <Option value="2">Medium</Option>
-                    <Option value="3">Medium High</Option>
-                    <Option value="4">High</Option>
+                    <Option value=0>Off</Option>
+                    <Option value=25>Low</Option>
+                    <Option value=50>Medium</Option>
+                    <Option value=75>Medium High</Option>
+                    <Option value=100>High</Option>
                 </List>
             </Field>
 		</ConfigUI>

@@ -857,6 +857,7 @@ class Plugin(indigo.PluginBase):
                     zone.updateStateOnServer("onOffState", True)
                     zone.updateStateOnServer("brightnessLevel", int(level))
                 self.logger.debug(u"Received: Dimmer " + zone.name + " level set to " + str(level))
+                
             elif id in self.shades:
                 shade = self.shades[id]
                 if int(level) == 0:
@@ -865,6 +866,7 @@ class Plugin(indigo.PluginBase):
                     shade.updateStateOnServer("onOffState", True)
                     shade.updateStateOnServer("brightnessLevel", int(level))
                 self.logger.debug(u"Received: Shade " + shade.name + " opening set to " + str(level))
+                
             elif id in self.switches:
                 switch = self.switches[id]
                 if int(level) == 0:
@@ -873,6 +875,7 @@ class Plugin(indigo.PluginBase):
                 else:
                     switch.updateStateOnServer("onOffState", True)
                     self.logger.debug(u"Received: Switch %s %s" % (switch.name, "turned On"))
+                    
             elif id in self.ccos:
                 cco = self.ccos[id]
                 ccoType = cco.pluginProps[PROP_CCO_TYPE]
@@ -885,20 +888,33 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(u"Received: CCO %s %s" % (cco.name, "Opened"))
                 else:
                     self.logger.debug(u"Received: CCO %s %s" % (cco.name, "Closed"))
+                    
             elif id in self.fans:
                 fan = self.fans[id]
                 if int(level) == 0:
                     fan.updateStateOnServer("onOffState", False)
+                    fan.updateStateOnServer("speedIndex", 0)
+                    fan.updateStateOnServer('actualSpeed', 0)
+                elif level < 26.0:
+                    fan.updateStateOnServer("onOffState", True)
+                    fan.updateStateOnServer("speedIndex", 1)
+                    fan.updateStateOnServer('actualSpeed', 25)
+                elif level < 51.0:
+                    fan.updateStateOnServer("onOffState", True)
+                    fan.updateStateOnServer("speedIndex", 2)
+                    fan.updateStateOnServer('actualSpeed', "50)
+                elif level < 76.0:
+                    fan.updateStateOnServer("onOffState", True)
+                    fan.updateStateOnServer("speedIndex", 2)
+                    fan.updateStateOnServer('actualSpeed', 75)
                 else:
                     fan.updateStateOnServer("onOffState", True)
-                    if level < 26.0:
-                        fan.updateStateOnServer("speedIndex", 1)
-                    elif level < 76.0:
-                        fan.updateStateOnServer("speedIndex", 2)
-                    else:
-                        fan.updateStateOnServer("speedIndex", 3)
-                self.logger.debug(u"Received: Fan " + fan.name + " speed set to " + str(level))
-                return
+                    fan.updateStateOnServer("speedIndex", 3)
+                    fan.updateStateOnServer('actualSpeed', 100)
+                self.logger.debug(u"{}: Fan speed set to {}".format(fan.name, level))
+                
+            return
+                
         elif action == '2':  # start raising
             self.logger.debug(u"Received Action 2 for Device " + cmd)
             return
@@ -1305,50 +1321,35 @@ class Plugin(indigo.PluginBase):
             if dev.deviceTypeId == RA_FAN:
                 newSpeed = action.actionValue
                 fan = dev.pluginProps[PROP_INTEGRATION_ID]
-                self.logger.info(u"New speedIndex = {}".format(newSpeed))
+                self.logger.debug(u"{}: New speedIndex = {}".format(dev.name, newSpeed))
                 if newSpeed == 0:
                     sendCmd = "#OUTPUT," + fan + ",1,0"
                 elif newSpeed == 1:
                     sendCmd = "#OUTPUT," + fan + ",1,25"
                 elif newSpeed == 2:
                     sendCmd = "#OUTPUT," + fan + ",1,75"
-                else:
+                elif newSpeed == 3:
                     sendCmd = "#OUTPUT," + fan + ",1,100"
+                else
+                    self.logger.error(u"{}: Invalid speedIndex = {}".format(dev.name, newSpeed)
 
         ###### CYCLE SPEED ######
         elif action.speedControlAction == indigo.kSpeedControlAction.cycleSpeedControlState:
             if dev.deviceTypeId == RA_FAN:
-                newSpeed = (dev.speedIndex + 1) % 4
-                self.logger.info(u"New speedIndex = {}".format(newSpeed))
-                fan = dev.pluginProps[PROP_INTEGRATION_ID]
-                if newSpeed == 0:
-                    sendCmd = "#OUTPUT," + fan + ",1,0"
-                elif newSpeed == 1:
-                    sendCmd = "#OUTPUT," + fan + ",1,25"
-                elif newSpeed == 2:
-                    sendCmd = "#OUTPUT," + fan + ",1,75"
-                else:
-                    sendCmd = "#OUTPUT," + fan + ",1,100"
+                speed = (dev.pluginProps['actualSpeed'] + 25) % 125    # 0 -> 25 -> 50 -> 75 -> 100 -> 0
+                self.logger.debug(u"{}: New speed = {}".format(dev.name, speed))
+                sendCmd = "#OUTPUT,{},1,{}".format(dev.pluginProps[PROP_INTEGRATION_ID], speed)
 
         ###### TOGGLE ######
         elif action.speedControlAction == indigo.kSpeedControlAction.toggle:
+            fan = dev.pluginProps[PROP_INTEGRATION_ID]
             if dev.speedIndex:
-                self.update_device_property(dev, "last_speed", str(dev.speedIndex))
-                sendCmd = "#OUTPUT," + dev.pluginProps[PROP_INTEGRATION_ID] + ",1,0"
+                self.update_device_property(dev, "last_speed", dev.pluginProps['actualSpeed'])
+                self.logger.debug(u"{}:Toggling off".format(dev.name, speed))
+                sendCmd = "#OUTPUT,{},1,0".format(fan)
             else:
-                newSpeed = int(dev.pluginProps["last_speed"])
-                self.logger.info(u"New speedIndex = {}".format(newSpeed))
-                fan = dev.pluginProps[PROP_INTEGRATION_ID]
-                if newSpeed == 0:
-                    sendCmd = "#OUTPUT," + fan + ",1,0"
-                elif newSpeed == 1:
-                    sendCmd = "#OUTPUT," + fan + ",1,25"
-                elif newSpeed == 2:
-                    sendCmd = "#OUTPUT," + fan + ",1,75"
-                else:
-                    sendCmd = "#OUTPUT," + fan + ",1,100"
-                
-
+                self.logger.debug(u"{}: Toggling on, speed = {}".format(dev.name, dev.pluginProps["last_speed"]))
+                sendCmd = "#OUTPUT,{},1,{}".format(fan, dev.pluginProps["last_speed"])
 
         ###### STATUS REQUEST ######
         elif action.speedControlAction == indigo.kSpeedControlAction.RequestStatus:
@@ -1453,21 +1454,8 @@ class Plugin(indigo.PluginBase):
     def setFanSpeed(self, pluginAction, fanDevice):
 
         fanSpeed =  pluginAction.props["fanSpeed"]
-        fan = fanDevice.address
-
-        self.logger.info(u"New fanSpeed = {}".format(fanSpeed))
-        if fanSpeed == "0":
-            sendCmd = "#OUTPUT," + fan + ",1,0"
-        elif fanSpeed == "1":
-            sendCmd = "#OUTPUT," + fan + ",1,25"
-        elif fanSpeed == "2":
-            sendCmd = "#OUTPUT," + fan + ",1,50"
-        elif fanSpeed == "3":
-            sendCmd = "#OUTPUT," + fan + ",1,75"
-        else:
-            sendCmd = "#OUTPUT," + fan + ",1,100"
-
-        self.logger.info(u"{}: Setting fan speed to {}".format(fanDevice.name, fanSpeed))
+        sendCmd = "#OUTPUT,{},1,25".format(fanDevice.address, fanSpeed)
+        self.logger.debug(u"{}: Setting fan speed to {}".format(fanDevice.name, fanSpeed))
         self._sendCommand(sendCmd)
 
     def fadeDimmer(self, pluginAction, dimmerDevice):
