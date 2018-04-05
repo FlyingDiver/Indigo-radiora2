@@ -1330,8 +1330,8 @@ class Plugin(indigo.PluginBase):
                     sendCmd = "#OUTPUT," + fan + ",1,75"
                 elif newSpeed == 3:
                     sendCmd = "#OUTPUT," + fan + ",1,100"
-                else
-                    self.logger.error(u"{}: Invalid speedIndex = {}".format(dev.name, newSpeed)
+                else:
+                    self.logger.error(u"{}: Invalid speedIndex = {}".format(dev.name, newSpeed))
 
         ###### CYCLE SPEED ######
         elif action.speedControlAction == indigo.kSpeedControlAction.cycleSpeedControlState:
@@ -1454,7 +1454,7 @@ class Plugin(indigo.PluginBase):
     def setFanSpeed(self, pluginAction, fanDevice):
 
         fanSpeed =  pluginAction.props["fanSpeed"]
-        sendCmd = "#OUTPUT,{},1,25".format(fanDevice.address, fanSpeed)
+        sendCmd = "#OUTPUT,{},1,{}".format(fanDevice.address, fanSpeed)
         self.logger.debug(u"{}: Setting fan speed to {}".format(fanDevice.name, fanSpeed))
         self._sendCommand(sendCmd)
 

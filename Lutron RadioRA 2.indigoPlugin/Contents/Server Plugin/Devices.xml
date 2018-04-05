@@ -106,7 +106,7 @@
                 <TriggerLabel>Fan Speed %</TriggerLabel>
                 <ControlPageLabel>Fan Speed %</ControlPageLabel>
             </State>
-        <States/>
+        </States>
     </Device>
     
     <Device id="ra2Thermo" type="thermostat">
