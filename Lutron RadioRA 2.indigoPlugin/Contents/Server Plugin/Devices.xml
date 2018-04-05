@@ -100,6 +100,13 @@
                 <Label>Notes:</Label>
             </Field>
         </ConfigUI>
+        <States>
+            <State id="actualSpeed">
+                <ValueType>Integer</ValueType>
+                <TriggerLabel>Fan Speed %</TriggerLabel>
+                <ControlPageLabel>Fan Speed %</ControlPageLabel>
+            </State>
+        <States/>
     </Device>
     
     <Device id="ra2Thermo" type="thermostat">
