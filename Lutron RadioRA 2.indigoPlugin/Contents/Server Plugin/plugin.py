@@ -1316,7 +1316,7 @@ class Plugin(indigo.PluginBase):
     # Fan Action callback
     ######################
     def actionControlSpeedControl(self, action, dev):
-
+        
         sendCmd = ""
 
         ###### SET SPEED ######
@@ -1337,27 +1337,28 @@ class Plugin(indigo.PluginBase):
                     self.logger.error(u"{}: Invalid speedIndex = {}".format(dev.name, newSpeed))
 
         ###### CYCLE SPEED ######
-        elif action.speedControlAction == indigo.kSpeedControlAction.cycleSpeedControlState:
-            if dev.deviceTypeId == RA_FAN:
-                speed = (dev.pluginProps['actualSpeed'] + 25) % 125    # 0 -> 25 -> 50 -> 75 -> 100 -> 0
-                self.logger.debug(u"{}: New speed = {}".format(dev.name, speed))
-                sendCmd = "#OUTPUT,{},1,{}".format(dev.pluginProps[PROP_INTEGRATION_ID], speed)
+#         elif action.speedControlAction == indigo.kSpeedControlAction.CycleSpeedControlState:
+#             if dev.deviceTypeId == RA_FAN:
+#                 speed = (dev.pluginProps['actualSpeed'] + 25) % 125    # 0 -> 25 -> 50 -> 75 -> 100 -> 0
+#                 self.logger.debug(u"{}: New speed = {}".format(dev.name, speed))
+#                 sendCmd = "#OUTPUT,{},1,{}".format(dev.pluginProps[PROP_INTEGRATION_ID], speed)
 
         ###### TOGGLE ######
-        elif action.speedControlAction == indigo.kSpeedControlAction.toggle:
+        elif action.speedControlAction == indigo.kSpeedControlAction.Toggle:
             fan = dev.pluginProps[PROP_INTEGRATION_ID]
+            last_speed = dev.pluginProps.get("last_speed", "100")
             if dev.speedIndex:
                 self.update_device_property(dev, "last_speed", dev.pluginProps['actualSpeed'])
                 self.logger.debug(u"{}:Toggling off".format(dev.name, speed))
                 sendCmd = "#OUTPUT,{},1,0".format(fan)
             else:
-                self.logger.debug(u"{}: Toggling on, speed = {}".format(dev.name, dev.pluginProps["last_speed"]))
-                sendCmd = "#OUTPUT,{},1,{}".format(fan, dev.pluginProps["last_speed"])
+                self.logger.debug(u"{}: Toggling on, speed = {}".format(dev.name, last_speed))
+                sendCmd = "#OUTPUT,{},1,{}".format(fan, last_speed)
 
         ###### STATUS REQUEST ######
-        elif action.speedControlAction == indigo.kSpeedControlAction.RequestStatus:
+        elif action.speedControlAction == indigo.kUniversalAction.RequestStatus:
             integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
-            sendCmd = "?OUTPUT," + integration_id + ",1,"
+            sendCmd = "?OUTPUT,{},1,".format(integration_id)
 
         if len(sendCmd):
             self._sendCommand(sendCmd)
