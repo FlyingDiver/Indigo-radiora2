@@ -363,7 +363,10 @@ class Plugin(indigo.PluginBase):
 
     # prevent deviceStartComm/deviceStopComm on property changes
     def didDeviceCommPropertyChange(self, origDev, newDev):
-        return False      
+        if origDev.deviceTypeId != newDev.deviceTypeId:
+            return True
+        else:
+            return False      
 
               
     def deviceStartComm(self, dev):
@@ -558,7 +561,7 @@ class Plugin(indigo.PluginBase):
             try:
                 roomName = dev.pluginProps[PROP_ROOM]
             except:
-                roomname = u"Unknown"
+                roomName = u"Unknown"
             try:
                 room = self.roomButtonTree[roomName]
             except:
