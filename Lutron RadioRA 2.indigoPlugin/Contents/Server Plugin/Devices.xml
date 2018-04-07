@@ -99,9 +99,10 @@
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
+            <Field id="LastSpeed" type="textfield" hidden="true" defaultValue="100"/>
         </ConfigUI>
         <States>
-            <State id="actualSpeed">
+            <State id="ActualSpeed">
                 <ValueType>Integer</ValueType>
                 <TriggerLabel>Fan Speed %</TriggerLabel>
                 <ControlPageLabel>Fan Speed %</ControlPageLabel>
