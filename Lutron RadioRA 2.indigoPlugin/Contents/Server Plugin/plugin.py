@@ -637,7 +637,7 @@ class Plugin(indigo.PluginBase):
             return (False, valuesDict, errorsDict)
 
         return (True, valuesDict)
-        
+                
     def runConcurrentThread(self):
 
         try:
@@ -692,10 +692,10 @@ class Plugin(indigo.PluginBase):
 
         self.portEnabled = False
 
-        serialUrl = self.getSerialPortUrl(self.pluginPrefs, u"devicePort")
-        self.logger.info(u"Serial Port URL is: " + serialUrl)
+        self.serialUrl = self.getSerialPortUrl(self.pluginPrefs, u"devicePort")
+        self.logger.info(u"Serial Port URL is: " + self.serialUrl)
 
-        self.connSerial = self.openSerial(u"Lutron RadioRA", serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
+        self.connSerial = self.openSerial(u"Lutron RadioRA", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
         if self.connSerial is None:
             self.logger.error(u"Failed to open serial port")
             return
@@ -756,53 +756,54 @@ class Plugin(indigo.PluginBase):
 
 # plugin configuration validation
     def validatePrefsConfigUi(self, valuesDict):
-        errorDict = indigo.Dict()
 
-        badAddr = "Please use either an IP address (i.e. 1.2.3.4) or a fully qualified host name (i.e. lutron.domain.com)"
+        if valuesDict["IP"]:
+            if valuesDict["ip_address"].count('.') != 3:
+                errorDict = indigo.Dict()
+                errorDict["ip_address"] = "Please enter an IP address (i.e. 192.168.1.100)"
+                return (False, valuesDict, errorDict)
 
-        self.IP = valuesDict["IP"]
+        if valuesDict["IP"]:
 
-        if valuesDict["ip_address"].count('.') >= 3:
-            ipOK = True
-        else:
-            ipOK = False
-
-        try:
-            if ipOK:
-                rtn = True
-            else:
-                errorDict["ip_address"] = badAddr
-                rtn = (False, valuesDict, errDict)
-        except AttributeError:
-            rtn = (True, valuesDict)
-
-        try:
-            if valuesDict["configDone"]:
-                self.runstartup = False
-            else:
-                if ipOK and rtn:
-                    self.logger.debug(u"Setting configDone to True")
-                    valuesDict["configDone"] = True
-                    self.logger.debug(u"Setting flag to run startup")
-                    self.runstartup = True
-        except KeyError:
-            if ipOK and rtn:
-                self.logger.debug(u"Setting configDone to True")
+            if self.IP == valuesDict["IP"] and self.pluginPrefs["ip_address"] == valuesDict["ip_address"]: # no changes
+                self.logger.debug(u"validatePrefsConfigUi: IP Config, no changes")
                 valuesDict["configDone"] = True
-                self.logger.exception(u"Setting flag to run startup")
-                self.runstartup = True
-        self.IP = valuesDict["IP"]
-        self.logger.debug(u"%s, %s, %s" % (str(rtn), str(ipOK), str(self.IP)))
-        return rtn
+            else:
+                self.logger.debug(u"validatePrefsConfigUi: IP Config changed")
+                valuesDict["configDone"] = False
+            
+        else:  # serial connection
+
+            serialUrl = self.getSerialPortUrl(valuesDict, u"devicePort")
+
+            if self.IP == valuesDict["IP"] and self.serialUrl == serialUrl: # no changes
+                self.logger.debug(u"validatePrefsConfigUi: Serial Config, no changes")
+                valuesDict["configDone"] = True
+            else:
+                self.logger.debug(u"validatePrefsConfigUi: Serial Config changed")
+                valuesDict["configDone"] = False
+
+        return (True, valuesDict)
+
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
-        if not userCancelled:
-            try:
-                self.logLevel = int(valuesDict[u"logLevel"])
-            except:
-                self.logLevel = logging.INFO
+        if userCancelled:
+            self.logger.debug(u"closedPrefsConfigUi: User Cancelled")
+            return
+            
+        logLevel = int(valuesDict.get(u"logLevel", logging.INFO))
+        if logLevel != self.logLevel:
+            self.logLevel = logLevel
             self.indigo_log_handler.setLevel(self.logLevel)
-            self.logger.debug(u"logLevel = " + str(self.logLevel))
+            self.logger.debug(u"New logLevel = {}".format(self.logLevel))
+            
+       
+        self.IP = valuesDict["IP"]
+        self.runstartup = not valuesDict.get("configDone", False)
+        self.logger.debug(u"closedPrefsConfigUi: Setting self.runstartup = {}".format(self.runstartup))
+        
+        return
+           
 
     ########################################
 

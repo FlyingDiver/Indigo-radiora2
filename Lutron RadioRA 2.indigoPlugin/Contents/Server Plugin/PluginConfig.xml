@@ -1,5 +1,6 @@
 <?xml version="1.0"?>
 <PluginConfig>
+    <Field id="configDone" type="checkbox" defaultValue="false" hidden="true"/>
     <Field id="infoLabel1" type="label">
         <Label>Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
     </Field>
@@ -12,9 +13,6 @@
     <Field id="simpleSeparator1" type="separator"/>
     <Field type="checkbox" id="IP" defaultValue="false">
         <Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
-    </Field>
-    <Field id="space1" type="label">
-        <Label/>
     </Field>
     <Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
         <Label>IP Address or Hostname:</Label>
@@ -43,7 +41,4 @@
     </Field>
     <Field id="simpleSeparator3" type="separator"/>
     <Field type="serialport" id="devicePort"/>
-    <Field id="configDone" type="checkbox" defaultValue="false" hidden="true">
-        <Label>Is it configured?</Label>
-    </Field>
 </PluginConfig>
