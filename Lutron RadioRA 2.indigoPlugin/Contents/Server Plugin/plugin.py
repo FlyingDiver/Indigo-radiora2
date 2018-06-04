@@ -1808,7 +1808,7 @@ class Plugin(indigo.PluginBase):
             name = u"{} - {} ({})".format(areaName, zone["Name"], zone["ID"])
             props = {
                 PROP_ROOM : areaName, 
-                PROP_INTEGRATION_ID : zone["ID"],
+                PROP_INTEGRATION_ID : str(zone["ID"]),
                 PROP_OUTPUTTYPE: "AUTO_DETECT"
             }
             self.createLutronDevice(RA_DIMMER, name, zone["ID"], props, areaName)
