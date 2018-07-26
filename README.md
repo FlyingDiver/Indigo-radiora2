@@ -1,13 +1,22 @@
 # Lutron RadioRA 2 / Caséta Plugin
 Indigo plugin for Lutron RadioRa 2 and  Caséta
 
+## Requirements
+
+1. For RadioRa2, a Main Repeater (RR-MAIN-REP-WH) with ethernet or serial connection to the Indigo server.
+
+2. For RadioRa2 Select, a Main Repeater (RR-SEL-REP2) with ethernet.
+
+3. For Caséta, a Wireless Smart Bridge Pro (L-BDGPRO2) with ethernet.
+
+
 ## Installation
 
 1. Download the plugin zip file and double-click it to expand. Double-click the Lutron RadioRA 2 plugin to install it.
 
 2. For RadioRa 2, you can connect to the main repeater either via Ethernet or a Serial using a USB to serial adapter.
 
-3. For Caséta, only Ethernet is supported.
+3. For Caséta or RadioRa2 Select, only Ethernet is supported.
 
 4. The initial configuration dialog will prompt you to specify a serial port or IP connection. If you check the option for IP, you must enter a valid username and password. For Caseta systems, this is the telnet login, not the login you use for the Caseta app.
 
