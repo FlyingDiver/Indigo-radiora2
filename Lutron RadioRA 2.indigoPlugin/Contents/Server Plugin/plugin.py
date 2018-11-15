@@ -128,12 +128,6 @@ class Plugin(indigo.PluginBase):
     def startup(self):
         self.logger.info(u"Starting up Lutron")
 
-        try:
-            self.IP = self.pluginPrefs["IP"]
-        except KeyError:
-            self.logger.warning(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
-            return
-
         savedList = indigo.activePlugin.pluginPrefs.get(u"linkedDevices", None)
         if savedList:
             self.linkedDeviceList = json.loads(savedList)
@@ -141,6 +135,13 @@ class Plugin(indigo.PluginBase):
             self.linkedDeviceList = {}        
         self.logLinkedDevices()
 
+        indigo.devices.subscribeToChanges()
+
+        try:
+            self.IP = self.pluginPrefs["IP"]
+        except KeyError:
+            self.logger.warning(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
+            return
 
         if self.IP:
             self.ipStartup()
@@ -148,7 +149,6 @@ class Plugin(indigo.PluginBase):
             self.serialStartup()
         self.runstartup = False
 
-        indigo.devices.subscribeToChanges()
 
         if self.queryAtStartup:
             self.queryAllDevices()
@@ -2296,6 +2296,8 @@ class Plugin(indigo.PluginBase):
 
 
     def createLutronDevice(self, devType, name, address, props, room):
+        
+        self.logger.threaddebug("createLutronDevice: devType = {}, name = {}, address = {}, props = {}, room = {}".format(devType, name, address, props, room))            
 
         folderNameDict = {
             RA_PHANTOM_BUTTON   : "Lutron Phantom Buttons",
@@ -2317,7 +2319,7 @@ class Plugin(indigo.PluginBase):
         # it would be more efficient to search through the internal device lists, but a pain to code.
         # If it does exist, update with the new properties
         
-        for dev in indigo.devices.iter("self"):
+        for dev in indigo.devices.iter("self"):        
             if dev.address == address:
                 if dev.pluginProps.get(PROP_ROOM, None):
                     self.logger.debug("Skipping existing device: '{}' ({})".format(name, address))            
@@ -2329,24 +2331,30 @@ class Plugin(indigo.PluginBase):
             
         # Pick the folder for this device, create it if necessary
         
-        if self.group_by == "Type":
+        if self.group_by == "Type":                     
             folderName = folderNameDict[devType]
             if folderName in indigo.devices.folders:
                 theFolder = indigo.devices.folders[folderName].id
             else:
                 self.logger.debug("Creating Device Folder: '%s'" % (folderName))            
                 theFolder = indigo.devices.folder.create(folderName).id
+                
         elif self.group_by == "Room":
-            foldername = u"Lutron " + room
+            folderName = u"Lutron {}".format(room)
             if folderName in indigo.devices.folders:
                 theFolder = indigo.devices.folders[folderName].id
             else:
-                self.logger.debug("Creating Device Folder: '%s'" % (folderName))            
+                self.logger.debug("Creating Device Folder: '{}'".format(folderName))            
                 theFolder = indigo.devices.folder.create(folderName).id
-        else:
-            foldername = u"DEVICES"
+                
+        elif self.group_by == "None":
+            folderName = u"DEVICES"
             theFolder = 0
-                    
+
+        else:
+            self.logger.error("Unknown value for group_by")
+            return
+                                        
         # finally, create the device
         
         self.logger.info("Creating %s device: '%s' (%s) in '%s'" % (devType, name, address, folderName))
