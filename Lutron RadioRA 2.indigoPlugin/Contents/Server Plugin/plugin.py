@@ -864,7 +864,7 @@ class Plugin(indigo.PluginBase):
                 if int(level) == 0:
                     zone.updateStateOnServer(ONOFF, False)
                 else:
-                    zone.updateStateOnServer(ONOFF, True)
+                    # zone.updateStateOnServer(ONOFF, True) # Setting brightness below also turns on light
                     zone.updateStateOnServer("brightnessLevel", int(level))
                 self.logger.debug(u"Received: Dimmer " + zone.name + " level set to " + str(level))
                 
@@ -873,7 +873,7 @@ class Plugin(indigo.PluginBase):
                 if int(level) == 0:
                     shade.updateStateOnServer(ONOFF, False)
                 else:
-                    shade.updateStateOnServer(ONOFF, True)
+                    # shade.updateStateOnServer(ONOFF, True) # Setting brightness below also turns on shade, since its basically a light device
                     shade.updateStateOnServer("brightnessLevel", int(level))
                 self.logger.debug(u"Received: Shade " + shade.name + " opening set to " + str(level))
                 
@@ -902,23 +902,23 @@ class Plugin(indigo.PluginBase):
             elif id in self.fans:
                 fan = self.fans[id]
                 if int(level) == 0:
-                    fan.updateStateOnServer(ONOFF, False)
+                    # fan.updateStateOnServer(ONOFF, False) # Setting speed also turns it on/off. This is redundant
                     fan.updateStateOnServer(SPEEDINDEX, 0)
                     fan.updateStateOnServer('ActualSpeed', 0)
                 elif level < 26.0:
-                    fan.updateStateOnServer(ONOFF, True)
+                    # fan.updateStateOnServer(ONOFF, True) # Setting speed also turns it on/off. This is redundant
                     fan.updateStateOnServer(SPEEDINDEX, 1)
                     fan.updateStateOnServer('ActualSpeed', 25)
                 elif level < 51.0:
-                    fan.updateStateOnServer(ONOFF, True)
+                    # fan.updateStateOnServer(ONOFF, True) # Setting speed also turns it on/off. This is redundant
                     fan.updateStateOnServer(SPEEDINDEX, 2)
                     fan.updateStateOnServer('ActualSpeed', 50)
                 elif level < 76.0:
-                    fan.updateStateOnServer(ONOFF, True)
+                    # fan.updateStateOnServer(ONOFF, True) # Setting speed also turns it on/off. This is redundant
                     fan.updateStateOnServer(SPEEDINDEX, 2)
                     fan.updateStateOnServer('ActualSpeed', 75)
                 else:
-                    fan.updateStateOnServer(ONOFF, True)
+                    # fan.updateStateOnServer(ONOFF, True) # Setting speed also turns it on/off. This is redundant
                     fan.updateStateOnServer(SPEEDINDEX, 3)
                     fan.updateStateOnServer('ActualSpeed', 100)
                 self.logger.debug(u"{}: Fan speed set to {}".format(fan.name, level))
