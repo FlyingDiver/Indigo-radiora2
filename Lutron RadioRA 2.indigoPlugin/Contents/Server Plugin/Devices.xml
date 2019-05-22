@@ -1,7 +1,7 @@
 <?xml version="1.0"?>
 <Devices>
     <Device type="custom" id="ra2TimeClockEvent">
-    	<Name>RadioRA 2 Time Clock Event</Name>
+    	<Name>Lutron Time Clock Event</Name>
         <ConfigUI>
             <Field id="event" type="textField" defaultValue="">
                 <Label>Event Number:</Label>
@@ -13,7 +13,7 @@
     </Device>
     
     <Device type="custom" id="ra2Group">
-    	<Name>RadioRA 2 Room Group</Name>
+    	<Name>Lutron Room Group</Name>
         <ConfigUI>
             <Field id="group" type="textField" defaultValue="">
                 <Label>Group Number:</Label>
@@ -25,7 +25,7 @@
     </Device>
     
     <Device type="relay" id="ra2PhantomButton">
-        <Name>RadioRA 2 Phantom Button</Name>
+        <Name>Lutron Phantom Button</Name>
         <ConfigUI>
             <Field id="isButton" type="checkbox"  defaultValue="True" hidden="true"/>
             <Field id="integrationID" type="textField" defaultValue="">
@@ -41,7 +41,7 @@
     </Device>
     
     <Device type="dimmer" id="ra2Dimmer">
-        <Name>RadioRA 2 Dimmer</Name>
+        <Name>Lutron Dimmer</Name>
         <ConfigUI>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
@@ -53,7 +53,7 @@
     </Device>
      
     <Device type="relay" id="ra2Switch">
-        <Name>RadioRA 2 Switch</Name>
+        <Name>Lutron Switch</Name>
         <ConfigUI>
             <Field id="integrationID"   type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
@@ -65,7 +65,7 @@
     </Device>
     
     <Device type="relay" id="ra2Keypad">
-        <Name>RadioRA 2 Keypad</Name>
+        <Name>Lutron Keypad</Name>
         <ConfigUI>
             <Field id="isButton" type="checkbox" defaultValue="True" hidden="true"/>
             <Field id="listType" type="menu"     defaultValue="button">
@@ -91,7 +91,7 @@
     </Device>
     
     <Device id="ra2Fan" type="speedcontrol">
-        <Name>RadioRA 2 Fan</Name>
+        <Name>Lutron Fan</Name>
         <ConfigUI>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
@@ -111,7 +111,7 @@
     </Device>
     
     <Device id="ra2Thermo" type="thermostat">
-        <Name>RadioRA 2 Thermostat</Name>
+        <Name>Lutron Thermostat</Name>
         <ConfigUI>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Thermostat Integration ID:</Label>
@@ -123,7 +123,7 @@
     </Device>
         
     <Device id="ra2Sensor" type="sensor">
-        <Name>RadioRA 2 Powr Savr Sensor</Name>
+        <Name>Lutron Motion Sensor</Name>
         <ConfigUI>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Sensor Integration ID:</Label>
@@ -136,7 +136,7 @@
     </Device>
     
     <Device id="ra2CCO" type="relay">
-        <Name>RadioRA 2 CCO</Name>
+        <Name>Lutron CCO</Name>
         <ConfigUI>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID (Not the same as VCRX Integration ID):</Label>
@@ -156,7 +156,7 @@
     </Device>
     
     <Device id="ra2CCI" type="sensor">
-        <Name>RadioRA 2 CCI</Name>
+        <Name>Lutron CCI</Name>
         <ConfigUI>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>VCRX Integration ID:</Label>
@@ -172,7 +172,7 @@
     </Device>
     
     <Device id="ra2MotorizedShade" type="dimmer">
-        <Name>RadioRA 2 Motorized Shade</Name>
+        <Name>Lutron Motorized Shade</Name>
         <ConfigUI>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
@@ -184,7 +184,7 @@
     </Device>
     
     <Device id="ra2Pico" type="relay">
-        <Name>RadioRA 2 Pico Button</Name>
+        <Name>Lutron Pico Button</Name>
         <ConfigUI>
             <Field id="isButton"     type="checkbox" defaultValue="True" hidden="true"/>
             <Field id="integrationID" type="textField" defaultValue="">
