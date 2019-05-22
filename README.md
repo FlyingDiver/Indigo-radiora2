@@ -18,7 +18,7 @@ Indigo plugin for Lutron RadioRa 2 and  Caséta
 
 3. For Caséta or RadioRa2 Select, only Ethernet is supported.
 
-4. The initial configuration dialog will prompt you to specify a serial port or IP connection. If you check the option for IP, you must enter a valid username and password. For Caseta systems, this is the telnet login, not the login you use for the Caseta app.
+4. The initial configuration dialog will prompt you to specify a serial port or IP connection. If you check the option for IP, you must enter a valid username and password. For Caseta systems, this is the telnet login, not the login you use for the Caseta app.  Foe Caseta, be sure to enable telnet support in the Advanced settings in the mobile app.
 
 5. For Serial, select the connection type and device address in the Plugin configuration dialog.  Although it costs more than most generic adaptors, the Keyspan adapter, which is solidly built and universally supported, is highly recommended.
 

@@ -1613,7 +1613,31 @@ class Plugin(indigo.PluginBase):
         zone = dimmerDevice.address
 
         sendCmd = ("#OUTPUT," + zone + ",1," + str(brightness) + "," + str(fadeTime))
-        self.logger.info(u"{}:  Set brightness to %s with fade %s".format(dimmerDevice.name, brightness, fadeTime))
+        self.logger.info(u"{}: Set brightness to %s with fade %s".format(dimmerDevice.name, brightness, fadeTime))
+        self._sendCommand(sendCmd)
+
+    def startRaising(self, pluginAction, shadeDevice):
+
+        zone = shadeDevice.address
+
+        sendCmd = ("#OUTPUT," + zone + ",2")
+        self.logger.info(u"{}: Start Raising".format(shadeDevice.name))
+        self._sendCommand(sendCmd)
+
+    def startLowering(self, pluginAction, shadeDevice):
+
+        zone = shadeDevice.address
+
+        sendCmd = ("#OUTPUT," + zone + ",3")
+        self.logger.info(u"{}: Start Lowering".format(shadeDevice.name))
+        self._sendCommand(sendCmd)
+
+    def stopRaiseLower(self, pluginAction, shadeDevice):
+
+        zone = shadeDevice.address
+
+        sendCmd = ("#OUTPUT," + zone + ",4")
+        self.logger.info(u"{}: Stop Raising/Lowering".format(shadeDevice.name))
         self._sendCommand(sendCmd)
 
     def sendRawCommand(self, pluginAction):

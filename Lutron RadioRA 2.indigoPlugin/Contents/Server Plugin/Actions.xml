@@ -33,6 +33,18 @@
 			</Field>
 		</ConfigUI>
 	</Action>
+	<Action id="startRaising" deviceFilter="self.ra2MotorizedShade">
+		<Name>Start Shade Raising</Name>
+		<CallbackMethod>startRaising</CallbackMethod>
+	</Action>
+	<Action id="startLowering" deviceFilter="self.ra2MotorizedShade">
+		<Name>Start Shade Lowering</Name>
+		<CallbackMethod>startLowering</CallbackMethod>
+	</Action>
+	<Action id="stopRaiseLower" deviceFilter="self.ra2MotorizedShade">
+		<Name>Stop Shade Raising/Lowering</Name>
+		<CallbackMethod>stopRaiseLower</CallbackMethod>
+	</Action>
     <Action id="sendRawCommand">
         <Name>Send Raw Command</Name>
         <CallbackMethod>sendRawCommand</CallbackMethod>
