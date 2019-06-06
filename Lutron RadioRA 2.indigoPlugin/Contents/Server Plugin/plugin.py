@@ -718,10 +718,11 @@ class Plugin(indigo.PluginBase):
         self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
 
         host = self.pluginPrefs["ip_address"]
+        port = int(self.pluginPrefs["ip_port"])
 
         try:
-            self.logger.info(u"Connecting via IP to %s" % host)
-            self.connIP = telnetlib.Telnet(host, 23, self.timeout)
+            self.logger.info(u"Connecting via IP to {}:{}".format(host, port))
+            self.connIP = telnetlib.Telnet(host, port, self.timeout)
         except socket.timeout:
             self.logger.error(u"Unable to connect to Lutron gateway. Timed out.")
             return
