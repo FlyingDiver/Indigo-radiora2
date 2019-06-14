@@ -1026,20 +1026,20 @@ class Plugin(indigo.PluginBase):
             dev = self.ccis[keypadid]
             if status == '0':
                 dev.updateStateOnServer(ONOFF, False)
-                self.logger.info(u"Received: CCI %s %s" % (cci.name, "Opened"))
+                self.logger.info(u"Received: CCI %s %s" % (dev.name, "Opened"))
             elif status == '1':
                 dev.updateStateOnServer(ONOFF, True)
-                self.logger.info(u"Received: CCI %s %s" % (cci.name, "Closed"))
+                self.logger.info(u"Received: CCI %s %s" % (dev.name, "Closed"))
 
         if id in self.sensors:
             self.logger.debug(u"Received a sensor status message: " + cmd)
             dev = self.sensors[id]
             if status == '0':
                 dev.updateStateOnServer(ONOFF, False)
-                self.logger.info(u"Received: Motion Sensor %s %s" % (but.name, "vacancy detected"))
+                self.logger.info(u"Received: Motion Sensor %s %s" % (dev.name, "vacancy detected"))
             elif status == '1':
                 dev.updateStateOnServer(ONOFF, True)
-                self.logger.info(u"Received: Motion Sensor %s %s" % (but.name, "motion detected"))
+                self.logger.info(u"Received: Motion Sensor %s %s" % (dev.name, "motion detected"))
 
     # IP comm has not yet been tested with _cmdHvacChange().  Currently left as is -vic13
     def _cmdHvacChange(self,cmd):
