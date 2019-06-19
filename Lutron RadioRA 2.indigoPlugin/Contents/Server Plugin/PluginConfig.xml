@@ -11,22 +11,6 @@
         <Label>Enhancements by Joe Keenan (FlyingDiver).</Label>
     </Field>
     <Field id="simpleSeparator1" type="separator"/>
-    <Field type="checkbox" id="IP" defaultValue="false">
-        <Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
-    </Field>
-    <Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
-        <Label>IP Address or Hostname:</Label>
-    </Field>
-    <Field id="ip_port" type="textfield" defaultValue="23">
-        <Label>Port:</Label>
-    </Field>
-    <Field id="ip_username" type="textfield" defaultValue="lutron" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP User Name for Lutron gateway.">
-        <Label>Username:</Label>
-    </Field>
-    <Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
-        <Label>Password:</Label>
-    </Field>
-    <Field id="simpleSeparator2" type="separator"/>
     <Field id="logLevel" type="menu" defaultValue="30">
         <Label>Event Logging Level:</Label>
         <List>
@@ -40,6 +24,4 @@
     <Field type="checkbox" id="queryAtStartup" defaultValue="false">
         <Label>Send status request for all devices at startup:</Label>
     </Field>
-    <Field id="simpleSeparator3" type="separator"/>
-    <Field type="serialport" id="devicePort"/>
 </PluginConfig>

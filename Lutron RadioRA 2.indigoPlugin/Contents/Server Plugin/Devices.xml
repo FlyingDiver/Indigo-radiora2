@@ -1,5 +1,29 @@
 <?xml version="1.0"?>
 <Devices>
+
+    <Device type="custom" id="lutronGateway">
+    	<Name>Lutron Gateway (Repeater or Pro Hub)</Name>
+        <ConfigUI>
+			<Field type="checkbox" id="IP" defaultValue="false">
+				<Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
+			</Field>
+			<Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
+				<Label>IP Address or Hostname:</Label>
+			</Field>
+			<Field id="ip_port" type="textfield" defaultValue="23" visibleBindingId="IP" visibleBindingValue="true" tooltip="Port number for Lutron gateway.">
+				<Label>Port:</Label>
+			</Field>
+			<Field id="ip_username" type="textfield" defaultValue="lutron" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP User Name for Lutron gateway.">
+				<Label>Username:</Label>
+			</Field>
+			<Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
+				<Label>Password:</Label>
+			</Field>
+			<Field id="simpleSeparator3" type="separator"/>
+			<Field type="serialport" id="devicePort"/>
+        </ConfigUI>
+    </Device>
+
     <Device type="custom" id="ra2TimeClockEvent">
     	<Name>Lutron Time Clock Event</Name>
         <ConfigUI>
