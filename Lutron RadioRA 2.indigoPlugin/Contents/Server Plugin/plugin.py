@@ -80,52 +80,65 @@ PROP_BUTTON = "button"
 # delay amount for detecting double/triple clicks
 CLICK_DELAY = 1.0
 
+########################################
 class IPGateway:
+########################################
 
     def __init__(self, dev):
         self.logger = logging.getLogger("Plugin.IPGateway")
-        self.connected = False
         self.dev = dev
+        self.connected = False
+        dev.updateStateOnServer(key="status", value="Disconnected")
+        dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
     def startup(self):
         self.logger.info(u"{}: Running IP Startup".format(self.dev.name))
-        self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
 
         host = self.dev.pluginProps["address"]
         port = int(self.dev.pluginProps["port"])
 
+        self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
+        
         try:
             self.logger.info(u"Connecting via IP to {}:{}".format(host, port))
             self.connIP = telnetlib.Telnet(host, port, self.timeout)
         except socket.timeout:
-            self.logger.error(u"Unable to connect to Lutron gateway. Timed out.")
+            self.logger.error(u"{}: Unable to connect to Lutron gateway. Timed out.".format(self.dev.name))
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
             return
                     
-        a = self.connIP.read_until(" ", self.timeout)
-        self.logger.debug(u"self.connIP.read: %s" % a)
+        txt = self.connIP.read_until(" ", self.timeout)
+        self.logger.debug(u"{}: self.connIP.read: {}".format(self.dev.name, txt))
 
-        if 'login' in a:
-            self.logger.debug(u"Sending username.")
-            self.connIP.write(str(self.dev.pluginProps["username"]) + "\r\n")
+        if 'login' not in txt:
+            self.logger.debug(u"{}: No login prompt, unable to send username".format(self.dev.name))
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            return
 
-            a = self.connIP.read_until(" ", self.timeout)
-            self.logger.debug(u"self.connIP.read: %s" % a)
-            if 'password' in a:
-                self.logger.debug(u"Sending password.")
-                self.connIP.write(str(self.dev.pluginProps["password"]) + "\r\n")
-            else:
-                self.logger.debug(u"password failure.")
-        else:
-            self.logger.debug(u"username failure.")
-        self.logger.debug(u"End of connection process.")
+        self.logger.debug(u"{}: Sending username".format(self.dev.name))
+        self.connIP.write(str(self.dev.pluginProps["username"]) + "\r\n")
+
+        txt = self.connIP.read_until(" ", self.timeout)
+        self.logger.debug(u"{}: self.connIP.read: {}".format(self.dev.name, txt))
+        if 'password' not in txt:
+            self.logger.debug(u"{}: No password prompt, unable to send password".format(self.dev.name))
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            return
+
+        self.logger.debug(u"{}: Sending password".format(self.dev.name))
+        self.connIP.write(str(self.dev.pluginProps["password"]) + "\r\n")
+                
+        self.logger.debug(u"{}: Login process complete, connected".format(self.dev.name))
         self.timeout = 5   # Reset the timeout to something reasonable
-
+        self.connected = True
+        self.dev.updateStateOnServer(key="status", value="Connected")
+        self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+        
     def poll(self):
 
         try:
             if not self.connected:
                 self.startup()
-                self.connected = True
 
             try:
                 return self.connIP.read_until("\n", self.timeout)
@@ -135,7 +148,9 @@ class IPGateway:
         except EOFError, e:
             self.logger.error(u"EOFError: %s" % e.message)
             if ('telnet connection closed' in e.message):
-                self.runstartup = True
+                self.connected = False
+                self.dev.updateStateOnServer(key="status", value="Disconnected")
+                self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
                 self.sleep(10)
         except AttributeError, e:
             self.logger.debug(u"AttributeError: %s" % e.message)
@@ -150,33 +165,51 @@ class IPGateway:
         except Exception, e:
             self.logger.warning(u"Error sending IP command, resetting connection:  %s", e)
             self.connIP.close()
-            self.runstartup = True
+            self.connected = False
+            self.dev.updateStateOnServer(key="status", value="Connected")
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 
+    def fetchXML(self):
+
+        host = self.dev.pluginProps["address"]
+
+        s = requests.Session()
+        r = s.get('http://' + host + '/login?login=lutron&password=lutron')
+        r = s.get('http://' + host + '/DbXmlInfo.xml')
+        
+        return r.text
+
+########################################
 class SerialGateway:
+########################################
 
     def __init__(self, dev):
         self.logger = logging.getLogger("Plugin.SerialGateway")
-        self.connected = False
         self.dev = dev
+        self.connected = False
+        dev.updateStateOnServer(key="status", value="Disconnected")
+        dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
         self.connSerial = {}
         self.command = ''
         
 
-    def serialStartup(self):
+    def startup(self):
         self.logger.info(u"{}: Running Serial Startup".format(self.dev.name))
-
-        self.portEnabled = False
 
         serialUrl = self.getSerialPortUrl(self.dev.pluginProps, u"devicePort")
         self.logger.info(u"{}: Serial Port URL is: {}".format(self.dev.name, serialUrl))
 
-        self.connSerial = self.openSerial(u"Lutron RadioRA", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
+        self.connSerial = self.openSerial(u"Lutron Gateway", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
         if self.connSerial is None:
-            self.logger.error(u"Failed to open serial port")
+            self.logger.error(u"{}: Failed to open serial port".format(self.dev.name))
+            self.dev.updateStateOnServer(key="status", value="Failed")
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
             return
 
-        self.portEnabled = True
+        self.connected = True
+        self.dev.updateStateOnServer(key="status", value="Connected")
+        self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 
         # Disable main repeater terminal prompt
         self._sendCommand("#MONITORING,12,2")
@@ -184,8 +217,7 @@ class SerialGateway:
         # Enable main repeater HVAC monitoring
         self._sendCommand("#MONITORING,17,1")
 
-        # Enable main repeater monitoring param 18
-        # (undocumented but seems to be enabled by default for ethernet connections)
+        # Enable main repeater monitoring param 18 (undocumented but seems to be enabled by default for ethernet connections)
         self._sendCommand("#MONITORING,18,1")
 
 
@@ -534,11 +566,19 @@ class Plugin(indigo.PluginBase):
     def deviceStartComm(self, dev):
     
         if dev.deviceTypeId == DEV_IP_GATEWAY:
-            self.gateways[dev.id] = IPGateway(dev)
-                       
+            gateway = IPGateway(dev)
+            self.gateways[dev.id] = gateway            
+            dev.updateStateOnServer(key="status", value="None")
+            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+            gateway.startup()
+            
         elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
-            self.gateways[dev.id] = SerialGateway(dev)
-                       
+            gateway = SerialGateway(dev)
+            self.gateways[dev.id] = gateway            
+            dev.updateStateOnServer(key="status", value="None")
+            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+            gateway.startup()
+                      
         elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
             if dev.pluginProps.get(PROP_REPEATER, None):
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_REPEATER])
@@ -871,7 +911,8 @@ class Plugin(indigo.PluginBase):
             while True:
                         
                 for gateway in self.gateways.values():
-                    self._processCommand(gateway.poll())
+                    if gateway.connected:
+                        self._processCommand(gateway.poll())
                     
                 self.sleep(0.1)
                 
@@ -945,6 +986,9 @@ class Plugin(indigo.PluginBase):
 
 
     def _processCommand(self, cmd):
+        if cmd == None:
+            return
+            
         cmd = cmd.rstrip()
         if len(cmd) > 0:
             if "~OUTPUT" in cmd:
@@ -1790,7 +1834,6 @@ class Plugin(indigo.PluginBase):
             (gateway.dev.id, indigo.devices[gateway.dev.id].name)
             for gateway in self.gateways.values()
         ]
-        self.logger.debug("get_gateway_list: gateways = {}".format(gateways))
         return gateways
         
 
@@ -1933,6 +1976,8 @@ class Plugin(indigo.PluginBase):
             self.logger.warning(u"Unable to create devices, process already running.")
             return
 
+        gatewayID = valuesDict["gateway"]
+
         self.group_by = valuesDict["group_by"]
         self.create_bridge_buttons = valuesDict["create_bridge_buttons"]
         self.jsonText = valuesDict["jsonText"]
@@ -1955,11 +2000,12 @@ class Plugin(indigo.PluginBase):
                 
             for button in device["Buttons"]:
             
-                address = "{}.{}".format(device["ID"], button["Number"])
+                address = "{}:{}.{}".format(gatewayID, device["ID"], button["Number"])
                 name = u"{} - {} ({})".format(areaName, device["Name"], address)
                 props = {
                     PROP_ROOM : areaName, 
                     PROP_LIST_TYPE : "button", 
+                    PROP_GATEWAY: gatewayID,
                     PROP_INTEGRATION_ID : str(device["ID"]), 
                     PROP_COMPONENT_ID : str(button["Number"]), 
                     PROP_BUTTONTYPE : "Unknown",
@@ -1975,13 +2021,15 @@ class Plugin(indigo.PluginBase):
             except:
                 areaname = u"Unknown"
                 
+            address = "{}:{}".format(gatewayID, zone["ID"])
             name = u"{} - {} ({})".format(areaName, zone["Name"], zone["ID"])
             props = {
                 PROP_ROOM : areaName, 
+                PROP_GATEWAY: gatewayID,
                 PROP_INTEGRATION_ID : str(zone["ID"]),
                 PROP_OUTPUTTYPE: "AUTO_DETECT"
             }
-            self.createLutronDevice(DEV_DIMMER, name, zone["ID"], props, areaName)
+            self.createLutronDevice(DEV_DIMMER, name, address, props, areaName)
    
         self.logger.info(u"Creating Devices done.")        
         self.threadLock.release()
@@ -1989,22 +2037,29 @@ class Plugin(indigo.PluginBase):
 
 
     def createRRA2DevicesMenu(self, valuesDict, typeId):
-
-        if not self.IP:
-            self.logger.warning(u"Unable to create devices, no IP connection to repeater.")
+        
+        gateway = self.gateways[int(valuesDict["gateway"])]
+        
+        if not gateway.connected:
+            self.logger.warning(u"Unable to create devices, no connection to repeater.")
             return False
             
+        self.logger.debug(u"Starting device fetch thread...")
         deviceThread = threading.Thread(target = self.createRRA2Devices, args = (valuesDict, ))
         deviceThread.start()    
         return True        
 
     def createRRA2Devices(self, valuesDict):
         
+        self.logger.debug(u"Device fetch thread running, valuesDict = {}".format(valuesDict))
+
         if not self.threadLock.acquire(False):
             self.logger.warning(u"Unable to create devices, process already running.")
             return
 
         # set up variables based on options selected
+
+        gatewayID = valuesDict["gateway"]
         
         self.group_by = valuesDict["group_by"]
         self.create_unused_keypad = bool(valuesDict["create_unused_keypad"])
@@ -2013,10 +2068,10 @@ class Plugin(indigo.PluginBase):
         self.create_group_triggers = bool(valuesDict["create_group_triggers"])
 
         if bool(valuesDict["use_local"]):
-            xmlFile = os.path.expanduser(valuesDict["xmlFileName"])         
             self.logger.info(u"Creating Devices from file: %s, Grouping = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
                 (xmlFile, self.group_by, self.create_unused_keypad, self.create_unused_phantom))
             try:
+                xmlFile = os.path.expanduser(valuesDict["xmlFileName"])         
                 root = ET.parse(xmlFile).getroot()
             except:
                 self.logger.error(u"Unable to parse XML file: {}".format(xmlFile))
@@ -2026,15 +2081,13 @@ class Plugin(indigo.PluginBase):
             self.logger.info(u"Creating Devices file read completed, parsing data...")
 
         else:
-            ip_address = self.pluginPrefs["ip_address"]
-            self.logger.info(u"Creating RRA2 Devices from repeater at %s, Grouping = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
-                (ip_address, self.group_by, self.create_unused_keypad, self.create_unused_phantom))
+        
+            self.logger.info(u"Creating RRA2 Devices from gateway {}, Grouping = {}, Create unprogrammed keypad buttons = {}, Create unprogrammed phantom buttons = {}".format(gatewayID, self.group_by, self.create_unused_keypad, self.create_unused_phantom))
             self.logger.info(u"Creating Devices - starting data fetch...")
+                    
             try:
-                s = requests.Session()
-                r = s.get('http://' + ip_address + '/login?login=lutron&password=lutron')
-                r = s.get('http://' + ip_address + '/DbXmlInfo.xml')
-                root = ET.fromstring(r.text)        
+                text = self.gateways[int(gatewayID)].fetchXML()
+                root = ET.fromstring(text)        
             except:
                 self.logger.error(u"Unable to parse XML data from repeater.")
                 self.threadLock.release()
@@ -2065,7 +2118,7 @@ class Plugin(indigo.PluginBase):
                             except:
                                 pass
                             button = str(int(component.attrib['ComponentNumber']) + 100)
-                            address = device.attrib['IntegrationID'] + "." + button
+                            address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + button
 
                             try:
                                 buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
@@ -2073,6 +2126,7 @@ class Plugin(indigo.PluginBase):
                                 buttonType = "Unknown"
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
+                                PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                                 PROP_COMPONENT_ID : button, 
                                 PROP_BUTTONTYPE : buttonType,
@@ -2093,62 +2147,74 @@ class Plugin(indigo.PluginBase):
                 self.logger.debug("Output: %s (%s) %s" % (output.attrib['Name'], output.attrib['IntegrationID'], output.attrib['OutputType']))
 
                 if output.attrib['OutputType'] == "INC" or output.attrib['OutputType'] == "MLV" or output.attrib['OutputType'] == "AUTO_DETECT":
+                    address = gatewayID + ":" + output.attrib['IntegrationID']
                     name = u"{} - Dimmer {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
+                        PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE],
                     }
-                    self.createLutronDevice(DEV_DIMMER, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_DIMMER, name, address, props, room.attrib['Name'])
                     
                 elif output.attrib['OutputType'] == "NON_DIM":
+                    address = gatewayID + ":" + output.attrib['IntegrationID']
                     name = u"{} - Switch {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
+                        PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(DEV_SWITCH, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_SWITCH, name, address, props, room.attrib['Name'])
                         
                 elif output.attrib['OutputType'] == "SYSTEM_SHADE":
+                    address = gatewayID + ":" + output.attrib['IntegrationID']
                     name = u"{} - Shade {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
+                        PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(DEV_SHADE, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_SHADE, name, address, props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CEILING_FAN_TYPE":
+                    address = gatewayID + ":" + output.attrib['IntegrationID']
                     name = u"{} - Fan {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
+                        PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(DEV_FAN, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_FAN, name, address, props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_PULSED":
+                    address = gatewayID + ":" + output.attrib['IntegrationID']
                     name = u"{} - VCRX CCO Momentary {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
+                        PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'], 
                         PROP_CCO_TYPE : "momentary", 
                         PROP_SUPPORTS_STATUS_REQUEST : "False",
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(DEV_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_CCO, name, address, props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_MAINTAINED":
+                    address = gatewayID + ":" + output.attrib['IntegrationID']
                     name = u"{} - VCRX CCO Sustained {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
+                        PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'], 
                         PROP_CCO_TYPE : "sustained", 
                         PROP_SUPPORTS_STATUS_REQUEST : "True",
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(DEV_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_CCO, name, address, props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "HVAC":
                     pass
@@ -2169,7 +2235,7 @@ class Plugin(indigo.PluginBase):
                             if not self.create_unused_keypad and assignments == 0:
                                 continue
                             
-                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             keypadType = device.attrib['DeviceType']
                             buttonNum = int(component.attrib['ComponentNumber'])
                             if ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum == 16):
@@ -2207,6 +2273,7 @@ class Plugin(indigo.PluginBase):
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_LIST_TYPE : "button", 
+                                PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                                 PROP_COMPONENT_ID : component.attrib['ComponentNumber'], 
                                 PROP_KEYPADBUT_DISPLAY_LED_STATE : "false", 
@@ -2224,10 +2291,11 @@ class Plugin(indigo.PluginBase):
                                             
                             name = name + " LED"  
                             keypadLED = str(int(component.attrib['ComponentNumber']) + 80)
-                            address = device.attrib['IntegrationID'] + "." + keypadLED
+                            address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + keypadLED
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_LIST_TYPE : "LED", 
+                                PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                                 PROP_COMPONENT_ID : keypadLED, 
                                 PROP_KEYPADBUT_DISPLAY_LED_STATE : "False" 
@@ -2254,7 +2322,7 @@ class Plugin(indigo.PluginBase):
                                 name = name + " - " + engraving
                             except:
                                 pass
-                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
 
                             try:
                                 buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
@@ -2263,6 +2331,7 @@ class Plugin(indigo.PluginBase):
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_LIST_TYPE : "button", 
+                                PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                                 PROP_COMPONENT_ID : component.attrib['ComponentNumber'], 
                                 PROP_KEYPADBUT_DISPLAY_LED_STATE : "false", 
@@ -2275,10 +2344,11 @@ class Plugin(indigo.PluginBase):
 
                             name = name + " LED"  
                             keypadLED = str(int(component.attrib['ComponentNumber']) + 80)
-                            address = device.attrib['IntegrationID'] + "." + keypadLED
+                            address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + keypadLED
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
                                 PROP_LIST_TYPE : "LED", 
+                                PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                                 PROP_COMPONENT_ID : keypadLED, 
                                 PROP_KEYPADBUT_DISPLAY_LED_STATE : "False" 
@@ -2290,9 +2360,10 @@ class Plugin(indigo.PluginBase):
                             
                         elif component.attrib['ComponentType'] == "CCI":
                             name = u"{} - VCRX CCI Input {:03}.{:02}".format(room.attrib['Name'], int(device.attrib['IntegrationID']), int(component.attrib['ComponentNumber']))
-                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
+                                PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                                 PROP_COMPONENT_ID : component.attrib['ComponentNumber'], 
                                 PROP_SUPPORTS_STATUS_REQUEST : "False" 
@@ -2317,7 +2388,7 @@ class Plugin(indigo.PluginBase):
                                 name = name + " - " + engraving
                             except:
                                 pass
-                            address = device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
+                            address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + component.attrib['ComponentNumber']
 
                             try:
                                 buttonType = component.find("Button").attrib[PROP_BUTTONTYPE]
@@ -2325,6 +2396,7 @@ class Plugin(indigo.PluginBase):
                                 buttonType = u"Unknown"
                             props = {
                                 PROP_ROOM : room.attrib['Name'], 
+                                PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                                 PROP_COMPONENT_ID : component.attrib['ComponentNumber'], 
                                 PROP_BUTTONTYPE : buttonType,
@@ -2337,9 +2409,10 @@ class Plugin(indigo.PluginBase):
                                          
                 elif device.attrib['DeviceType'] == "MOTION_SENSOR":
                     name = u"{} - Motion Sensor {}".format(room.attrib['Name'], device.attrib['IntegrationID'])
-                    address = device.attrib['IntegrationID']
+                    address = gatewayID + ":" + device.attrib['IntegrationID']
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
+                        PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID : address, 
                         PROP_SUPPORTS_STATUS_REQUEST : "False" 
                     }
@@ -2348,8 +2421,9 @@ class Plugin(indigo.PluginBase):
                     # Create a Group (Room) device for every room that has a motion sensors
                     
                     name = u"Group {:03} - {}".format( int(room.attrib['IntegrationID']), room.attrib['Name'])
-                    address = room.attrib['IntegrationID']
+                    address = gatewayID + ":" + room.attrib['IntegrationID']
                     props = {
+                        PROP_GATEWAY: gatewayID,
                         'group': address 
                     }
                     if not address in self.groups:
@@ -2414,8 +2488,9 @@ class Plugin(indigo.PluginBase):
         for event in root.iter('TimeClockEvent'):
             self.logger.debug("TimeClockEvent: %s (%s)" % (event.attrib['Name'], event.attrib['EventNumber']))
             name = u"Event {:02} - {}".format(int(event.attrib['EventNumber']), event.attrib['Name'])
-            address = "Event.{}".format(event.attrib['EventNumber'])
+            address = gatewayID + ":" + "Event.{}".format(event.attrib['EventNumber'])
             props = {
+                PROP_GATEWAY: gatewayID,
                 PROP_EVENT : event.attrib['EventNumber']
             }
             self.createLutronDevice(DEV_TIMECLOCKEVENT, name, address, props, "TimeClock")
@@ -2453,9 +2528,10 @@ class Plugin(indigo.PluginBase):
         for hvac in root.iter('HVAC'):
             self.logger.debug("HVAC: %s (%s)" % (hvac.attrib['Name'], hvac.attrib['IntegrationID']))
             name = u"HVAC {:03} - {}".format(int(hvac.attrib['IntegrationID']), hvac.attrib['Name'])
-            address = hvac.attrib['IntegrationID']
+            address = gatewayID + ":" + hvac.attrib['IntegrationID']
             props = {
-                'thermo': address
+                PROP_GATEWAY: gatewayID,
+                PROP_INTEGRATION_ID: hvac.attrib['IntegrationID']
             }
             self.createLutronDevice(DEV_THERMO, name, address, props, "HVAC")
                      

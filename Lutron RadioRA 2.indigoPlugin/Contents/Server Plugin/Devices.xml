@@ -17,6 +17,14 @@
 				<Label>Password:</Label>
 			</Field>
         </ConfigUI>
+        <States>
+            <State id="status" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>Gateway Status</TriggerLabel>
+                <ControlPageLabel>Gateway Status</ControlPageLabel>
+            </State>
+        </States>
+        <UiDisplayStateId>status</UiDisplayStateId>
     </Device>
 
     <Device type="custom" id="serialGateway">
@@ -24,6 +32,13 @@
         <ConfigUI>
 			<Field type="serialport" id="devicePort"/>
         </ConfigUI>
+        <States>
+            <State id="status" readonly="true">
+                <ValueType >String</ValueType>
+                <TriggerLabel>Gateway Status</TriggerLabel>
+                <ControlPageLabel>Gateway Status</ControlPageLabel>
+            </State>
+        </States>
     </Device>
 
     <Device type="custom" id="ra2TimeClockEvent">

@@ -60,6 +60,12 @@
 				<Label>Warning:  This procedure creates new devices and makes changes to your existing devices.  Backing up your Indigo database before proceeding is highly recommended!</Label>
 			</Field>
     		<Field id="separator0" type="separator" />
+            <Field id="gateway" type="menu">
+                <Label>RadioRa2 Repeater:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+    		<Field id="separator1" type="separator" />
 			<Field id="group_by" type="menu" defaultValue="Type">
 				<Label>Group New Devices By:</Label>
 				<List>
@@ -106,6 +112,12 @@
 				<Label>Generate a Lutron Integration Report using the Advanced Settings in the mobile application.  Copy and paste the body of the emailed report into the text field below.</Label>
 			</Field>
     		<Field id="separator0" type="separator" />
+            <Field id="gateway" type="menu">
+                <Label>Smart Bridge Pro Hub:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+    		<Field id="separator1" type="separator" />
 			<Field id="group_by" type="menu" defaultValue="Type">
 				<Label>Group New Devices By:</Label>
 				<List>
