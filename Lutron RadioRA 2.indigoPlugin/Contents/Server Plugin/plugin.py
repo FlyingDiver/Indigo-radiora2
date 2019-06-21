@@ -20,22 +20,25 @@ import xml.etree.ElementTree as ET
 import threading
 
 # Indigo Custom Device Types
-RA_PHANTOM_BUTTON = "ra2PhantomButton"
-RA_DIMMER = "ra2Dimmer"
-RA_SWITCH = "ra2Switch"
-RA_KEYPAD = "ra2Keypad"
-RA_FAN = "ra2Fan"
-RA_THERMO = "ra2Thermo"
-RA_SENSOR = "ra2Sensor"
-RA_CCO = "ra2CCO"
-RA_CCI = "ra2CCI"
-RA_SHADE = "ra2MotorizedShade"
-RA_PICO = "ra2Pico"
-RA_LINKEDDEVICE = "ra2LinkedDevice"
-RA_TIMECLOCKEVENT = "ra2TimeClockEvent"
-RA_GROUP = "ra2Group"
+DEV_IP_GATEWAY = "ipGateway"
+DEV_SERIAL_GATEWAY = "serialGateway"
+DEV_PHANTOM_BUTTON = "ra2PhantomButton"
+DEV_DIMMER = "ra2Dimmer"
+DEV_SWITCH = "ra2Switch"
+DEV_KEYPAD = "ra2Keypad"
+DEV_FAN = "ra2Fan"
+DEV_THERMO = "ra2Thermo"
+DEV_SENSOR = "ra2Sensor"
+DEV_CCO = "ra2CCO"
+DEV_CCI = "ra2CCI"
+DEV_SHADE = "ra2MotorizedShade"
+DEV_PICO = "ra2Pico"
+DEV_LINKEDDEVICE = "ra2LinkedDevice"
+DEV_TIMECLOCKEVENT = "ra2TimeClockEvent"
+DEV_GROUP = "ra2Group"
 
 # pluginProps keys
+PROP_GATEWAY = "gateway"
 PROP_INTEGRATION_ID = "integrationID"
 PROP_COMPONENT_ID = "componentID"
 PROP_ISBUTTON = "isButton"
@@ -77,6 +80,140 @@ PROP_BUTTON = "button"
 # delay amount for detecting double/triple clicks
 CLICK_DELAY = 1.0
 
+class IPGateway:
+
+    def __init__(self, dev):
+        self.logger = logging.getLogger("Plugin.IPGateway")
+        self.connected = False
+        self.dev = dev
+
+    def startup(self):
+        self.logger.info(u"{}: Running IP Startup".format(self.dev.name))
+        self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
+
+        host = self.dev.pluginProps["address"]
+        port = int(self.dev.pluginProps["port"])
+
+        try:
+            self.logger.info(u"Connecting via IP to {}:{}".format(host, port))
+            self.connIP = telnetlib.Telnet(host, port, self.timeout)
+        except socket.timeout:
+            self.logger.error(u"Unable to connect to Lutron gateway. Timed out.")
+            return
+                    
+        a = self.connIP.read_until(" ", self.timeout)
+        self.logger.debug(u"self.connIP.read: %s" % a)
+
+        if 'login' in a:
+            self.logger.debug(u"Sending username.")
+            self.connIP.write(str(self.dev.pluginProps["username"]) + "\r\n")
+
+            a = self.connIP.read_until(" ", self.timeout)
+            self.logger.debug(u"self.connIP.read: %s" % a)
+            if 'password' in a:
+                self.logger.debug(u"Sending password.")
+                self.connIP.write(str(self.dev.pluginProps["password"]) + "\r\n")
+            else:
+                self.logger.debug(u"password failure.")
+        else:
+            self.logger.debug(u"username failure.")
+        self.logger.debug(u"End of connection process.")
+        self.timeout = 5   # Reset the timeout to something reasonable
+
+    def poll(self):
+
+        try:
+            if not self.connected:
+                self.startup()
+                self.connected = True
+
+            try:
+                return self.connIP.read_until("\n", self.timeout)
+            except:
+                pass
+            
+        except EOFError, e:
+            self.logger.error(u"EOFError: %s" % e.message)
+            if ('telnet connection closed' in e.message):
+                self.runstartup = True
+                self.sleep(10)
+        except AttributeError, e:
+            self.logger.debug(u"AttributeError: %s" % e.message)
+        except select.error, e:
+            self.logger.debug(u"Disconnected while listening: %s" % e.message)
+
+    def send(self, cmd):
+        self.logger.debug(u"Sending network command:  %s" % cmd)
+        cmd = cmd + "\r\n"
+        try:
+            self.connIP.write(str(cmd))
+        except Exception, e:
+            self.logger.warning(u"Error sending IP command, resetting connection:  %s", e)
+            self.connIP.close()
+            self.runstartup = True
+
+class SerialGateway:
+
+    def __init__(self, dev):
+        self.logger = logging.getLogger("Plugin.SerialGateway")
+        self.connected = False
+        self.dev = dev
+
+        self.connSerial = {}
+        self.command = ''
+        
+
+    def serialStartup(self):
+        self.logger.info(u"{}: Running Serial Startup".format(self.dev.name))
+
+        self.portEnabled = False
+
+        serialUrl = self.getSerialPortUrl(self.dev.pluginProps, u"devicePort")
+        self.logger.info(u"{}: Serial Port URL is: {}".format(self.dev.name, serialUrl))
+
+        self.connSerial = self.openSerial(u"Lutron RadioRA", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
+        if self.connSerial is None:
+            self.logger.error(u"Failed to open serial port")
+            return
+
+        self.portEnabled = True
+
+        # Disable main repeater terminal prompt
+        self._sendCommand("#MONITORING,12,2")
+
+        # Enable main repeater HVAC monitoring
+        self._sendCommand("#MONITORING,17,1")
+
+        # Enable main repeater monitoring param 18
+        # (undocumented but seems to be enabled by default for ethernet connections)
+        self._sendCommand("#MONITORING,18,1")
+
+
+    def poll(self):
+        while not self.portEnabled:
+            self.sleep(.1)
+
+        if self.runstartup:
+            self.serialStartup()
+            self.runstartup = False
+
+        s = self.connSerial.read()
+        if len(s) > 0:
+            # RadioRA 2 messages are always terminated with CRLF
+            if s == '\r':
+                tmp = self.command
+                self.command = ''
+                return tmp
+            else:
+                self.command += s
+
+    def send(self, cmd):
+        self.logger.debug(u"Sending serial command: %s" % cmd)
+        cmd = cmd + "\r"
+        self.connSerial.write(str(cmd))
+
+
+
 ########################################
 class Plugin(indigo.PluginBase):
 ########################################
@@ -93,10 +230,8 @@ class Plugin(indigo.PluginBase):
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
 
-        self.queryAtStartup = self.pluginPrefs.get(u"queryAtStartup", False)
-
-        self.connSerial = {}
-        self.command = ''
+        self.gateways = {}
+        
         self.phantomButtons = {}
         self.keypads = {}
         self.dimmers = {}
@@ -111,9 +246,7 @@ class Plugin(indigo.PluginBase):
         self.picos = {}
         self.events = {}
         self.groups = {}
-        self.runstartup = False
-        self.IP = False     # Default to serial I/O, not IP -vic13
-        self.portEnabled = False
+                
         self.eventTriggers = { }
         self.groupTriggers = { }
         self.buttonTriggers = { }
@@ -136,28 +269,51 @@ class Plugin(indigo.PluginBase):
         self.logLinkedDevices()
 
         indigo.devices.subscribeToChanges()
+        
+        IP = indigo.activePlugin.pluginPrefs.get(u"IP", "None")
+        if IP != "None":
 
-        try:
-            self.IP = self.pluginPrefs["IP"]
-        except KeyError:
-            self.logger.warning(u"Plugin not yet configured.\nPlease save the configuration then reload the plugin.\nThis should only happen the first time you run the plugin\nor if you delete the preferences file.")
-            return
-
-        if self.IP:
-            self.ipStartup()
-        else:
-            self.serialStartup()
-        self.runstartup = False
-
-
-        if self.queryAtStartup:
-            self.queryAllDevices()
-
-
+            if IP:
+                address = self.pluginPrefs["ip_address"]
+                name = "Lutron IP Gateway"
+                props = {
+                    "port" : self.pluginPrefs["ip_port"], 
+                    "username" : self.pluginPrefs["ip_username"], 
+                    "password" : self.pluginPrefs["ip_password"] 
+                }
+                self.logger.info("Creating new IP Gateway device @ {}:{}".format(address, self.pluginPrefs["ip_port"]))
+                try:
+                    newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_IP_GATEWAY, props=props)
+                except Exception, e:
+                    self.logger.error("Error calling indigo.device.create(): %s" % (e.message))
+                else:
+                    del indigo.activePlugin.pluginPrefs[u"IP"]
+                    del indigo.activePlugin.pluginPrefs[u"ip_address"]
+                    del indigo.activePlugin.pluginPrefs[u"ip_port"]
+                    del indigo.activePlugin.pluginPrefs[u"ip_username"]
+                    del indigo.activePlugin.pluginPrefs[u"ip_password"]
+                                
+            else:
+            
+                address = self.pluginPrefs["serialport"]
+                name = "Lutron Serial Gateway"
+                props = {
+                    "serialport" : address
+                }
+                self.logger.info("Creating new Serial Gateway device @ {}".format(address))
+                try:
+                    newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_SERIAL_GATEWAY, props=props)
+                except Exception, e:
+                    self.logger.error("Error calling indigo.device.create(): %s" % (e.message))
+                else:
+                    del indigo.activePlugin.pluginPrefs[u"IP"]
+                    del indigo.activePlugin.pluginPrefs[u"serialport"]
+            
+            self.newGateway = newDevice.id
+            
     def shutdown(self):
         self.logger.info(u"Shutting down Lutron")
-        if self.IP:
-            self.connIP.close()
+
   
     ################################################################################
     #
@@ -376,7 +532,14 @@ class Plugin(indigo.PluginBase):
 
               
     def deviceStartComm(self, dev):
-        if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+    
+        if dev.deviceTypeId == DEV_IP_GATEWAY:
+            self.gateways[dev.id] = IPGateway(dev)
+                       
+        elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
+            self.gateways[dev.id] = SerialGateway(dev)
+                       
+        elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
             if dev.pluginProps.get(PROP_REPEATER, None):
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_REPEATER])
                 self.remove_device_property(dev, PROP_REPEATER)
@@ -394,62 +557,86 @@ class Plugin(indigo.PluginBase):
                 self.update_device_property(dev, PROP_ISBUTTON, "True")
                 self.logger.info(u"{}: Added isButton property".format(dev.name))
 
-            address = u"{}.{}".format(dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.phantomButtons[address] = dev
             self.update_device_property(dev, "address", address)
             
-        elif dev.deviceTypeId == RA_DIMMER:
+        elif dev.deviceTypeId == DEV_DIMMER:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_ZONE])
                 self.remove_device_property(dev, PROP_ZONE)
                 self.logger.info(u"{}: Updated zone property to IntegrationID".format(dev.name))
 
-            address = u"{}".format(dev.pluginProps[PROP_INTEGRATION_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.dimmers[address] = dev
             self.update_device_property(dev, "address", address)
             
-        elif dev.deviceTypeId == RA_SHADE:
+        elif dev.deviceTypeId == DEV_SHADE:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SHADE])
                 self.remove_device_property(dev, PROP_SHADE)
                 self.logger.info(u"{}: Updated zone property to IntegrationID".format(dev.name))
 
-            address = u"{}".format(dev.pluginProps[PROP_INTEGRATION_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.shades[address] = dev
             self.update_device_property(dev, "address", address)
             dev.updateStateImageOnServer( indigo.kStateImageSel.None)
             
-        elif dev.deviceTypeId == RA_SWITCH:
+        elif dev.deviceTypeId == DEV_SWITCH:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SWITCH])
                 self.remove_device_property(dev, PROP_SWITCH)
                 self.logger.info(u"{}: Updated switch property to IntegrationID".format(dev.name))
 
-            address = u"{}".format(dev.pluginProps[PROP_INTEGRATION_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.switches[address] = dev
             self.update_device_property(dev, "address", address)
             
-        elif dev.deviceTypeId == RA_FAN:
+        elif dev.deviceTypeId == DEV_FAN:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_FAN])
                 self.remove_device_property(dev, PROP_FAN)
                 self.logger.info(u"{}: Updated fan property to IntegrationID".format(dev.name))
 
-            address = u"{}".format(dev.pluginProps[PROP_INTEGRATION_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.fans[address] = dev
             self.update_device_property(dev, "address", address)
 
-        elif dev.deviceTypeId == RA_THERMO:
+        elif dev.deviceTypeId == DEV_THERMO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_THERMO])
                 self.remove_device_property(dev, PROP_THERMO)
                 self.logger.info(u"{}: Updated thermo property to IntegrationID".format(dev.name))
 
-            address = u"{}".format(dev.pluginProps[PROP_INTEGRATION_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.thermos[address] = dev
             self.update_device_property(dev, "address", address)
             
-        elif dev.deviceTypeId == RA_KEYPAD:
+        elif dev.deviceTypeId == DEV_KEYPAD:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_KEYPAD])
                 self.remove_device_property(dev, PROP_KEYPAD)
@@ -464,7 +651,11 @@ class Plugin(indigo.PluginBase):
                 self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
                 self.logger.info(u"%s: Added isButton property" % (dev.name))
                 
-            address = u"{}.{}".format(dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.update_device_property(dev, "address", address)
             if int(dev.pluginProps[PROP_COMPONENT_ID]) > 80:
                 self.update_device_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
@@ -472,17 +663,21 @@ class Plugin(indigo.PluginBase):
                 self.update_device_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = False)
             self.keypads[address] = dev
 
-        elif dev.deviceTypeId == RA_SENSOR:
+        elif dev.deviceTypeId == DEV_SENSOR:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SENSOR])
                 self.remove_device_property(dev, PROP_SENSOR)
                 self.logger.info(u"{}: Updated sensor property to IntegrationID".format(dev.name))
 
-            address = u"{}".format(dev.pluginProps[PROP_INTEGRATION_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.sensors[address] = dev
             self.update_device_property(dev, "address", address)
 
-        elif dev.deviceTypeId == RA_CCI:
+        elif dev.deviceTypeId == DEV_CCI:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCI_INTEGRATION_ID])
                 self.remove_device_property(dev, PROP_CCI_INTEGRATION_ID)
@@ -493,17 +688,25 @@ class Plugin(indigo.PluginBase):
                 self.remove_device_property(dev, PROP_COMPONENT)
                 self.logger.info(u"{}: Updated cciCompoment property to componentID".format(dev.name))
                 
-            address = u"{}.{}".format(dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.ccis[address] = dev
             self.update_device_property(dev, "address", address)
 
-        elif dev.deviceTypeId == RA_CCO:
+        elif dev.deviceTypeId == DEV_CCO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCO_INTEGRATION_ID])
                 self.remove_device_property(dev, PROP_CCO_INTEGRATION_ID)
                 self.logger.info(u"{}: Updated ccoIntegrationID property to IntegrationID".format(dev.name))
 
-            address = u"{}".format(dev.pluginProps[PROP_INTEGRATION_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.ccos[address] = dev
             self.update_device_property(dev, "address", address)
 
@@ -513,7 +716,7 @@ class Plugin(indigo.PluginBase):
             else:
                 self.update_device_property(dev, PROP_SUPPORTS_STATUS_REQUEST, new_value = True)
             
-        elif dev.deviceTypeId == RA_PICO:
+        elif dev.deviceTypeId == DEV_PICO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
                 self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_PICO_INTEGRATION_ID])
                 self.remove_device_property(dev, PROP_PICO_INTEGRATION_ID)
@@ -528,21 +731,35 @@ class Plugin(indigo.PluginBase):
                 self.remove_device_property(dev, PROP_PICOBUTTON)
                 self.logger.info(u"{}: Updated keypadButton property to componentID".format(dev.name))
                 
-            address = u"{}.{}".format(dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.picos[address] = dev
             self.update_device_property(dev, "address", address)
 
-        elif dev.deviceTypeId == RA_TIMECLOCKEVENT:
-            address = u"Event.{}".format(dev.pluginProps[PROP_EVENT])
+        elif dev.deviceTypeId == DEV_TIMECLOCKEVENT:
+
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:Event.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_EVENT])
             self.events[address] = dev
             self.update_device_property(dev, "address", address)
 
-        elif dev.deviceTypeId == RA_GROUP:
-            address = u"{}".format(dev.pluginProps[PROP_GROUP])
+        elif dev.deviceTypeId == DEV_GROUP:
+
+            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.logger.info(u"{}: Added Gateway property".format(dev.name))
+
+            address = u"{}:Group.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_GROUP])
             self.groups[address] = dev
             self.update_device_property(dev, "address", address)
 
-        elif dev.deviceTypeId == RA_LINKEDDEVICE:
+        elif dev.deviceTypeId == DEV_LINKEDDEVICE:
         
             # migrate devices then delete them
             
@@ -560,7 +777,7 @@ class Plugin(indigo.PluginBase):
             indigo.device.delete(dev.id)
 
         else:
-            self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(dev.name, dev.deviceTypeId))
+            self.logger.error(u"{}: deviceStartComm: Unknown device type: {}".format(dev.name, dev.deviceTypeId))
             return
         
         if (dev.pluginProps.get(PROP_ISBUTTON, None)):      # it's a button, so put it in the tree
@@ -577,46 +794,52 @@ class Plugin(indigo.PluginBase):
         
         
     def deviceStopComm(self, dev):
-        if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+        if dev.deviceTypeId == DEV_IP_GATEWAY:
+            del self.gateways[dev.id]
+            
+        elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
+            del self.gateways[dev.id]
+            
+        elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
             del self.phantomButtons[dev.address]
 
-        elif dev.deviceTypeId == RA_DIMMER:
+        elif dev.deviceTypeId == DEV_DIMMER:
             del self.dimmers[dev.address]
 
-        elif dev.deviceTypeId == RA_SHADE:
+        elif dev.deviceTypeId == DEV_SHADE:
             del self.shades[dev.address]
 
-        elif dev.deviceTypeId == RA_SWITCH:
+        elif dev.deviceTypeId == DEV_SWITCH:
             del self.switches[dev.address]
 
-        elif dev.deviceTypeId == RA_KEYPAD:
+        elif dev.deviceTypeId == DEV_KEYPAD:
             del self.keypads[dev.address]
 
-        elif dev.deviceTypeId == RA_FAN:
+        elif dev.deviceTypeId == DEV_FAN:
             del self.fans[dev.address]
 
-        elif dev.deviceTypeId == RA_THERMO:
+        elif dev.deviceTypeId == DEV_THERMO:
             del self.thermos[dev.address]
 
-        elif dev.deviceTypeId == RA_SENSOR:
+        elif dev.deviceTypeId == DEV_SENSOR:
             del self.sensors[dev.address]
 
-        elif dev.deviceTypeId == RA_CCI:
+        elif dev.deviceTypeId == DEV_CCI:
             del self.ccis[dev.address]
 
-        elif dev.deviceTypeId == RA_CCO:
+        elif dev.deviceTypeId == DEV_CCO:
             del self.ccos[dev.address]
 
-        elif dev.deviceTypeId == RA_PICO:
+        elif dev.deviceTypeId == DEV_PICO:
             del self.picos[dev.address]
 
-        elif dev.deviceTypeId == RA_GROUP:
+        elif dev.deviceTypeId == DEV_GROUP:
             del self.groups[dev.address]
 
-        elif dev.deviceTypeId == RA_TIMECLOCKEVENT:
+        elif dev.deviceTypeId == DEV_TIMECLOCKEVENT:
             del self.events[dev.address]
 
-        elif dev.deviceTypeId == RA_LINKEDDEVICE:
+        elif dev.deviceTypeId == DEV_LINKEDDEVICE:
             pass
 
         else:
@@ -629,7 +852,7 @@ class Plugin(indigo.PluginBase):
 
         errorsDict = indigo.Dict()
 
-        if typeId == RA_KEYPAD and bool(valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE]) and int(valuesDict[PROP_KEYPADBUT]) < 80:
+        if typeId == DEV_KEYPAD and bool(valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE]) and int(valuesDict[PROP_KEYPADBUT]) < 80:
             valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE] = False
             self.logger.debug(u"validateDeviceConfigUi: forced PROP_KEYPADBUT_DISPLAY_LED_STATE to False for keypad # {}, button # {}".format(valuesDict[PROP_INTEGRATION_ID], valuesDict[PROP_KEYPADBUT]))
         
@@ -640,112 +863,20 @@ class Plugin(indigo.PluginBase):
                 
     def runConcurrentThread(self):
 
+        if self.pluginPrefs.get(u"queryAtStartup", False):
+            self.queryAllDevices()
+
+
         try:
             while True:
-
-                if self.IP:
-                    self.sleep(.1)
-                    try:
-                        if self.runstartup:
-                            self.ipStartup()
-                            self.runstartup = False
-
-                        try:
-                            self._processCommand(self.connIP.read_until("\n", self.timeout))
-                        except:
-                            pass
-                            
-                    except EOFError, e:
-                        self.logger.error(u"EOFError: %s" % e.message)
-                        if ('telnet connection closed' in e.message):
-                            self.runstartup = True
-                            self.sleep(10)
-                    except AttributeError, e:
-                        self.logger.debug(u"AttributeError: %s" % e.message)
-                    except select.error, e:
-                        self.logger.debug(u"Disconnected while listening: %s" % e.message)
-
-                else:
-                    while not self.portEnabled:
-                        self.sleep(.1)
-
-                    if self.runstartup:
-                        self.serialStartup()
-                        self.runstartup = False
-
-                    s = self.connSerial.read()
-                    if len(s) > 0:
-                        # RadioRA 2 messages are always terminated with CRLF
-                        if s == '\r':
-                            self._processCommand(self.command)
-                            self.command = ''
-                        else:
-                            self.command += s
-
+                        
+                for gateway in self.gateways.values():
+                    self._processCommand(gateway.poll())
+                    
+                self.sleep(0.1)
+                
         except self.StopThread:
             pass
-
-    ####################
-
-    def serialStartup(self):
-        self.logger.info(u"Running serialStartup")
-
-        self.portEnabled = False
-
-        self.serialUrl = self.getSerialPortUrl(self.pluginPrefs, u"devicePort")
-        self.logger.info(u"Serial Port URL is: " + self.serialUrl)
-
-        self.connSerial = self.openSerial(u"Lutron RadioRA", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
-        if self.connSerial is None:
-            self.logger.error(u"Failed to open serial port")
-            return
-
-        self.portEnabled = True
-
-        # Disable main repeater terminal prompt
-        self._sendCommand("#MONITORING,12,2")
-
-        # Enable main repeater HVAC monitoring
-        self._sendCommand("#MONITORING,17,1")
-
-        # Enable main repeater monitoring param 18
-        # (undocumented but seems to be enabled by default for ethernet connections)
-        self._sendCommand("#MONITORING,18,1")
-
-
-    def ipStartup(self):
-        self.logger.info(u"Running ipStartup")
-        self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
-
-        host = self.pluginPrefs["ip_address"]
-        port = int(self.pluginPrefs["ip_port"])
-
-        try:
-            self.logger.info(u"Connecting via IP to {}:{}".format(host, port))
-            self.connIP = telnetlib.Telnet(host, port, self.timeout)
-        except socket.timeout:
-            self.logger.error(u"Unable to connect to Lutron gateway. Timed out.")
-            return
-                    
-        a = self.connIP.read_until(" ", self.timeout)
-        self.logger.debug(u"self.connIP.read: %s" % a)
-
-        if 'login' in a:
-            self.logger.debug(u"Sending username.")
-            self.connIP.write(str(self.pluginPrefs["ip_username"]) + "\r\n")
-
-            a = self.connIP.read_until(" ", self.timeout)
-            self.logger.debug(u"self.connIP.read: %s" % a)
-            if 'password' in a:
-                self.logger.debug(u"Sending password.")
-                self.connIP.write(str(self.pluginPrefs["ip_password"]) + "\r\n")
-            else:
-                self.logger.debug(u"password failure.")
-        else:
-            self.logger.debug(u"username failure.")
-        self.logger.debug(u"End of connection process.")
-        self.timeout = 5   # Reset the timeout to something reasonable
-
 
 #########################################
 # Poll registered devices for status
@@ -808,6 +939,11 @@ class Plugin(indigo.PluginBase):
 
     ########################################
 
+    def _sendCommand(self, cmd, gateway):
+    
+        self.gateways[gateway].send(cmd)
+
+
     def _processCommand(self, cmd):
         cmd = cmd.rstrip()
         if len(cmd) > 0:
@@ -831,21 +967,6 @@ class Plugin(indigo.PluginBase):
             elif cmd != "!":
                 self.logger.debug(u"Unrecognized command: " + cmd)
 
-
-    def _sendCommand(self, cmd):
-        if self.IP:
-            self.logger.debug(u"Sending network command:  %s" % cmd)
-            cmd = cmd + "\r\n"
-            try:
-                self.connIP.write(str(cmd))
-            except Exception, e:
-                self.logger.warning(u"Error sending IP command, resetting connection:  %s", e)
-                self.connIP.close()
-                self.runstartup = True
-        else:
-            self.logger.debug(u"Sending serial command: %s" % cmd)
-            cmd = cmd + "\r"
-            self.connSerial.write(str(cmd))
 
     def _cmdOutputChange(self,cmd):
         self.logger.threaddebug(u"Received an Output message: " + cmd)
@@ -953,9 +1074,6 @@ class Plugin(indigo.PluginBase):
 
     def _cmdDeviceChange(self,cmd):
         self.logger.threaddebug(u"Received a Device message: " + cmd)
-
-        if self.IP:
-            cmd = cmd.rstrip() # IP strings are terminated with \n -JL
 
         cmdArray = cmd.split(',')
         id = cmdArray[1]
@@ -1100,17 +1218,17 @@ class Plugin(indigo.PluginBase):
 
         ###### TURN ON ######
         if action.deviceAction == indigo.kDeviceAction.TurnOn:
-            if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+            if dev.deviceTypeId == DEV_PHANTOM_BUTTON:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 phantom_button = dev.pluginProps[PROP_COMPONENT_ID]
                 sendCmd = ("#DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)-100) + ",3,") # Press button
                 
-            elif dev.deviceTypeId == RA_PICO:
+            elif dev.deviceTypeId == DEV_PICO:
                 pico = dev.pluginProps[PROP_INTEGRATION_ID]
                 button = dev.pluginProps[PROP_COMPONENT_ID]
                 sendCmd = ("#DEVICE," + pico + "," + button + ",3") # Press button
                 
-            elif dev.deviceTypeId == RA_KEYPAD:
+            elif dev.deviceTypeId == DEV_KEYPAD:
                 keypad = dev.pluginProps[PROP_INTEGRATION_ID]
                 keypadButton = dev.pluginProps[PROP_COMPONENT_ID]
                 if (int(keypadButton) > 80):
@@ -1118,26 +1236,26 @@ class Plugin(indigo.PluginBase):
                 else:
                     sendCmd = ("#DEVICE," + keypad + "," + str(int(keypadButton)) + ",3") # Press button
                     
-            elif dev.deviceTypeId == RA_DIMMER:
+            elif dev.deviceTypeId == DEV_DIMMER:
                 zone = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#OUTPUT," + zone + ",1,100")
                 self.lastBrightness[zone] = 100
                 
-            elif dev.deviceTypeId == RA_SHADE:
+            elif dev.deviceTypeId == DEV_SHADE:
                 shade = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#OUTPUT," + shade + ",1,100")
                 self.lastBrightness[shade] = 100
                 
-            elif dev.deviceTypeId == RA_SWITCH:
+            elif dev.deviceTypeId == DEV_SWITCH:
                 switch = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#OUTPUT," + switch + ",1,100")
                 
-            elif dev.deviceTypeId == RA_CCI:
+            elif dev.deviceTypeId == DEV_CCI:
                 cci = dev.pluginProps[PROP_INTEGRATION_ID]
                 component = dev.pluginProps[PROP_COMPONENT_ID]
                 sendCmd = ("#DEVICE," + cci +"," + str(int(component)) + ",3")
                 
-            elif dev.deviceTypeId == RA_CCO:
+            elif dev.deviceTypeId == DEV_CCO:
                 cco = dev.pluginProps[PROP_INTEGRATION_ID]
                 ccoType = dev.pluginProps[PROP_CCO_TYPE]
                 if ccoType == "momentary":
@@ -1148,17 +1266,17 @@ class Plugin(indigo.PluginBase):
             
         ###### TURN OFF ######
         elif action.deviceAction == indigo.kDeviceAction.TurnOff:
-            if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+            if dev.deviceTypeId == DEV_PHANTOM_BUTTON:
                 phantom_button = dev.pluginProps[PROP_COMPONENT_ID]
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)-100) + ",4,") # Release button
                 
-            elif dev.deviceTypeId == RA_PICO:
+            elif dev.deviceTypeId == DEV_PICO:
                 pico = dev.pluginProps[PROP_INTEGRATION_ID]
                 button = dev.pluginProps[PROP_COMPONENT_ID]
                 sendCmd = ("#DEVICE," + pico + "," + button + ",4") # Release button
                 
-            elif dev.deviceTypeId == RA_KEYPAD:
+            elif dev.deviceTypeId == DEV_KEYPAD:
                 keypad = dev.pluginProps[PROP_INTEGRATION_ID]
                 keypadButton = dev.pluginProps[PROP_COMPONENT_ID]
                 if (int(keypadButton) > 80):
@@ -1166,27 +1284,27 @@ class Plugin(indigo.PluginBase):
                 else:
                     sendCmd = ("#DEVICE," + keypad + "," + str(int(keypadButton)) + ",4") # Release button
                     
-            elif dev.deviceTypeId == RA_DIMMER:
+            elif dev.deviceTypeId == DEV_DIMMER:
                 zone = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#OUTPUT," + zone + ",1,0")
                 self.lastBrightness[zone] = 0
                 
-            elif dev.deviceTypeId == RA_SHADE:
+            elif dev.deviceTypeId == DEV_SHADE:
                 shade = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#OUTPUT," + shade + ",1,0")
                 self.lastBrightness[shade] = 0
                 
-            elif dev.deviceTypeId == RA_SWITCH:
+            elif dev.deviceTypeId == DEV_SWITCH:
                 switch = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#OUTPUT," + switch + ",1,0")
                 
-            elif dev.deviceTypeId == RA_CCI:
+            elif dev.deviceTypeId == DEV_CCI:
                 self.logger.debug(u"it is a cci")
                 cci = dev.pluginProps[PROP_INTEGRATION_ID]
                 component = dev.pluginProps[PROP_COMPONENT_ID]
                 sendCmd = ("#DEVICE," + cci +"," + str(int(component)) + ",4")
                 
-            elif dev.deviceTypeId == RA_CCO:
+            elif dev.deviceTypeId == DEV_CCO:
                 cco = dev.pluginProps[PROP_INTEGRATION_ID]
                 ccoType = dev.pluginProps[PROP_CCO_TYPE]
                 if ccoType == "momentary":
@@ -1196,12 +1314,12 @@ class Plugin(indigo.PluginBase):
 
         ###### TOGGLE ######
         elif action.deviceAction == indigo.kDeviceAction.Toggle:
-            if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+            if dev.deviceTypeId == DEV_PHANTOM_BUTTON:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 phantom_button = dev.pluginProps[PROP_COMPONENT_ID]
                 sendCmd = ("#DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)-100) + ",3,")
                 
-            elif dev.deviceTypeId == RA_KEYPAD:
+            elif dev.deviceTypeId == DEV_KEYPAD:
                 keypad = dev.pluginProps[PROP_INTEGRATION_ID]
                 keypadButton = dev.pluginProps[PROP_COMPONENT_ID]
                 if (int(keypadButton) > 80):
@@ -1215,28 +1333,28 @@ class Plugin(indigo.PluginBase):
                     else:
                         sendCmd = ("#DEVICE," + keypad + "," + str(int(keypadButton)) + ",3") # Press button
                         
-            elif dev.deviceTypeId == RA_DIMMER:
+            elif dev.deviceTypeId == DEV_DIMMER:
                 zone = dev.pluginProps[PROP_INTEGRATION_ID]
                 if dev.brightness > 0:
                     sendCmd = ("#OUTPUT," + zone + ",1,0")
                 else:
                     sendCmd = ("#OUTPUT," + zone + ",1,100")
                     
-            elif dev.deviceTypeId == RA_SHADE:
+            elif dev.deviceTypeId == DEV_SHADE:
                 shade = dev.pluginProps[PROP_INTEGRATION_ID]
                 if dev.brightness > 0:
                     sendCmd = ("#OUTPUT," + shade + ",1,0")
                 else:
                     sendCmd = ("#OUTPUT," + shade + ",1,100")
                     
-            elif dev.deviceTypeId == RA_SWITCH:
+            elif dev.deviceTypeId == DEV_SWITCH:
                 switch = dev.pluginProps[PROP_INTEGRATION_ID]
                 if dev.onState == True:
                     sendCmd = ("#OUTPUT," + switch + ",1,0")
                 else:
                     sendCmd = ("#OUTPUT," + switch + ",1,100")
                     
-            elif dev.deviceTypeId == RA_CCI:
+            elif dev.deviceTypeId == DEV_CCI:
                 self.logger.debug(u"it is a cci")
                 cci = dev.pluginProps[PROP_INTEGRATION_ID]
                 component = dev.pluginProps[PROP_COMPONENT_ID]
@@ -1245,7 +1363,7 @@ class Plugin(indigo.PluginBase):
                 else:
                     sendCmd = ("#DEVICE," + cci +"," + str(int(component)) + ",3")
                     
-            elif dev.deviceTypeId == RA_CCO:
+            elif dev.deviceTypeId == DEV_CCO:
                 cco = dev.pluginProps[PROP_INTEGRATION_ID]
                 ccoType = dev.pluginProps[PROP_CCO_TYPE]
                 if ccoType == "momentary":
@@ -1259,14 +1377,14 @@ class Plugin(indigo.PluginBase):
                 
         ###### SET BRIGHTNESS ######
         elif action.deviceAction == indigo.kDeviceAction.SetBrightness:
-            if (dev.deviceTypeId == RA_DIMMER) or (dev.deviceTypeId == RA_SHADE):
+            if (dev.deviceTypeId == DEV_DIMMER) or (dev.deviceTypeId == DEV_SHADE):
                 newBrightness = action.actionValue
                 zone = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("#OUTPUT," + dev.pluginProps[PROP_INTEGRATION_ID] + ",1," + str(newBrightness))
 
         ###### BRIGHTEN BY ######
         elif action.deviceAction == indigo.kDimmerRelayAction.BrightenBy:
-            if (dev.deviceTypeId == RA_DIMMER) or (dev.deviceTypeId == RA_SHADE):
+            if (dev.deviceTypeId == DEV_DIMMER) or (dev.deviceTypeId == DEV_SHADE):
                 newBrightness = dev.brightness + action.actionValue
                 if newBrightness > 100:
                     newBrightness = 100
@@ -1274,7 +1392,7 @@ class Plugin(indigo.PluginBase):
 
         ###### DIM BY ######
         elif action.deviceAction == indigo.kDimmerRelayAction.DimBy:
-            if (dev.deviceTypeId == RA_DIMMER) or (dev.deviceTypeId == RA_SHADE):
+            if (dev.deviceTypeId == DEV_DIMMER) or (dev.deviceTypeId == DEV_SHADE):
                 newBrightness = dev.brightness - action.actionValue
                 if newBrightness < 0:
                     newBrightness = 0
@@ -1282,12 +1400,12 @@ class Plugin(indigo.PluginBase):
 
         ###### STATUS REQUEST ######
         elif action.deviceAction == indigo.kDeviceAction.RequestStatus:
-            if dev.deviceTypeId == RA_PHANTOM_BUTTON:
+            if dev.deviceTypeId == DEV_PHANTOM_BUTTON:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 phantom_button = dev.pluginProps[PROP_COMPONENT_ID]
                 sendCmd = ("?DEVICE," + str(int(integration_id)) + ","+ str(int(phantom_button)) + ",9,")
                 
-            elif dev.deviceTypeId == RA_KEYPAD:
+            elif dev.deviceTypeId == DEV_KEYPAD:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 keypadButton = dev.pluginProps[PROP_COMPONENT_ID]
                 if (int(keypadButton) > 80):
@@ -1295,11 +1413,11 @@ class Plugin(indigo.PluginBase):
                 else:
                     sendCmd = ("?DEVICE," + integration_id + "," + str(int(keypadButton)+80) + ",9")
                     
-            elif (dev.deviceTypeId == RA_DIMMER) or (dev.deviceTypeId == RA_SHADE) or (dev.deviceTypeId == RA_SWITCH):
+            elif (dev.deviceTypeId == DEV_DIMMER) or (dev.deviceTypeId == DEV_SHADE) or (dev.deviceTypeId == DEV_SWITCH):
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = ("?OUTPUT," + integration_id + ",1,")
                                 
-            elif dev.deviceTypeId == RA_CCO:
+            elif dev.deviceTypeId == DEV_CCO:
                 cco = dev.pluginProps[PROP_INTEGRATION_ID]
                 ccoType = dev.pluginProps[PROP_CCO_TYPE]
                 if ccoType == "momentary":
@@ -1307,31 +1425,30 @@ class Plugin(indigo.PluginBase):
                 else:
                     sendCmd = ("?OUTPUT," + cco + ",1,")
 
-            elif dev.deviceTypeId == RA_CCI:
+            elif dev.deviceTypeId == DEV_CCI:
                 self.logger.info(u"This device does not respond to Status Requests")
 
         if len(sendCmd):
-            self._sendCommand(sendCmd)
-            self.logger.debug(u"actionControlDimmerRelay sent: \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
+            gateway = dev.pluginProps['gateway']
+            self._sendCommand(sendCmd, gateway)
+            self.logger.debug(u"{}: actionControlDimmerRelay sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
 
     ######################
     # Sensor Action callback
     ######################
     def actionControlSensor(self, action, dev):
-        self.logger.info(u"This device does not respond to Status Requests")
+        self.logger.debug(u"{}: This device does not respond to Status Requests".format(dev.name))
 
     ######################
     # Fan Action callback
     ######################
     def actionControlSpeedControl(self, action, dev):
         
-        sendCmd = ""
-
         ###### TURN ON ######
         if action.speedControlAction == indigo.kSpeedControlAction.TurnOn:
             self.logger.debug(u"{}: TurnOn".format(dev.name))
 
-            if dev.deviceTypeId == RA_FAN:
+            if dev.deviceTypeId == DEV_FAN:
                 sendCmd = "#OUTPUT,{},1,{}".format(dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_LASTSPEED])
                 dev.updateStateOnServer(ACTUALSPEED, int(dev.pluginProps[PROP_LASTSPEED]))
                 dev.updateStateOnServer(ONOFF, True)
@@ -1341,7 +1458,7 @@ class Plugin(indigo.PluginBase):
         elif action.speedControlAction == indigo.kSpeedControlAction.TurnOff:
             self.logger.debug(u"{}: TurnOff".format(dev.name))
 
-            if dev.deviceTypeId == RA_FAN:
+            if dev.deviceTypeId == DEV_FAN:
                 sendCmd = "#OUTPUT,{},1,0".format(dev.pluginProps[PROP_INTEGRATION_ID])
                 if dev.states[ACTUALSPEED] > 0:
                     self.update_device_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
@@ -1353,7 +1470,7 @@ class Plugin(indigo.PluginBase):
         elif action.speedControlAction == indigo.kSpeedControlAction.Toggle:
             self.logger.debug(u"{}: Toggle".format(dev.name))
 
-            if dev.deviceTypeId == RA_FAN:
+            if dev.deviceTypeId == DEV_FAN:
             
                 if int(dev.states[ACTUALSPEED]) > 0:      # turn Off
                     sendCmd = "#OUTPUT,{},1,0".format(dev.pluginProps[PROP_INTEGRATION_ID])
@@ -1374,7 +1491,7 @@ class Plugin(indigo.PluginBase):
         elif action.speedControlAction == indigo.kSpeedControlAction.SetSpeedIndex:
             self.logger.debug(u"{}: SetSpeedIndex to {}".format(dev.name, action.actionValue))
 
-            if dev.deviceTypeId == RA_FAN:
+            if dev.deviceTypeId == DEV_FAN:
                 newSpeedIndex = action.actionValue
                 if newSpeedIndex == 0:
                     sendCmd = "#OUTPUT,{},1,0".format(dev.pluginProps[PROP_INTEGRATION_ID])
@@ -1407,7 +1524,7 @@ class Plugin(indigo.PluginBase):
         elif action.speedControlAction == indigo.kSpeedControlAction.SetSpeedLevel:
             self.logger.debug(u"{}: SetSpeedLevel to {}".format(dev.name, action.actionValue))
 
-            if dev.deviceTypeId == RA_FAN:
+            if dev.deviceTypeId == DEV_FAN:
                 newSpeedLevel = int(action.actionValue)
                 sendCmd = "#OUTPUT,{},1,{}".format(dev.pluginProps[PROP_INTEGRATION_ID], action.actionValue)
                 dev.updateStateOnServer(ACTUALSPEED, action.actionValue)
@@ -1432,7 +1549,7 @@ class Plugin(indigo.PluginBase):
         elif action.speedControlAction == indigo.kSpeedControlAction.IncreaseSpeedIndex:
             self.logger.debug(u"{}: IncreaseSpeedIndex by {}".format(dev.name, action.actionValue))
 
-            if dev.deviceTypeId == RA_FAN:
+            if dev.deviceTypeId == DEV_FAN:
                 newSpeedIndex = dev.speedIndex + action.actionValue
                 if newSpeedIndex > 3:
                     newSpeedIndex = 3
@@ -1468,7 +1585,7 @@ class Plugin(indigo.PluginBase):
         elif action.speedControlAction == indigo.kSpeedControlAction.DecreaseSpeedIndex:
             self.logger.debug(u"{}: DecreaseSpeedIndex by {}".format(dev.name, action.actionValue))
 
-            if dev.deviceTypeId == RA_FAN:
+            if dev.deviceTypeId == DEV_FAN:
                 newSpeedIndex = dev.speedIndex - action.actionValue
                 if newSpeedIndex < 0:
                     newSpeedIndex = 0
@@ -1506,8 +1623,9 @@ class Plugin(indigo.PluginBase):
             sendCmd = "?OUTPUT,{},1,".format(integration_id)
 
         if len(sendCmd):
-            self._sendCommand(sendCmd)
-            self.logger.debug(u"actionControlSpeedControl sent: \"%s\" %s %s" % (dev.name, dev.onState, sendCmd))
+            gateway = dev.pluginProps['gateway']
+            self._sendCommand(sendCmd, gateway)
+            self.logger.debug(u"{}: actionControlSpeedControl sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
 
 
     ######################
@@ -1577,77 +1695,104 @@ class Plugin(indigo.PluginBase):
 
         ###### STATUS REQUEST ######
         elif action.thermostatAction == indigo.kThermostatAction.RequestStatusAll:
+
+            gateway = dev.pluginProps['gateway']
+
             sendCmd = "?HVAC," + integration_id + ",1," # get temperature
-            self._sendCommand(sendCmd)
-            self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
+            self._sendCommand(sendCmd, gateway)
+            self.logger.debug(u"{}: actionControlSpeedControl sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
             
             sendCmd = "?HVAC," + integration_id + ",2," # get heat and cool setpoints
-            self._sendCommand(sendCmd)
-            self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
+            self._sendCommand(sendCmd, gateway)
+            self.logger.debug(u"{}: actionControlSpeedControl sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
             
             sendCmd = "?HVAC," + integration_id + ",3," # get operating mode
-            self._sendCommand(sendCmd)
-            self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
+            self._sendCommand(sendCmd, gateway)
+            self.logger.debug(u"{}: actionControlSpeedControl sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
 
             sendCmd = "?HVAC," + integration_id + ",4," # get fan mode
-
+            self._sendCommand(sendCmd, gateway)
+            self.logger.debug(u"{}: actionControlSpeedControl sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
+            return
+            
+        # only if not request status, which sends multiple commmands 
         if len(sendCmd):
-            self._sendCommand(sendCmd)
-            self.logger.debug(u"actionControlThermostat sent: \"%s\" %s" % (dev.name, sendCmd))
-
-
+            gateway = dev.pluginProps['gateway']
+            self._sendCommand(sendCmd, gateway)
+            self.logger.debug(u"{}: actionControlSpeedControl sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
 
     ########################################
     # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
 
-    def setFanSpeed(self, pluginAction, fanDevice):
+    def setFanSpeed(self, pluginAction, dev):
+
+        gateway = dev.pluginProps['gateway']
 
         fanSpeed =  pluginAction.props["fanSpeed"]
-        sendCmd = "#OUTPUT,{},1,{}".format(fanDevice.address, fanSpeed)
-        self.logger.debug(u"{}: Setting fan speed to {}".format(fanDevice.name, fanSpeed))
-        self._sendCommand(sendCmd)
+        sendCmd = "#OUTPUT,{},1,{}".format(dev.address, fanSpeed)
+        self.logger.debug(u"{}: Sending set fan speed {} to {}".format(dev.name, fanSpeed, gateway))
+        self._sendCommand(sendCmd, gateway)
 
-    def fadeDimmer(self, pluginAction, dimmerDevice):
+    def fadeDimmer(self, pluginAction, dev):
+
+        gateway = dev.pluginProps['gateway']
 
         brightness =  indigo.activePlugin.substitute(pluginAction.props["brightness"])
         fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
-        zone = dimmerDevice.address
+        zone = dev.address
 
         sendCmd = ("#OUTPUT," + zone + ",1," + str(brightness) + "," + str(fadeTime))
-        self.logger.info(u"{}: Set brightness to %s with fade %s".format(dimmerDevice.name, brightness, fadeTime))
-        self._sendCommand(sendCmd)
+        self.logger.debug(u"{}: Sending set brightness {} with fade {} to {}".format(dev.name, brightness, fadeTime, gateway))
+        self._sendCommand(sendCmd, gateway)
 
-    def startRaising(self, pluginAction, shadeDevice):
+    def startRaising(self, pluginAction, dev):
+
+        gateway = dev.pluginProps['gateway']
 
         zone = shadeDevice.address
 
         sendCmd = ("#OUTPUT," + zone + ",2")
-        self.logger.info(u"{}: Start Raising".format(shadeDevice.name))
-        self._sendCommand(sendCmd)
+        self.logger.info(u"{}: Start Raising".format(dev.name))
+        self._sendCommand(sendCmd, gateway)
 
-    def startLowering(self, pluginAction, shadeDevice):
+    def startLowering(self, pluginAction, dev):
+
+        gateway = dev.pluginProps['gateway']
 
         zone = shadeDevice.address
 
         sendCmd = ("#OUTPUT," + zone + ",3")
-        self.logger.info(u"{}: Start Lowering".format(shadeDevice.name))
-        self._sendCommand(sendCmd)
+        self.logger.info(u"{}: Start Lowering".format(dev.name))
+        self._sendCommand(sendCmd, gateway)
 
-    def stopRaiseLower(self, pluginAction, shadeDevice):
+    def stopRaiseLower(self, pluginAction, dev):
 
-        zone = shadeDevice.address
+        gateway = dev.pluginProps['gateway']
+
+        zone = dev.address
 
         sendCmd = ("#OUTPUT," + zone + ",4")
-        self.logger.info(u"{}: Stop Raising/Lowering".format(shadeDevice.name))
-        self._sendCommand(sendCmd)
+        self.logger.info(u"{}: Stop Raising/Lowering".format(dev.name))
+        self._sendCommand(sendCmd, gateway)
 
     def sendRawCommand(self, pluginAction):
 
+        gateway = pluginAction.pluginProps['gateway']
         sendCmd =  indigo.activePlugin.substitute(pluginAction.props["commandString"])
-        self.logger.debug(u"Sending Raw Command: \"%s\"" % sendCmd)
-        self._sendCommand(sendCmd)
+        self.logger.debug(u"Sending Raw Command: '{}'".formatsendCmd)
+        self._sendCommand(sendCmd, gateway)
         
     ########################################
+
+    def get_gateway_list(self, filter="", valuesDict=None, typeId="", targetId=0):
+        self.logger.threaddebug("get_gateway_list: typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
+        gateways = [
+            (gateway.dev.id, indigo.devices[gateway.dev.id].name)
+            for gateway in self.gateways.values()
+        ]
+        self.logger.debug("get_gateway_list: gateways = {}".format(gateways))
+        return gateways
+        
 
     def roomListGenerator(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         self.logger.threaddebug(u"roomListGenerator, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
@@ -1820,7 +1965,7 @@ class Plugin(indigo.PluginBase):
                     PROP_BUTTONTYPE : "Unknown",
                     PROP_ISBUTTON : "True"
                 }
-                self.createLutronDevice(RA_PICO, name, address, props, areaName)                    
+                self.createLutronDevice(DEV_PICO, name, address, props, areaName)                    
            
         for zone in casetaData["LIPIdList"]["Zones"]:
             self.logger.info(u"Caseta Zone '{}' ({}), Area = {}".format(zone["Name"], zone["ID"], zone["Area"]["Name"]))
@@ -1836,7 +1981,7 @@ class Plugin(indigo.PluginBase):
                 PROP_INTEGRATION_ID : str(zone["ID"]),
                 PROP_OUTPUTTYPE: "AUTO_DETECT"
             }
-            self.createLutronDevice(RA_DIMMER, name, zone["ID"], props, areaName)
+            self.createLutronDevice(DEV_DIMMER, name, zone["ID"], props, areaName)
    
         self.logger.info(u"Creating Devices done.")        
         self.threadLock.release()
@@ -1933,7 +2078,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_BUTTONTYPE : buttonType,
                                 PROP_ISBUTTON : "True"
                             }
-                            self.createLutronDevice(RA_PHANTOM_BUTTON, name, address, props, room.attrib['Name'])
+                            self.createLutronDevice(DEV_PHANTOM_BUTTON, name, address, props, room.attrib['Name'])
 
                         elif component.attrib['ComponentType'] == "LED":    # ignore LEDs for phantom buttons
                             pass
@@ -1954,7 +2099,7 @@ class Plugin(indigo.PluginBase):
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE],
                     }
-                    self.createLutronDevice(RA_DIMMER, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_DIMMER, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
                     
                 elif output.attrib['OutputType'] == "NON_DIM":
                     name = u"{} - Switch {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
@@ -1963,7 +2108,7 @@ class Plugin(indigo.PluginBase):
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(RA_SWITCH, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_SWITCH, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
                         
                 elif output.attrib['OutputType'] == "SYSTEM_SHADE":
                     name = u"{} - Shade {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
@@ -1972,7 +2117,7 @@ class Plugin(indigo.PluginBase):
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(RA_SHADE, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_SHADE, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CEILING_FAN_TYPE":
                     name = u"{} - Fan {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
@@ -1981,7 +2126,7 @@ class Plugin(indigo.PluginBase):
                         PROP_INTEGRATION_ID : output.attrib['IntegrationID'],
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(RA_FAN, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_FAN, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_PULSED":
                     name = u"{} - VCRX CCO Momentary {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
@@ -1992,7 +2137,7 @@ class Plugin(indigo.PluginBase):
                         PROP_SUPPORTS_STATUS_REQUEST : "False",
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "CCO_MAINTAINED":
                     name = u"{} - VCRX CCO Sustained {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
@@ -2003,7 +2148,7 @@ class Plugin(indigo.PluginBase):
                         PROP_SUPPORTS_STATUS_REQUEST : "True",
                         PROP_OUTPUTTYPE: output.attrib[PROP_OUTPUTTYPE]
                     }
-                    self.createLutronDevice(RA_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_CCO, name, output.attrib['IntegrationID'], props, room.attrib['Name'])
 
                 elif output.attrib['OutputType'] == "HVAC":
                     pass
@@ -2068,7 +2213,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_BUTTONTYPE : buttonType,
                                PROP_ISBUTTON : "True"
                             }
-                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+                            self.createLutronDevice(DEV_KEYPAD, name, address, props, room.attrib['Name'])
                     
                             # create button LED, if needed for the button
                             
@@ -2087,7 +2232,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_COMPONENT_ID : keypadLED, 
                                 PROP_KEYPADBUT_DISPLAY_LED_STATE : "False" 
                             }
-                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+                            self.createLutronDevice(DEV_KEYPAD, name, address, props, room.attrib['Name'])
 
                         elif component.attrib['ComponentType'] == "LED":
                             pass    # LED device created same time as button
@@ -2124,7 +2269,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_BUTTONTYPE : buttonType,
                                 PROP_ISBUTTON : "True"
                             }
-                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+                            self.createLutronDevice(DEV_KEYPAD, name, address, props, room.attrib['Name'])
                                 
                             # create button LED, if needed for the button
 
@@ -2138,7 +2283,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_COMPONENT_ID : keypadLED, 
                                 PROP_KEYPADBUT_DISPLAY_LED_STATE : "False" 
                             }
-                            self.createLutronDevice(RA_KEYPAD, name, address, props, room.attrib['Name'])
+                            self.createLutronDevice(DEV_KEYPAD, name, address, props, room.attrib['Name'])
 
                         elif component.attrib['ComponentType'] == "LED":
                             pass
@@ -2152,7 +2297,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_COMPONENT_ID : component.attrib['ComponentNumber'], 
                                 PROP_SUPPORTS_STATUS_REQUEST : "False" 
                             }
-                            self.createLutronDevice(RA_CCI, name, address, props, room.attrib['Name'])
+                            self.createLutronDevice(DEV_CCI, name, address, props, room.attrib['Name'])
 
                         else:
                             self.logger.error("Unknown Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
@@ -2185,7 +2330,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_BUTTONTYPE : buttonType,
                                 PROP_ISBUTTON : "True"
                             }
-                            self.createLutronDevice(RA_PICO, name, address, props, room.attrib['Name'])
+                            self.createLutronDevice(DEV_PICO, name, address, props, room.attrib['Name'])
 
                         else:
                             self.logger.error("Unknown Component Type: %s (%s)" % (component.attrib['Name'], component.attrib['ComponentType']))
@@ -2198,7 +2343,7 @@ class Plugin(indigo.PluginBase):
                         PROP_INTEGRATION_ID : address, 
                         PROP_SUPPORTS_STATUS_REQUEST : "False" 
                     }
-                    self.createLutronDevice(RA_SENSOR, name, address, props, room.attrib['Name'])
+                    self.createLutronDevice(DEV_SENSOR, name, address, props, room.attrib['Name'])
                     
                     # Create a Group (Room) device for every room that has a motion sensors
                     
@@ -2208,7 +2353,7 @@ class Plugin(indigo.PluginBase):
                         'group': address 
                     }
                     if not address in self.groups:
-                        self.createLutronDevice(RA_GROUP, name, address, props, room.attrib['Name'])
+                        self.createLutronDevice(DEV_GROUP, name, address, props, room.attrib['Name'])
                    
                     if self.create_group_triggers:
                         self.logger.debug("Creating Group triggers for: {} ({})".format(name, address))
@@ -2273,7 +2418,7 @@ class Plugin(indigo.PluginBase):
             props = {
                 PROP_EVENT : event.attrib['EventNumber']
             }
-            self.createLutronDevice(RA_TIMECLOCKEVENT, name, address, props, "TimeClock")
+            self.createLutronDevice(DEV_TIMECLOCKEVENT, name, address, props, "TimeClock")
             
             if self.create_event_triggers:
                 self.logger.debug("Creating Event triggers for: {} ({})".format(name, address))
@@ -2312,7 +2457,7 @@ class Plugin(indigo.PluginBase):
             props = {
                 'thermo': address
             }
-            self.createLutronDevice(RA_THERMO, name, address, props, "HVAC")
+            self.createLutronDevice(DEV_THERMO, name, address, props, "HVAC")
                      
                         
         self.logger.info(u"Creating Devices done.")        
@@ -2325,19 +2470,19 @@ class Plugin(indigo.PluginBase):
         self.logger.threaddebug("createLutronDevice: devType = {}, name = {}, address = {}, props = {}, room = {}".format(devType, name, address, props, room))            
 
         folderNameDict = {
-            RA_PHANTOM_BUTTON   : "Lutron Phantom Buttons",
-            RA_DIMMER           : "Lutron Dimmers",
-            RA_SWITCH           : "Lutron Switches",
-            RA_KEYPAD           : "Lutron Keypads",
-            RA_FAN              : "Lutron Fans",
-            RA_SENSOR           : "Lutron Sensors",
-            RA_THERMO           : "Lutron Thermostats",
-            RA_CCO              : "Lutron Switches",
-            RA_CCI              : "Lutron Sensors",
-            RA_SHADE            : "Lutron Shades",
-            RA_PICO             : "Lutron Keypads",
-            RA_GROUP            : "Lutron Room Groups",
-            RA_TIMECLOCKEVENT   : "Lutron Timeclock Events"
+            DEV_PHANTOM_BUTTON   : "Lutron Phantom Buttons",
+            DEV_DIMMER           : "Lutron Dimmers",
+            DEV_SWITCH           : "Lutron Switches",
+            DEV_KEYPAD           : "Lutron Keypads",
+            DEV_FAN              : "Lutron Fans",
+            DEV_SENSOR           : "Lutron Sensors",
+            DEV_THERMO           : "Lutron Thermostats",
+            DEV_CCO              : "Lutron Switches",
+            DEV_CCI              : "Lutron Sensors",
+            DEV_SHADE            : "Lutron Shades",
+            DEV_PICO             : "Lutron Keypads",
+            DEV_GROUP            : "Lutron Room Groups",
+            DEV_TIMECLOCKEVENT   : "Lutron Timeclock Events"
         }
 
         # first, make sure this device doesn't exist.  Unless I screwed up, the addresses should be unique

@@ -22,6 +22,6 @@
         </List>
     </Field>            
     <Field type="checkbox" id="queryAtStartup" defaultValue="false">
-        <Label>Send status request for all devices at startup:</Label>
+        <Label>Request status for all devices at startup:</Label>
     </Field>
 </PluginConfig>

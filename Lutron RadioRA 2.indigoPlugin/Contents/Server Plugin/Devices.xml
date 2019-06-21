@@ -1,25 +1,27 @@
 <?xml version="1.0"?>
 <Devices>
 
-    <Device type="custom" id="lutronGateway">
-    	<Name>Lutron Gateway (Repeater or Pro Hub)</Name>
+    <Device type="custom" id="ipGateway">
+    	<Name>Network Connected Gateway</Name>
         <ConfigUI>
-			<Field type="checkbox" id="IP" defaultValue="false">
-				<Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
-			</Field>
-			<Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
+			<Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
 				<Label>IP Address or Hostname:</Label>
 			</Field>
-			<Field id="ip_port" type="textfield" defaultValue="23" visibleBindingId="IP" visibleBindingValue="true" tooltip="Port number for Lutron gateway.">
+			<Field id="port" type="textfield" defaultValue="23" tooltip="Port number for gateway.">
 				<Label>Port:</Label>
 			</Field>
-			<Field id="ip_username" type="textfield" defaultValue="lutron" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP User Name for Lutron gateway.">
+			<Field id="username" type="textfield" defaultValue="lutron" tooltip="Enter User Name for gateway.">
 				<Label>Username:</Label>
 			</Field>
-			<Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
+			<Field id="password" type="textfield" defaultValue="integration" tooltip="Enter Password for gateway.">
 				<Label>Password:</Label>
 			</Field>
-			<Field id="simpleSeparator3" type="separator"/>
+        </ConfigUI>
+    </Device>
+
+    <Device type="custom" id="serialGateway">
+    	<Name>Serial Port Connected Gateway</Name>
+        <ConfigUI>
 			<Field type="serialport" id="devicePort"/>
         </ConfigUI>
     </Device>
@@ -27,6 +29,11 @@
     <Device type="custom" id="ra2TimeClockEvent">
     	<Name>Lutron Time Clock Event</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="event" type="textField" defaultValue="">
                 <Label>Event Number:</Label>
             </Field>
@@ -39,6 +46,11 @@
     <Device type="custom" id="ra2Group">
     	<Name>Lutron Room Group</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="group" type="textField" defaultValue="">
                 <Label>Group Number:</Label>
             </Field>
@@ -52,7 +64,12 @@
         <Name>Lutron Phantom Button</Name>
         <ConfigUI>
             <Field id="isButton" type="checkbox"  defaultValue="True" hidden="true"/>
-            <Field id="integrationID" type="textField" defaultValue="">
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="integrationID" type="textField" defaultValue="1">
                 <Label>Repeater Integration ID:</Label>
             </Field>
             <Field id="componentID" type="textField" defaultValue="">
@@ -67,6 +84,11 @@
     <Device type="dimmer" id="ra2Dimmer">
         <Name>Lutron Dimmer</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
@@ -79,6 +101,11 @@
     <Device type="relay" id="ra2Switch">
         <Name>Lutron Switch</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID"   type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
@@ -99,6 +126,11 @@
                     <Option value="LED">Keypad LED</Option>
                 </List>
             </Field>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
@@ -117,6 +149,11 @@
     <Device id="ra2Fan" type="speedcontrol">
         <Name>Lutron Fan</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
@@ -137,6 +174,11 @@
     <Device id="ra2Thermo" type="thermostat">
         <Name>Lutron Thermostat</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Thermostat Integration ID:</Label>
             </Field>
@@ -149,6 +191,11 @@
     <Device id="ra2Sensor" type="sensor">
         <Name>Lutron Motion Sensor</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Sensor Integration ID:</Label>
             </Field>
@@ -162,6 +209,11 @@
     <Device id="ra2CCO" type="relay">
         <Name>Lutron CCO</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID (Not the same as VCRX Integration ID):</Label>
             </Field>
@@ -182,6 +234,11 @@
     <Device id="ra2CCI" type="sensor">
         <Name>Lutron CCI</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>VCRX Integration ID:</Label>
             </Field>
@@ -198,6 +255,11 @@
     <Device id="ra2MotorizedShade" type="dimmer">
         <Name>Lutron Motorized Shade</Name>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
@@ -211,6 +273,11 @@
         <Name>Lutron Pico Button</Name>
         <ConfigUI>
             <Field id="isButton"     type="checkbox" defaultValue="True" hidden="true"/>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Pico Integration ID:</Label>
             </Field>
