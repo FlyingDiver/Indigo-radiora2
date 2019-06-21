@@ -88,6 +88,8 @@ class IPGateway:
         self.logger = logging.getLogger("Plugin.IPGateway")
         self.dev = dev
         self.connected = False
+        self.connIP = None
+
         dev.updateStateOnServer(key="status", value="Disconnected")
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
@@ -133,6 +135,13 @@ class IPGateway:
         self.connected = True
         self.dev.updateStateOnServer(key="status", value="Connected")
         self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+
+    def stop(self):
+        self.logger.debug(u"IP stop called")
+        if self.connected:
+            self.connIP.close()
+            self.connected = False
+        self.connIP = None  
         
     def poll(self):
 
@@ -191,7 +200,7 @@ class SerialGateway:
         dev.updateStateOnServer(key="status", value="Disconnected")
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
-        self.connSerial = {}
+        self.connSerial = None
         self.command = ''
         
 
@@ -210,7 +219,10 @@ class SerialGateway:
                 return
 
         except Exception, e:
-            self.logger.debug(u"Error opening Serial port: {}".format(e.message))
+            self.logger.error(u"{}: Failed to open serial port".format(self.dev.name))
+            self.dev.updateStateOnServer(key="status", value="Failed")
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            return
 
         self.connected = True
         self.dev.updateStateOnServer(key="status", value="Connected")
@@ -225,13 +237,28 @@ class SerialGateway:
         # Enable main repeater monitoring param 18 (undocumented but seems to be enabled by default for ethernet connections)
         self.send("#MONITORING,18,1")
 
+    def stop(self):
+        self.logger.debug(u"Serial stop called")
+        if self.connected:
+            self.connSerial.close()
+            self.connected = False
+        self.connSerial = None  
+       
 
     def poll(self):
 
         if not self.connected:
             self.startup()
 
-        s = self.connSerial.read()
+        try:
+            s = self.connSerial.read()
+        except:
+            self.logger.error(u"{}: Error reading from serial port".format(self.dev.name))
+            self.dev.updateStateOnServer(key="status", value="Failed")
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            self.connected = False
+            return
+            
         if len(s) > 0:
             
             if s == '\r':               # RadioRA 2 messages are always terminated with CRLF
@@ -836,10 +863,21 @@ class Plugin(indigo.PluginBase):
         
         
     def deviceStopComm(self, dev):
+
         if dev.deviceTypeId == DEV_IP_GATEWAY:
+
+            gateway = self.gateways[dev.id]         
+            gateway.stop()
+            dev.updateStateOnServer(key="status", value="None")
+            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             del self.gateways[dev.id]
             
         elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
+            
+            gateway = self.gateways[dev.id]         
+            gateway.stop()
+            dev.updateStateOnServer(key="status", value="None")
+            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             del self.gateways[dev.id]
             
         elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
