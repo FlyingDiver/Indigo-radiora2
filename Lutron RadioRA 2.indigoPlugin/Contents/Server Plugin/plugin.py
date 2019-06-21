@@ -84,7 +84,7 @@ CLICK_DELAY = 1.0
 class IPGateway:
 ########################################
 
-    def __init__(self, dev):
+    def __init__(self, plugin, dev):
         self.logger = logging.getLogger("Plugin.IPGateway")
         self.dev = dev
         self.connected = False
@@ -183,9 +183,10 @@ class IPGateway:
 class SerialGateway:
 ########################################
 
-    def __init__(self, dev):
+    def __init__(self, plugin, dev):
         self.logger = logging.getLogger("Plugin.SerialGateway")
         self.dev = dev
+        self.plugin = plugin
         self.connected = False
         dev.updateStateOnServer(key="status", value="Disconnected")
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
@@ -197,42 +198,43 @@ class SerialGateway:
     def startup(self):
         self.logger.info(u"{}: Running Serial Startup".format(self.dev.name))
 
-        serialUrl = self.getSerialPortUrl(self.dev.pluginProps, u"devicePort")
-        self.logger.info(u"{}: Serial Port URL is: {}".format(self.dev.name, serialUrl))
+        self.serialUrl = self.dev.pluginProps.get(u"serialPort", None)
+        self.logger.info(u"{}: Serial Port URL is: {}".format(self.dev.name, self.serialUrl))
 
-        self.connSerial = self.openSerial(u"Lutron Gateway", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
-        if self.connSerial is None:
-            self.logger.error(u"{}: Failed to open serial port".format(self.dev.name))
-            self.dev.updateStateOnServer(key="status", value="Failed")
-            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
-            return
+        try:
+            self.connSerial = self.plugin.openSerial(u"Lutron Gateway", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
+            if self.connSerial is None:
+                self.logger.error(u"{}: Failed to open serial port".format(self.dev.name))
+                self.dev.updateStateOnServer(key="status", value="Failed")
+                self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+                return
+
+        except Exception, e:
+            self.logger.debug(u"Error opening Serial port: {}".format(e.message))
 
         self.connected = True
         self.dev.updateStateOnServer(key="status", value="Connected")
         self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 
         # Disable main repeater terminal prompt
-        self._sendCommand("#MONITORING,12,2")
+        self.send("#MONITORING,12,2")
 
         # Enable main repeater HVAC monitoring
-        self._sendCommand("#MONITORING,17,1")
+        self.send("#MONITORING,17,1")
 
         # Enable main repeater monitoring param 18 (undocumented but seems to be enabled by default for ethernet connections)
-        self._sendCommand("#MONITORING,18,1")
+        self.send("#MONITORING,18,1")
 
 
     def poll(self):
-        while not self.portEnabled:
-            self.sleep(.1)
 
-        if self.runstartup:
-            self.serialStartup()
-            self.runstartup = False
+        if not self.connected:
+            self.startup()
 
         s = self.connSerial.read()
         if len(s) > 0:
-            # RadioRA 2 messages are always terminated with CRLF
-            if s == '\r':
+            
+            if s == '\r':               # RadioRA 2 messages are always terminated with CRLF
                 tmp = self.command
                 self.command = ''
                 return tmp
@@ -566,14 +568,14 @@ class Plugin(indigo.PluginBase):
     def deviceStartComm(self, dev):
     
         if dev.deviceTypeId == DEV_IP_GATEWAY:
-            gateway = IPGateway(dev)
+            gateway = IPGateway(self, dev)
             self.gateways[dev.id] = gateway            
             dev.updateStateOnServer(key="status", value="None")
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             gateway.startup()
             
         elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
-            gateway = SerialGateway(dev)
+            gateway = SerialGateway(self, dev)
             self.gateways[dev.id] = gateway            
             dev.updateStateOnServer(key="status", value="None")
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)

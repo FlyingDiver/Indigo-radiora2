@@ -4,6 +4,7 @@
     <Device type="custom" id="ipGateway">
     	<Name>Network Connected Gateway</Name>
         <ConfigUI>
+ 		    <Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
 			<Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
 				<Label>IP Address or Hostname:</Label>
 			</Field>
@@ -30,7 +31,10 @@
     <Device type="custom" id="serialGateway">
     	<Name>Serial Port Connected Gateway</Name>
         <ConfigUI>
-			<Field type="serialport" id="devicePort"/>
+	        <Field id="serialPort" type="menu">
+		        <Label>Serial Port:</Label>
+		        <List class="indigo.serialPorts" filter="indigo.ignoreBluetooth" />
+	        </Field>
         </ConfigUI>
         <States>
             <State id="status" readonly="true">
@@ -39,6 +43,7 @@
                 <ControlPageLabel>Gateway Status</ControlPageLabel>
             </State>
         </States>
+        <UiDisplayStateId>status</UiDisplayStateId>
     </Device>
 
     <Device type="custom" id="ra2TimeClockEvent">
