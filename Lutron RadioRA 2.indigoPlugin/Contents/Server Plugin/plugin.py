@@ -331,9 +331,15 @@ class Plugin(indigo.PluginBase):
 
         indigo.devices.subscribeToChanges()
         
-        IP = indigo.activePlugin.pluginPrefs.get(u"IP", "None")
-        if IP != "None":
+        converted = indigo.activePlugin.pluginPrefs.get(u"Converted", False)
+        if converted:
+            
+            self.logger.debug("Previously converted, version = {}".format(converted))
 
+        else:
+            self.logger.info("Converting to multiple gateway system")
+
+            IP = indigo.activePlugin.pluginPrefs.get(u"IP", "None")
             if IP:
                 address = self.pluginPrefs["ip_address"]
                 name = "Lutron IP Gateway"
@@ -346,13 +352,7 @@ class Plugin(indigo.PluginBase):
                 try:
                     newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_IP_GATEWAY, props=props)
                 except Exception, e:
-                    self.logger.error("Error calling indigo.device.create(): %s" % (e.message))
-                else:
-                    del indigo.activePlugin.pluginPrefs[u"IP"]
-                    del indigo.activePlugin.pluginPrefs[u"ip_address"]
-                    del indigo.activePlugin.pluginPrefs[u"ip_port"]
-                    del indigo.activePlugin.pluginPrefs[u"ip_username"]
-                    del indigo.activePlugin.pluginPrefs[u"ip_password"]
+                    self.logger.error("Error in indigo.device.create(): %s" % (e.message))
                                 
             else:
                 address = self.pluginPrefs["serialPort_uiAddress"]
@@ -368,15 +368,9 @@ class Plugin(indigo.PluginBase):
                 try:
                     newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_SERIAL_GATEWAY, props=props)
                 except Exception, e:
-                    self.logger.error("Error calling indigo.device.create(): %s" % (e.message))
-                else:
-                    del indigo.activePlugin.pluginPrefs[u"IP"]
-                    del indigo.activePlugin.pluginPrefs[u"serialPort_serialConnType"]
-                    del indigo.activePlugin.pluginPrefs[u"serialport_serialPortLocal"]
-                    del indigo.activePlugin.pluginPrefs[u"serialPort_serialPortNetRfc2217"]
-                    del indigo.activePlugin.pluginPrefs[u"serialPort_serialPortNetRfc2217"]
-                    del indigo.activePlugin.pluginPrefs[u"serialPort_uiAddress"]
-            
+                    self.logger.error("Error in indigo.device.create(): %s" % (e.message))
+                    
+            indigo.activePlugin.pluginPrefs[u"Converted"] = "7.3"
             self.newGateway = newDevice.id
             
     def shutdown(self):
@@ -863,66 +857,66 @@ class Plugin(indigo.PluginBase):
         
     def deviceStopComm(self, dev):
 
-        if dev.deviceTypeId == DEV_IP_GATEWAY:
+        try:
+            if dev.deviceTypeId == DEV_IP_GATEWAY:
 
-            gateway = self.gateways[dev.id]         
-            gateway.stop()
-            dev.updateStateOnServer(key="status", value="None")
-            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-            del self.gateways[dev.id]
+                gateway = self.gateways[dev.id]         
+                gateway.stop()
+                dev.updateStateOnServer(key="status", value="None")
+                dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                del self.gateways[dev.id]
             
-        elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
+            elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
             
-            gateway = self.gateways[dev.id]         
-            gateway.stop()
-            dev.updateStateOnServer(key="status", value="None")
-            dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-            del self.gateways[dev.id]
+                gateway = self.gateways[dev.id]         
+                gateway.stop()
+                dev.updateStateOnServer(key="status", value="None")
+                dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
+                del self.gateways[dev.id]
             
-        elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
-            del self.phantomButtons[dev.address]
+            elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
+                del self.phantomButtons[dev.address]
 
-        elif dev.deviceTypeId == DEV_DIMMER:
-            del self.dimmers[dev.address]
+            elif dev.deviceTypeId == DEV_DIMMER:
+                del self.dimmers[dev.address]
 
-        elif dev.deviceTypeId == DEV_SHADE:
-            del self.shades[dev.address]
+            elif dev.deviceTypeId == DEV_SHADE:
+                del self.shades[dev.address]
 
-        elif dev.deviceTypeId == DEV_SWITCH:
-            del self.switches[dev.address]
+            elif dev.deviceTypeId == DEV_SWITCH:
+                del self.switches[dev.address]
 
-        elif dev.deviceTypeId == DEV_KEYPAD:
-            del self.keypads[dev.address]
+            elif dev.deviceTypeId == DEV_KEYPAD:
+                del self.keypads[dev.address]
 
-        elif dev.deviceTypeId == DEV_FAN:
-            del self.fans[dev.address]
+            elif dev.deviceTypeId == DEV_FAN:
+                del self.fans[dev.address]
 
-        elif dev.deviceTypeId == DEV_THERMO:
-            del self.thermos[dev.address]
+            elif dev.deviceTypeId == DEV_THERMO:
+                del self.thermos[dev.address]
 
-        elif dev.deviceTypeId == DEV_SENSOR:
-            del self.sensors[dev.address]
+            elif dev.deviceTypeId == DEV_SENSOR:
+                del self.sensors[dev.address]
 
-        elif dev.deviceTypeId == DEV_CCI:
-            del self.ccis[dev.address]
+            elif dev.deviceTypeId == DEV_CCI:
+                del self.ccis[dev.address]
 
-        elif dev.deviceTypeId == DEV_CCO:
-            del self.ccos[dev.address]
+            elif dev.deviceTypeId == DEV_CCO:
+                del self.ccos[dev.address]
 
-        elif dev.deviceTypeId == DEV_PICO:
-            del self.picos[dev.address]
+            elif dev.deviceTypeId == DEV_PICO:
+                del self.picos[dev.address]
 
-        elif dev.deviceTypeId == DEV_GROUP:
-            del self.groups[dev.address]
+            elif dev.deviceTypeId == DEV_GROUP:
+                del self.groups[dev.address]
 
-        elif dev.deviceTypeId == DEV_TIMECLOCKEVENT:
-            del self.events[dev.address]
+            elif dev.deviceTypeId == DEV_TIMECLOCKEVENT:
+                del self.events[dev.address]
 
-        elif dev.deviceTypeId == DEV_LINKEDDEVICE:
+            else:
+                self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(dev.name, dev.deviceTypeId))
+        except:
             pass
-
-        else:
-            self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(dev.name, dev.deviceTypeId))
 
 ########################################
 # 
