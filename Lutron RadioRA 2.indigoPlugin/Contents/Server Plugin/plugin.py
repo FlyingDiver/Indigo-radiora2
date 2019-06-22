@@ -2453,7 +2453,7 @@ class Plugin(indigo.PluginBase):
                     props = {
                         PROP_ROOM : room.attrib['Name'], 
                         PROP_GATEWAY: gatewayID,
-                        PROP_INTEGRATION_ID : address, 
+                        PROP_INTEGRATION_ID : device.attrib['IntegrationID'], 
                         PROP_SUPPORTS_STATUS_REQUEST : "False" 
                     }
                     self.createLutronDevice(DEV_SENSOR, name, address, props, room.attrib['Name'])
@@ -2464,7 +2464,7 @@ class Plugin(indigo.PluginBase):
                     address = gatewayID + ":" + room.attrib['IntegrationID']
                     props = {
                         PROP_GATEWAY: gatewayID,
-                        'group': address 
+                        'group': room.attrib['IntegrationID'] 
                     }
                     if not address in self.groups:
                         self.createLutronDevice(DEV_GROUP, name, address, props, room.attrib['Name'])
