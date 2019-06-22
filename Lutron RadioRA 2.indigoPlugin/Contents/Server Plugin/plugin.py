@@ -207,11 +207,11 @@ class SerialGateway:
     def startup(self):
         self.logger.info(u"{}: Running Serial Startup".format(self.dev.name))
 
-        self.serialUrl = self.dev.pluginProps.get(u"serialPort", None)
-        self.logger.info(u"{}: Serial Port URL is: {}".format(self.dev.name, self.serialUrl))
+        serialUrl = self.plugin.getSerialPortUrl(self.dev.pluginProps, u"serialPort")
+        self.logger.info(u"{}: Serial Port URL is: {}".format(self.dev.name, serialUrl))
 
         try:
-            self.connSerial = self.plugin.openSerial(u"Lutron Gateway", self.serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
+            self.connSerial = self.plugin.openSerial(u"Lutron Gateway", serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
             if self.connSerial is None:
                 self.logger.error(u"{}: Failed to open serial port".format(self.dev.name))
                 self.dev.updateStateOnServer(key="status", value="Failed")
@@ -338,7 +338,7 @@ class Plugin(indigo.PluginBase):
                 address = self.pluginPrefs["ip_address"]
                 name = "Lutron IP Gateway"
                 props = {
-                    "port" : self.pluginPrefs["ip_port"], 
+                    "port" :     self.pluginPrefs["ip_port"], 
                     "username" : self.pluginPrefs["ip_username"], 
                     "password" : self.pluginPrefs["ip_password"] 
                 }
@@ -355,11 +355,14 @@ class Plugin(indigo.PluginBase):
                     del indigo.activePlugin.pluginPrefs[u"ip_password"]
                                 
             else:
-            
-                address = self.pluginPrefs["serialport"]
+                address = self.pluginPrefs["serialPort_uiAddress"]
                 name = "Lutron Serial Gateway"
                 props = {
-                    "serialport" : address
+                    "serialPort_serialConnType" :       self.pluginPrefs["serialPort_serialConnType"],
+                    "serialport_serialPortLocal" :      self.pluginPrefs["serialport_serialPortLocal"],
+                    "serialPort_serialPortNetRfc2217" : self.pluginPrefs["serialPort_serialPortNetRfc2217"],
+                    "serialPort_serialPortNetSocket" :  self.pluginPrefs["serialPort_serialPortNetSocket"],
+                    "serialPort_uiAddress" :            self.pluginPrefs["serialPort_uiAddress"]
                 }
                 self.logger.info("Creating new Serial Gateway device @ {}".format(address))
                 try:
@@ -368,7 +371,11 @@ class Plugin(indigo.PluginBase):
                     self.logger.error("Error calling indigo.device.create(): %s" % (e.message))
                 else:
                     del indigo.activePlugin.pluginPrefs[u"IP"]
-                    del indigo.activePlugin.pluginPrefs[u"serialport"]
+                    del indigo.activePlugin.pluginPrefs[u"serialPort_serialConnType"]
+                    del indigo.activePlugin.pluginPrefs[u"serialport_serialPortLocal"]
+                    del indigo.activePlugin.pluginPrefs[u"serialPort_serialPortNetRfc2217"]
+                    del indigo.activePlugin.pluginPrefs[u"serialPort_serialPortNetRfc2217"]
+                    del indigo.activePlugin.pluginPrefs[u"serialPort_uiAddress"]
             
             self.newGateway = newDevice.id
             
@@ -584,14 +591,6 @@ class Plugin(indigo.PluginBase):
         dev.replacePluginPropsOnServer(newProps)
         return None
 
-    # prevent deviceStartComm/deviceStopComm on property changes
-    def didDeviceCommPropertyChange(self, origDev, newDev):
-        if origDev.deviceTypeId != newDev.deviceTypeId:
-            return True
-        else:
-            return False      
-
-              
     def deviceStartComm(self, dev):
     
         if dev.deviceTypeId == DEV_IP_GATEWAY:
@@ -925,14 +924,40 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.error(u"{}: deviceStopComm: Unknown device type: {}".format(dev.name, dev.deviceTypeId))
 
-    ########################################
+########################################
+# 
+#     def didDeviceCommPropertyChange(self, origDev, newDev):
+#     
+#         if newDev.deviceTypeId == DEV_SERIAL_GATEWAY:
+#             if origDev.pluginProps.get('serialPort', None) != newDev.pluginProps.get('serialPort', None):
+#                 return True           
+# 
+#         elif newDev.deviceTypeId == DEV_IP_GATEWAY:
+#             if origDev.pluginProps.get('serialPort', None) != newDev.pluginProps.get('serialPort', None):
+#                 return True           
+# 
+#         return False
+#       
+########################################
 
+#     prevent deviceStartComm/deviceStopComm on property changes
+#     def didDeviceCommPropertyChange(self, origDev, newDev):
+#         if origDev.deviceTypeId != newDev.deviceTypeId:
+#             return True
+#         else:
+#             return False      
+
+              
     def validateDeviceConfigUi(self, valuesDict, typeId, devId):
         self.logger.debug(u"validateDeviceConfigUi: typeId = {}, devId = {}".format(typeId, devId))
 
         errorsDict = indigo.Dict()
 
-        if typeId == DEV_KEYPAD and bool(valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE]) and int(valuesDict[PROP_KEYPADBUT]) < 80:
+        if typeId == DEV_SERIAL_GATEWAY:
+            valuesDict['address'] = self.getSerialPortUrl(valuesDict, 'serialPort') 
+
+
+        elif typeId == DEV_KEYPAD and bool(valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE]) and int(valuesDict[PROP_KEYPADBUT]) < 80:
             valuesDict[PROP_KEYPADBUT_DISPLAY_LED_STATE] = False
             self.logger.debug(u"validateDeviceConfigUi: forced PROP_KEYPADBUT_DISPLAY_LED_STATE to False for keypad # {}, button # {}".format(valuesDict[PROP_INTEGRATION_ID], valuesDict[PROP_KEYPADBUT]))
         
@@ -940,7 +965,8 @@ class Plugin(indigo.PluginBase):
             return (False, valuesDict, errorsDict)
 
         return (True, valuesDict)
-                
+
+          
     def runConcurrentThread(self):
 
         if self.pluginPrefs.get(u"queryAtStartup", False):
@@ -950,9 +976,11 @@ class Plugin(indigo.PluginBase):
         try:
             while True:
                         
-                for gateway in self.gateways.values():
+                for gatewayID, gateway in self.gateways.items():
                     if gateway.connected:
-                        self._processCommand(gateway.poll())
+                        cmd = gateway.poll()
+                        if cmd:
+                            self._processCommand(cmd.rstrip(), gatewayID)
                     
                 self.sleep(0.1)
                 
@@ -970,32 +998,11 @@ class Plugin(indigo.PluginBase):
 # plugin configuration validation
     def validatePrefsConfigUi(self, valuesDict):
 
-        if valuesDict["IP"]:
-            if valuesDict["ip_address"].count('.') != 3:
-                errorDict = indigo.Dict()
-                errorDict["ip_address"] = "Please enter an IP address (i.e. 192.168.1.100)"
-                return (False, valuesDict, errorDict)
+        self.logger.debug(u"validatePrefsConfigUi called")
+        errorsDict = indigo.Dict()
 
-        if valuesDict["IP"]:
-
-            if self.IP == valuesDict["IP"] and self.pluginPrefs["ip_address"] == valuesDict["ip_address"]: # no changes
-                self.logger.debug(u"validatePrefsConfigUi: IP Config, no changes")
-                valuesDict["configDone"] = True
-            else:
-                self.logger.debug(u"validatePrefsConfigUi: IP Config changed")
-                valuesDict["configDone"] = False
-            
-        else:  # serial connection
-
-            serialUrl = self.getSerialPortUrl(valuesDict, u"devicePort")
-
-            if self.IP == valuesDict["IP"] and self.serialUrl == serialUrl: # no changes
-                self.logger.debug(u"validatePrefsConfigUi: Serial Config, no changes")
-                valuesDict["configDone"] = True
-            else:
-                self.logger.debug(u"validatePrefsConfigUi: Serial Config changed")
-                valuesDict["configDone"] = False
-
+        if len(errorsDict) > 0:
+            return (False, valuesDict, errorsDict)
         return (True, valuesDict)
 
 
@@ -1009,12 +1016,7 @@ class Plugin(indigo.PluginBase):
             self.logLevel = logLevel
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(u"New logLevel = {}".format(self.logLevel))
-            
-       
-        self.IP = valuesDict["IP"]
-        self.runstartup = not valuesDict.get("configDone", False)
-        self.logger.debug(u"closedPrefsConfigUi: Setting self.runstartup = {}".format(self.runstartup))
-        
+                    
         return
            
 
@@ -1022,40 +1024,38 @@ class Plugin(indigo.PluginBase):
 
     def _sendCommand(self, cmd, gateway):
     
-        self.gateways[gateway].send(cmd)
+        self.gateways[int(gateway)].send(cmd)
 
 
-    def _processCommand(self, cmd):
-        if cmd == None:
-            return
-            
-        cmd = cmd.rstrip()
+    def _processCommand(self, cmd, gatewayID):
+#        self.logger.debug(u"Received command: {} from Gateway {}".format(cmd, gatewayID))
+                
         if len(cmd) > 0:
             if "~OUTPUT" in cmd:
-                self._cmdOutputChange(cmd)
+                self._cmdOutputChange(cmd, gatewayID)
             elif "~DEVICE" in cmd:
-                self._cmdDeviceChange(cmd)
+                self._cmdDeviceChange(cmd, gatewayID)
             elif "~HVAC" in cmd:
-                self._cmdHvacChange(cmd)
+                self._cmdHvacChange(cmd, gatewayID)
             elif "~GROUP" in cmd:
-                self._cmdGroup(cmd)
+                self._cmdGroup(cmd, gatewayID)
             elif "~TIMECLOCK" in cmd:
-                self._cmdTimeClock(cmd)
+                self._cmdTimeClock(cmd, gatewayID)
             elif "~MONITORING" in cmd:
                 self.logger.debug(u"Main repeater serial interface configured" + cmd)
             elif "~ERROR" in cmd:
-                self.logger.debug(u"{} received".format(cmd))
+                self.logger.debug(u"Gateway {} received: {}".format(gatewayID, cmd))
             elif 'GNET' in cmd:
                 #command prompt is ready
                 self.logger.threaddebug(u"Command prompt received. Device is ready.")
             elif cmd != "!":
-                self.logger.debug(u"Unrecognized command: " + cmd)
+                self.logger.debug(u"Gateway {} Unrecognized command: {}".format(gatewayID, cmd))
 
 
-    def _cmdOutputChange(self,cmd):
+    def _cmdOutputChange(self, cmd, gatewayID):
         self.logger.threaddebug(u"Received an Output message: " + cmd)
         cmdArray = cmd.split(',')
-        id = cmdArray[1]
+        id = "{}:{}".format(gatewayID, cmdArray[1])
         action = cmdArray[2]
         
         if action == '1':  # set level
@@ -1156,7 +1156,7 @@ class Plugin(indigo.PluginBase):
             self.logger.warning(u"Received Unknown Action Code: %s" % cmd)
         return
 
-    def _cmdDeviceChange(self,cmd):
+    def _cmdDeviceChange(self, cmd, gatewayID):
         self.logger.threaddebug(u"Received a Device message: " + cmd)
 
         cmdArray = cmd.split(',')
@@ -1175,7 +1175,7 @@ class Plugin(indigo.PluginBase):
         else:
             status = cmdArray[4]
 
-        keypadid = id + "." + button
+        keypadid = "{}:{}.{}".format(gatewayID, id, button)
 
 
         if keypadid in self.phantomButtons:
@@ -1196,7 +1196,7 @@ class Plugin(indigo.PluginBase):
             
             if dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]: # Also display this LED state on its corresponding button
             
-                keypadid = id + '.' + str(int(button) - 80)         # Convert LED ID to button ID
+                keypadid = "{}:{}.{}".format(gatewayID, id, int(button)-80)  # Convert LED ID to button ID
                 if keypadid in self.keypads:
                     keypad = self.keypads[keypadid]
                     self.logger.debug(u"Updating button status with state of LED ({}) for keypadID {}".format(status, keypadid))
@@ -1244,10 +1244,10 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u"Received: Motion Sensor %s %s" % (dev.name, "motion detected"))
 
     # IP comm has not yet been tested with _cmdHvacChange().  Currently left as is -vic13
-    def _cmdHvacChange(self,cmd):
+    def _cmdHvacChange(self, cmd, gatewayID):
         self.logger.debug(u"Received an HVAC message: " + cmd)
         cmdArray = cmd.split(',')
-        id = cmdArray[1]
+        id = "{}:{}".format(gatewayID, cmdArray[1])
         action = cmdArray[2]
         if id in self.thermos:
             thermo = self.thermos[id]
@@ -1276,18 +1276,18 @@ class Plugin(indigo.PluginBase):
                 elif fanmode == '2':
                     thermo.updateStateOnServer("hvacFanMode", indigo.kFanMode.AlwaysOn)
 
-    def _cmdTimeClock(self,cmd):
+    def _cmdTimeClock(self, cmd, gatewayID):
         self.logger.debug(u"Received a TimeClock message: " + cmd)
         cmdArray = cmd.split(',')
-        id = cmdArray[1]
+        id = "{}:Event.{}".format(gatewayID, cmdArray[1])
         action = cmdArray[2]
         event = cmdArray[3]
         self.eventTriggerCheck(event)
 
-    def _cmdGroup(self,cmd):
+    def _cmdGroup(self, cmd, gatewayID):
         self.logger.debug(u"Received a Group message  " + cmd)
         cmdArray = cmd.split(',')
-        id = cmdArray[1]
+        id = "{}:Group.{}".format(gatewayID, cmdArray[1])
         action = cmdArray[2]
         status = cmdArray[3]
         self.groupTriggerCheck(id, status)
