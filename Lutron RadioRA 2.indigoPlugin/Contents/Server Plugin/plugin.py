@@ -1613,7 +1613,8 @@ class Plugin(indigo.PluginBase):
         fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
         zone = dimmerDevice.address
 
-        sendCmd = ("#OUTPUT," + zone + ",1," + str(brightness) + "," + str(fadeTime))
+        m, s = divmod(int(fadeTime), 60)
+        sendCmd = ("#OUTPUT,{},1,{},{:02}:{:02}".format(zone, brightness, m, s))
         self.logger.info(u"{}: Set brightness to {} with fade {}".format(dimmerDevice.name, brightness, fadeTime))
         self._sendCommand(sendCmd)
 
