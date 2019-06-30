@@ -62,7 +62,7 @@
         </ConfigUI>
     </Device>
     
-    <Device type="custom" id="ra2Group">
+    <Device type="sensor" id="ra2Group">
     	<Name>Lutron Room Group</Name>
         <ConfigUI>
             <Field id="gateway" type="menu">
@@ -76,6 +76,7 @@
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
+            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         </ConfigUI>
     </Device>
     

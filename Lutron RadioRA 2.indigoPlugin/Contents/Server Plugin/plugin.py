@@ -93,8 +93,8 @@ class IPGateway:
         dev.updateStateOnServer(key="status", value="Disconnected")
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
 
-    def startup(self):
-        self.logger.info(u"{}: Running IP Startup".format(self.dev.name))
+    def start(self):
+        self.logger.info(u"{}: Running IP Start".format(self.dev.name))
 
         host = self.dev.pluginProps["address"]
         port = int(self.dev.pluginProps["port"])
@@ -147,7 +147,7 @@ class IPGateway:
 
         try:
             if not self.connected:
-                self.startup()
+                self.start()
 
             try:
                 return self.connIP.read_until("\n", self.timeout)
@@ -204,8 +204,8 @@ class SerialGateway:
         self.command = ''
         
 
-    def startup(self):
-        self.logger.info(u"{}: Running Serial Startup".format(self.dev.name))
+    def start(self):
+        self.logger.info(u"{}: Running Serial Start".format(self.dev.name))
 
         serialUrl = self.plugin.getSerialPortUrl(self.dev.pluginProps, u"serialPort")
         self.logger.info(u"{}: Serial Port URL is: {}".format(self.dev.name, serialUrl))
@@ -248,7 +248,7 @@ class SerialGateway:
     def poll(self):
 
         if not self.connected:
-            self.startup()
+            self.start()
 
         try:
             s = self.connSerial.read()
@@ -330,7 +330,11 @@ class Plugin(indigo.PluginBase):
         self.logLinkedDevices()
 
         indigo.devices.subscribeToChanges()
-        
+
+        ################################################################################
+        # convert to device-based gateways
+        ################################################################################
+    
         converted = indigo.activePlugin.pluginPrefs.get(u"Converted", False)
         if converted:
             
@@ -592,14 +596,14 @@ class Plugin(indigo.PluginBase):
             self.gateways[dev.id] = gateway            
             dev.updateStateOnServer(key="status", value="None")
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-            gateway.startup()
+            gateway.start()
             
         elif dev.deviceTypeId == DEV_SERIAL_GATEWAY:
             gateway = SerialGateway(self, dev)
             self.gateways[dev.id] = gateway            
             dev.updateStateOnServer(key="status", value="None")
             dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
-            gateway.startup()
+            gateway.start()
                       
         elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
             if dev.pluginProps.get(PROP_REPEATER, None):
@@ -817,6 +821,13 @@ class Plugin(indigo.PluginBase):
                 self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
+            # fix device properties to show correct UI in Indigo client, matches Devices.xml
+            newProps = dev.pluginProps
+            newProps["SupportsOnState"] = True
+            newProps["SupportsSensorValue"] = False
+            newProps["SupportsStatusRequest"] = False
+            dev.replacePluginPropsOnServer(newProps)
+
             address = u"{}:Group.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_GROUP])
             self.groups[address] = dev
             self.update_device_property(dev, "address", address)
@@ -854,7 +865,8 @@ class Plugin(indigo.PluginBase):
                 self.roomButtonTree[roomName] = room
             self.roomButtonTree[roomName][dev.id] = dev.name
         
-        
+        dev.stateListOrDisplayStateIdChanged()
+
     def deviceStopComm(self, dev):
 
         try:
@@ -1284,6 +1296,13 @@ class Plugin(indigo.PluginBase):
         id = "{}:Group.{}".format(gatewayID, cmdArray[1])
         action = cmdArray[2]
         status = cmdArray[3]
+
+        group = self.groups[id]
+        if status == "3":
+            group.updateStateOnServer(ONOFF, True)
+        elif status == "4":
+            group.updateStateOnServer(ONOFF, False)
+
         self.groupTriggerCheck(id, status)
 
 
