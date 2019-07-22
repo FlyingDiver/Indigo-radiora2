@@ -22,10 +22,10 @@
 		<CallbackMethod>fadeDimmer</CallbackMethod>
 		<ConfigUI>
 			<Field id="brightness" type="textfield">
-				<Label>Brightness:</Label>
+				<Label>Brightness (0-100):</Label>
 			</Field>
 			<Field id="fadeTime" type="textfield">
-				<Label>Fade Time:</Label>
+				<Label>Fade Time (in seconds):</Label>
 			</Field>
 			<Field id="simpleSeparator2" type="separator"/>
 			<Field id="messageNote" type="label" fontSize="small" fontColor="darkgray">
