@@ -157,8 +157,11 @@ class Plugin(indigo.PluginBase):
     def shutdown(self):
         self.logger.info(u"Shutting down Lutron")
         if self.IP:
-            self.connIP.close()
-  
+            try:
+                self.connIP.close()
+            except:
+                pass
+                
     ################################################################################
     #
     # delegate methods for indigo.devices.subscribeToChanges()
