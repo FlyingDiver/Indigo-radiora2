@@ -139,8 +139,11 @@ class IPGateway:
     def stop(self):
         self.logger.debug(u"IP stop called")
         if self.connected:
-            self.connIP.close()
             self.connected = False
+            try:
+                self.connIP.close()
+            except:
+                pass
         self.connIP = None  
         
     def poll(self):
@@ -173,11 +176,14 @@ class IPGateway:
             self.connIP.write(str(cmd))
         except Exception, e:
             self.logger.warning(u"Error sending IP command, resetting connection:  %s", e)
-            self.connIP.close()
             self.connected = False
             self.dev.updateStateOnServer(key="status", value="Connected")
             self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
-
+            try:
+                self.connIP.close()
+            except:
+                pass
+                
     def fetchXML(self):
 
         host = self.dev.pluginProps["address"]
