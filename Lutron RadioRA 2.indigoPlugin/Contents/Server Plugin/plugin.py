@@ -1303,14 +1303,15 @@ class Plugin(indigo.PluginBase):
         action = cmdArray[2]
         status = cmdArray[3]
 
-        group = self.groups[id]
+        self.groupTriggerCheck(id, status)
+
+        group = self.groups.get(id, None)
+        if not group:
+            return
         if status == "3":
             group.updateStateOnServer(ONOFF, True)
         elif status == "4":
             group.updateStateOnServer(ONOFF, False)
-
-        self.groupTriggerCheck(id, status)
-
 
     ########################################
     # Relay / Dimmer / Shade / CCO / CCI Action callback
@@ -2052,7 +2053,7 @@ class Plugin(indigo.PluginBase):
         casetaData = json.loads(self.jsonText)
         
         for device in casetaData["LIPIdList"]["Devices"]:
-            self.logger.info(u"Caseta Device '{}' ({}), Buttons = {}".format(device["Name"], device["ID"], len(device["Buttons"])))
+            self.logger.info(u"Caseta Device '{}' ({})".format(device["Name"], device["ID"]))
  
             if device["ID"] == 1 and not self.create_bridge_buttons:
                 self.logger.debug(u"Skipping Smart Bridge button creation")
@@ -2061,23 +2062,27 @@ class Plugin(indigo.PluginBase):
             try:
                 areaName = device["Area"]["Name"]
             except:
-                areaname = u"Bridge"
-                
-            for button in device["Buttons"]:
+                areaName = u"Bridge"
+            self.logger.debug(u"Using area name '{}'".format(areaName))
             
-                address = "{}:{}.{}".format(gatewayID, device["ID"], button["Number"])
-                name = u"{} - {} ({})".format(areaName, device["Name"], address)
-                props = {
-                    PROP_ROOM : areaName, 
-                    PROP_LIST_TYPE : "button", 
-                    PROP_GATEWAY: gatewayID,
-                    PROP_INTEGRATION_ID : str(device["ID"]), 
-                    PROP_COMPONENT_ID : str(button["Number"]), 
-                    PROP_BUTTONTYPE : "Unknown",
-                    PROP_ISBUTTON : "True"
-                }
-                self.createLutronDevice(DEV_PICO, name, address, props, areaName)                    
-           
+            try:
+                for button in device["Buttons"]:
+                    address = "{}:{}.{}".format(gatewayID, device["ID"], button["Number"])
+                    name = u"{} - {} ({})".format(areaName, button.get("Name", device["Name"]), address)                    
+
+                    props = {
+                        PROP_ROOM : areaName, 
+                        PROP_LIST_TYPE : "button", 
+                        PROP_GATEWAY: gatewayID,
+                        PROP_INTEGRATION_ID : str(device["ID"]), 
+                        PROP_COMPONENT_ID : str(button["Number"]), 
+                        PROP_BUTTONTYPE : "Unknown",
+                        PROP_ISBUTTON : "True"
+                    }
+                    self.createLutronDevice(DEV_PICO, name, address, props, areaName)                    
+            except:
+                pass
+
         for zone in casetaData["LIPIdList"]["Zones"]:
             self.logger.info(u"Caseta Zone '{}' ({}), Area = {}".format(zone["Name"], zone["ID"], zone["Area"]["Name"]))
 

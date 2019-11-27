@@ -28,12 +28,12 @@
 	<Event id="keypadButtonPress">
         <Name>Keypad Button Press</Name>
  		<ConfigUI>
-            <Field type="menu" id="clicks" defaultValue="single">
+            <Field type="menu" id="clicks" defaultValue="1">
                 <Label>Presses:</Label>
                 <List>
-                    <Option value="1">Single</Option>
-                    <Option value="2">Double</Option>
-                    <Option value="3">Triple</Option>
+                    <Option value="1">First Press</Option>
+                    <Option value="2">Second Press</Option>
+                    <Option value="3">Third Press</Option>
                 </List>
             </Field>            
             <Field id="room" type="menu">
