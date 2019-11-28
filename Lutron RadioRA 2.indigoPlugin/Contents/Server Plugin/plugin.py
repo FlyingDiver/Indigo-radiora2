@@ -89,6 +89,7 @@ class IPGateway:
         self.dev = dev
         self.connected = False
         self.connIP = None
+        self.buffer = ''
 
         dev.updateStateOnServer(key="status", value="Disconnected")
         dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
@@ -102,7 +103,7 @@ class IPGateway:
         self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
         
         try:
-            self.logger.info(u"Connecting via IP to {}:{}".format(host, port))
+            self.logger.info(u"{}: Connecting via IP to {}:{}".format(self.dev.name, host, port))
             self.connIP = telnetlib.Telnet(host, port, self.timeout)
         except socket.timeout:
             self.logger.error(u"{}: Unable to connect to Lutron gateway. Timed out.".format(self.dev.name))
@@ -131,7 +132,7 @@ class IPGateway:
         self.connIP.write(str(self.dev.pluginProps["password"]) + "\r\n")
                 
         self.logger.debug(u"{}: Login process complete, connected".format(self.dev.name))
-        self.timeout = 5   # Reset the timeout to something reasonable
+        self.timeout = 5      # Reset the timeout to something reasonable
         self.connected = True
         self.dev.updateStateOnServer(key="status", value="Connected")
         self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
@@ -148,34 +149,45 @@ class IPGateway:
         
     def poll(self):
 
-        try:
-            if not self.connected:
-                self.start()
+        if not self.connected:
+            self.start()
 
-            try:
-                return self.connIP.read_until("\n", self.timeout)
-            except:
-                pass
-            
+        try:
+            input = self.connIP.read_eager()            
         except EOFError, e:
-            self.logger.error(u"EOFError: %s" % e.message)
+            self.logger.error(u"{}: EOFError: {}".format(self.dev.name, e.message))
             if ('telnet connection closed' in e.message):
                 self.connected = False
                 self.dev.updateStateOnServer(key="status", value="Disconnected")
                 self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
-                self.sleep(10)
-        except AttributeError, e:
-            self.logger.debug(u"AttributeError: %s" % e.message)
-        except select.error, e:
-            self.logger.debug(u"Disconnected while listening: %s" % e.message)
+                return None
+                
+        if len(input):
+            self.logger.threaddebug(u"{}: {} characters read:\n{}".format(self.dev.name, len(input), input))
+            
+            # add new data to existing buffer in case a message got split across reads
+            self.buffer += input
+            
+        # is there a complete line in the buffer?
+        
+        i = self.buffer.find('\n')
+        if i == -1:
+            return None
+                
+        self.logger.threaddebug(u"{}: self.buffer = '{}'".format(self.dev.name, self.buffer))        
+        msg = self.buffer[:i]
+        self.logger.threaddebug(u"{}: msg = '{}'".format(self.dev.name, msg))
+        self.buffer = self.buffer[i+1:]
+        self.logger.threaddebug(u"{}: self.buffer = '{}'".format(self.dev.name, self.buffer))
+        return msg
 
     def send(self, cmd):
-        self.logger.debug(u"Sending network command:  %s" % cmd)
+        self.logger.debug(u"{}: Sending command: '{}'".format(self.dev.name, cmd))
         cmd = cmd + "\r\n"
         try:
             self.connIP.write(str(cmd))
         except Exception, e:
-            self.logger.warning(u"Error sending IP command, resetting connection:  %s", e)
+            self.logger.warning(u"{}: Error sending IP command, resetting connection:  {}".format(self.dev.name, e.message))
             self.connected = False
             self.dev.updateStateOnServer(key="status", value="Connected")
             self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
@@ -296,7 +308,8 @@ class Plugin(indigo.PluginBase):
             self.logLevel = logging.INFO
         self.indigo_log_handler.setLevel(self.logLevel)
         self.logger.debug(u"logLevel = " + str(self.logLevel))
-
+        self.pluginVersion = pluginVersion
+        
         self.gateways = {}
         
         self.phantomButtons = {}
@@ -362,7 +375,7 @@ class Plugin(indigo.PluginBase):
                 try:
                     newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_IP_GATEWAY, props=props)
                 except Exception, e:
-                    self.logger.error("Error in indigo.device.create(): %s" % (e.message))
+                    self.logger.error("Error in indigo.device.create(): {}".format(e.message))
                                 
             else:
                 address = self.pluginPrefs["serialPort_uiAddress"]
@@ -378,9 +391,9 @@ class Plugin(indigo.PluginBase):
                 try:
                     newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_SERIAL_GATEWAY, props=props)
                 except Exception, e:
-                    self.logger.error("Error in indigo.device.create(): %s" % (e.message))
+                    self.logger.error("Error in indigo.device.create(): {}".format(e.message))
                     
-            indigo.activePlugin.pluginPrefs[u"Converted"] = "7.3"
+            indigo.activePlugin.pluginPrefs[u"Converted"] = str(self.pluginVersion)
             self.newGateway = newDevice.id
             
     def shutdown(self):
