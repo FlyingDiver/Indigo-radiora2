@@ -31,6 +31,7 @@
     <Device type="custom" id="serialGateway">
     	<Name>Serial Port Connected Gateway</Name>
         <ConfigUI>
+ 		    <Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
 			<Field type="serialport" id="serialPort" />
             <!-- Will be populated with serial port name by validateDeviceConfigUi -->
             <Field id="address" type="textField" defaultValue="unknown" hidden="true" />

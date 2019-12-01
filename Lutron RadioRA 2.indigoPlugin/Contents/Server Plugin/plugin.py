@@ -77,8 +77,9 @@ PROP_PICOBUTTON = "picoButton"
 PROP_COMPONENT = "component"
 PROP_BUTTON = "button"
 
-# delay amount for detecting double/triple clicks
+# delay amount for detecting double/triple clicks, timeout for single/double/triple only detection
 CLICK_DELAY = 1.0
+CLICK_TIMEOUT = 0.4
 
 ########################################
 class IPGateway:
@@ -307,10 +308,11 @@ class Plugin(indigo.PluginBase):
         except:
             self.logLevel = logging.INFO
         self.indigo_log_handler.setLevel(self.logLevel)
-        self.logger.debug(u"logLevel = " + str(self.logLevel))
+        self.logger.debug(u"logLevel = {}".format(self.logLevel))
         self.pluginVersion = pluginVersion
         
         self.gateways = {}
+        self.defaultGateway = None
         
         self.phantomButtons = {}
         self.keypads = {}
@@ -356,8 +358,9 @@ class Plugin(indigo.PluginBase):
     
         converted = indigo.activePlugin.pluginPrefs.get(u"Converted", False)
         if converted:
-            
-            self.logger.debug("Previously converted, version = {}".format(converted))
+
+            self.logger.debug("Previously converted, default gateway ID = {}".format(converted))
+            self.defaultGateway = int(converted)            
 
         else:
             self.logger.info("Converting to multiple gateway system")
@@ -393,8 +396,9 @@ class Plugin(indigo.PluginBase):
                 except Exception, e:
                     self.logger.error("Error in indigo.device.create(): {}".format(e.message))
                     
-            indigo.activePlugin.pluginPrefs[u"Converted"] = str(self.pluginVersion)
-            self.newGateway = newDevice.id
+            self.defaultGateway = newDevice.id            
+            indigo.activePlugin.pluginPrefs[u"Converted"] = str(self.defaultGateway)
+            self.logger.info("Conversion complete, default gateway = {}".format(self.defaultGateway))
             
     def shutdown(self):
         self.logger.info(u"Shutting down Lutron")
@@ -443,49 +447,47 @@ class Plugin(indigo.PluginBase):
     ####################
 
     def triggerStartProcessing(self, trigger):
-                                                
-        if  trigger.pluginTypeId == "keypadButtonPress":
-            try:
-                clicks = trigger.pluginProps["clicks"]
-            except:
-                clicks = trigger.pluginProps["clicks"] = "1"
-        
-            try:
-                deviceID = trigger.pluginProps["deviceID"]
-                componentID = trigger.pluginProps["componentID"]
-            except:
-                try:
-                    buttonID = trigger.pluginProps["buttonID"]
-                    buttonAddress = indigo.devices[int(buttonID)].address
-                    parts = buttonAddress.split(".")
-                    deviceID = trigger.pluginProps["deviceID"] =  parts[0]
-                    componentID = trigger.pluginProps["componentID"] = parts[1]
-                except:
-                    self.logger.error("keypadButtonPress Trigger  {} ({}) missing deviceID/componentID/buttonID: {}".format(trigger.name, trigger.id, str(trigger.pluginProps)))
-                    return
+        self.logger.threaddebug("Starting Trigger '{}', pluginProps = {}".format(trigger.name, trigger.pluginProps))
+                        
+        # add the default gateway if not already in props
+                                
+        gateway = trigger.pluginProps.get(PROP_GATEWAY, None) 
+        if not gateway:
+             self.update_plugin_property(trigger, PROP_GATEWAY, self.defaultGateway)
+             self.logger.info(u"{}: Added default Gateway ({})".format(trigger.name, self.defaultGateway))
 
-            self.logger.debug("Adding Button Trigger '{}', deviceID = {}, componentID = {}, clicks =  {}".format(trigger.name, deviceID, componentID, clicks))
+        # based on trigger type, do property adjustments and add to trigger list
+        
+        if  trigger.pluginTypeId == "keypadButtonPress":
+            clicks = trigger.pluginProps.get("clicks", "1")
+        
+            buttonID = trigger.pluginProps.get("buttonID", None)
+            if not buttonID:
+                self.logger.error("keypadButtonPress Trigger  {} ({}) missing buttonID: {}".format(trigger.name, trigger.id, str(trigger.pluginProps)))
+                return
+
+            self.logger.debug("Adding Button Trigger '{}', buttonID = {}, clicks = {}".format(trigger.name, buttonID, clicks))
             self.buttonTriggers[trigger.id] = trigger
 
 
         elif trigger.pluginTypeId == "timeClockEvent":
-            try:
-                event = trigger.pluginProps[PROP_EVENT]
-            except:
-                self.logger.error(u"Timeclock Event Trigger {} ({}) does not contain event: {}".format(trigger.name, trigger.id, str(trigger.pluginProps)))
+
+            event = trigger.pluginProps.get(PROP_EVENT, None)
+            if not event:
+                self.logger.error(u"Timeclock Event Trigger {} ({}) does not contain event: {}".format(trigger.name, trigger.id, trigger.pluginProps))
                 return
 
-            self.logger.debug("Adding Event Trigger {}, event = {}".format(trigger.name, event))
+            self.logger.debug("Adding Event Trigger {}, event = {}, gateway = {}".format(trigger.name, event, gateway))
             self.eventTriggers[trigger.id] = trigger
         
         elif trigger.pluginTypeId == "groupEvent":
-            try:
-                group = trigger.pluginProps[PROP_GROUP]
-            except:
-                self.logger.error(u"Group Trigger {} ({}) does not contain group: {}".format(trigger.name, trigger.id, str(trigger.pluginProps)))
+
+            group = trigger.pluginProps.get(PROP_GROUP, None)
+            if not group:
+                self.logger.error(u"Group Trigger {} ({}) does not contain group: {}".format(trigger.name, trigger.id, trigger.pluginProps))
                 return
         
-            self.logger.debug("Adding Group Trigger {}, group = {}".format(trigger.name, group))
+            self.logger.debug("Adding Group Trigger {}, group = {}, gateway = {}".format(trigger.name, group, gateway))
             self.groupTriggers[trigger.id] = trigger
         
         else:
@@ -506,106 +508,91 @@ class Plugin(indigo.PluginBase):
                       
 
 
-    def eventTriggerCheck(self, info):
+    def eventTriggerCheck(self, eventID, gatewayID):
 
-        self.logger.debug(u"eventTriggerCheck: event {}".format(info))
+        self.logger.debug(u"eventTriggerCheck: event {}, gateway: {}".format(eventID, gatewayID))
 
         for triggerId, trigger in self.eventTriggers.iteritems():
 
-            event = trigger.pluginProps[PROP_EVENT]
-            if event != info:
-                self.logger.threaddebug(u"eventTriggerCheck: Skipping Trigger {} ({}), wrong event: {}".format(trigger.name, trigger.id, event))
-                continue
+            if eventID == trigger.pluginProps[PROP_EVENT] and gatewayID == trigger.pluginProps[PROP_GATEWAY]:
+                self.logger.debug(u"eventTriggerCheck: Executing Trigger {} ({})".format(trigger.name, trigger.id))
+                indigo.trigger.execute(trigger)
+            else:
+                self.logger.threaddebug(u"eventTriggerCheck: Skipping Trigger {} ({})".format(trigger.name, trigger.id))
 
-            self.logger.debug(u"eventTriggerCheck: Executing Trigger {} ({}), event: {}".format(trigger.name, trigger.id, info))
-            indigo.trigger.execute(trigger)
+    def groupTriggerCheck(self, groupID, gatewayID, status):
 
-    def groupTriggerCheck(self, groupID, status):
-
-        self.logger.debug(u"groupTriggerCheck: group {} {}".format(groupID, status))
+        self.logger.debug(u"groupTriggerCheck: group: {}, gateway: {}, status: {}".format(groupID, gatewayID, status))
 
         for triggerId, trigger in self.groupTriggers.iteritems():
 
-            group = trigger.pluginProps[PROP_GROUP]
-            occupancy = trigger.pluginProps["occupancyPopUp"]
-            if (group != groupID) or (occupancy != status):
-                self.logger.threaddebug(u"groupTriggerCheck: Skipping Trigger {} ({}), wrong group or status: {}, {}".format(trigger.name, trigger.id, group, occupancy))
-                continue
+            if (trigger.pluginProps[PROP_GROUP] == groupID) and (trigger.pluginProps[PROP_GATEWAY] == gatewayID) and (trigger.pluginProps["occupancyPopUp"] == status):
+                self.logger.debug(u"groupTriggerCheck: Executing Trigger {} ({})".format(trigger.name, trigger.id))
+                indigo.trigger.execute(trigger)
+            else:
+                self.logger.threaddebug(u"groupTriggerCheck: Skipping Trigger {} ({})".format(trigger.name, trigger.id))
 
-            self.logger.info(u"groupTriggerCheck: Executing Trigger {} ({}), group {}, status {}".format(trigger.name, trigger.id, groupID, status))
-            indigo.trigger.execute(trigger)
 
-    def buttonTriggerCheck(self, devID, compID):
+    def buttonTriggerCheck(self, deviceID, componentID, gatewayID):
 
-        triggerAddress = "{}.{}".format(devID, compID)
-        self.logger.debug(u"buttonTriggerCheck: devID: {}, compID: {}, address: {}".format(devID, compID, triggerAddress))
-        
+        self.logger.debug(u"buttonTriggerCheck: deviceID: {}, componentID: {}, gatewayID: {}".format(deviceID, componentID, gatewayID))
+        keypadid = "{}:{}.{}".format(gatewayID, deviceID, componentID)
+       
         # check for linked devices
         
         for linkID, linkItem in self.linkedDeviceList.iteritems():
             controlledDevice = indigo.devices[int(linkItem["controlledDevice"])]
             buttonAddress = linkItem["buttonAddress"]
-            if buttonAddress == triggerAddress:
+            if buttonAddress == keypadid:
                 self.logger.debug(u"Linked Device Match, buttonAddress: {}, controlledDevice: {}".format(buttonAddress, controlledDevice.id))
                 indigo.device.toggle(controlledDevice.id)
 
-
         # and check for multiple taps
         
-        if (triggerAddress == self.lastKeyAddress) and (time.time() < (self.lastKeyTime + CLICK_DELAY)):
+        if (keypadid == self.lastKeyAddress) and (time.time() < (self.lastKeyTime + CLICK_DELAY)):
             self.key_taps += 1
         else:
             self.key_taps = 1
             
-        self.lastKeyAddress = triggerAddress
+        self.lastKeyAddress = keypadid
         self.lastKeyTime = time.time()
             
         # Look for triggers that match this button
 
         for triggerId, trigger in self.buttonTriggers.iteritems():
-            try:
-                clicks = trigger.pluginProps["clicks"]
-            except:
-                clicks = "1"
-        
-            try:
-                deviceID = trigger.pluginProps["deviceID"]
-                componentID = trigger.pluginProps["componentID"]
-            except:
-                try:
-                    buttonID = trigger.pluginProps["buttonID"]
-                    buttonAddress = indigo.devices[int(buttonID)].address
-                    parts = buttonAddress.split(".")
-                    deviceID =  parts[0]
-                    componentID = parts[1]
-                except:
-                    self.logger.error(u"keypadButtonPress Trigger '{}' missing deviceID/componentID/buttonID: {}".format(trigger.name, trigger.pluginProps))
-                    return
 
-            if (deviceID != devID) or (componentID != compID):
+            buttonID = trigger.pluginProps["buttonID"]
+            buttonAddress = indigo.devices[int(buttonID)].address
+            parts1 = buttonAddress.split(".")
+            parts2 = parts1[0].split(":")
+            t_gatewayID = parts2[0]
+            t_deviceID = parts2[1]
+            t_componentID = parts1[1]
+
+            if not (deviceID == t_deviceID) and (componentID == t_deviceID) and (gatewayID == t_gatewayID):
                 self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger '{}', wrong keypad button: {}, {}".format(trigger.name, deviceID, componentID))
                 continue
                 
-            if self.key_taps != int(clicks):
-                self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger {}, wrong click count: {}".format(trigger.name, clicks))
+            if self.key_taps != int(trigger.pluginProps["clicks"]):
+                self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger {}, wrong click count: {}".format(trigger.name, self.key_taps))
                 continue
 
-            self.logger.debug(u"buttonTriggerCheck: Executing Trigger '{}', keypad button: {}.{}".format(trigger.name, deviceID, componentID))
+            self.logger.debug(u"buttonTriggerCheck: Executing Trigger '{}', keypad button: {}:{}.{}".format(trigger.name, gatewayID, deviceID, componentID))
             indigo.trigger.execute(trigger)
         
             
     ####################
 
-    def update_device_property(self, dev, propertyname, new_value = ""):
-        newProps = dev.pluginProps
+    def update_plugin_property(self, object, propertyname, new_value = ""):
+        newProps = object.pluginProps
         newProps.update( {propertyname : new_value} )
-        dev.replacePluginPropsOnServer(newProps)
+        object.replacePluginPropsOnServer(newProps)
         return None
 
-    def remove_device_property(self, dev, propertyname):
-        newProps = dev.pluginProps
+    def remove_plugin_property(self, object, propertyname):
+        newProps = object.pluginProps
         del newProps[propertyname]
-        dev.replacePluginPropsOnServer(newProps)
+        object.replacePluginPropsOnServer(newProps)
         return None
 
     def deviceStartComm(self, dev):
@@ -626,218 +613,218 @@ class Plugin(indigo.PluginBase):
                       
         elif dev.deviceTypeId == DEV_PHANTOM_BUTTON:
             if dev.pluginProps.get(PROP_REPEATER, None):
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_REPEATER])
-                self.remove_device_property(dev, PROP_REPEATER)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_REPEATER])
+                self.remove_plugin_property(dev, PROP_REPEATER)
                 self.logger.info(u"{}: Updated repeater property to IntegrationID".format(dev.name))
             elif dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, "1")
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, "1")
                 self.logger.info(u"{}: Added IntegrationID property".format(dev.name))
                 
             if dev.pluginProps.get(PROP_BUTTON, None):
-                self.update_device_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_BUTTON])
-                self.remove_device_property(dev, PROP_BUTTON)
+                self.update_plugin_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_BUTTON])
+                self.remove_plugin_property(dev, PROP_BUTTON)
                 self.logger.info(u"{}: Updated button property to componentID".format(dev.name))
                 
             if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
-                self.update_device_property(dev, PROP_ISBUTTON, "True")
+                self.update_plugin_property(dev, PROP_ISBUTTON, "True")
                 self.logger.info(u"{}: Added isButton property".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.phantomButtons[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_DIMMER:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_ZONE])
-                self.remove_device_property(dev, PROP_ZONE)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_ZONE])
+                self.remove_plugin_property(dev, PROP_ZONE)
                 self.logger.info(u"{}: Updated zone property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.dimmers[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_SHADE:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SHADE])
-                self.remove_device_property(dev, PROP_SHADE)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SHADE])
+                self.remove_plugin_property(dev, PROP_SHADE)
                 self.logger.info(u"{}: Updated zone property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.shades[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
             dev.updateStateImageOnServer( indigo.kStateImageSel.None)
             
         elif dev.deviceTypeId == DEV_SWITCH:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SWITCH])
-                self.remove_device_property(dev, PROP_SWITCH)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SWITCH])
+                self.remove_plugin_property(dev, PROP_SWITCH)
                 self.logger.info(u"{}: Updated switch property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.switches[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_FAN:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_FAN])
-                self.remove_device_property(dev, PROP_FAN)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_FAN])
+                self.remove_plugin_property(dev, PROP_FAN)
                 self.logger.info(u"{}: Updated fan property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.fans[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_THERMO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_THERMO])
-                self.remove_device_property(dev, PROP_THERMO)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_THERMO])
+                self.remove_plugin_property(dev, PROP_THERMO)
                 self.logger.info(u"{}: Updated thermo property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.thermos[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_KEYPAD:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_KEYPAD])
-                self.remove_device_property(dev, PROP_KEYPAD)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_KEYPAD])
+                self.remove_plugin_property(dev, PROP_KEYPAD)
                 self.logger.info(u"{}: Updated keypad property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_KEYPADBUT, None):
-                self.update_device_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_KEYPADBUT])
-                self.remove_device_property(dev, PROP_KEYPADBUT)
+                self.update_plugin_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_KEYPADBUT])
+                self.remove_plugin_property(dev, PROP_KEYPADBUT)
                 self.logger.info(u"{}: Updated keypadButton property to componentID".format(dev.name))
                 
             if (dev.pluginProps.get(PROP_ISBUTTON, None) == None) and (int(dev.pluginProps[PROP_COMPONENT_ID]) < 80):
-                self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
+                self.update_plugin_property(dev, PROP_ISBUTTON, new_value = "True")
                 self.logger.info(u"{}: Added isButton property".format(dev.name))
                 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
             if int(dev.pluginProps[PROP_COMPONENT_ID]) > 80:
-                self.update_device_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
+                self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
             else:
-                self.update_device_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = False)
+                self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = False)
             self.keypads[address] = dev
 
         elif dev.deviceTypeId == DEV_SENSOR:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SENSOR])
-                self.remove_device_property(dev, PROP_SENSOR)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SENSOR])
+                self.remove_plugin_property(dev, PROP_SENSOR)
                 self.logger.info(u"{}: Updated sensor property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.sensors[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_CCI:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCI_INTEGRATION_ID])
-                self.remove_device_property(dev, PROP_CCI_INTEGRATION_ID)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCI_INTEGRATION_ID])
+                self.remove_plugin_property(dev, PROP_CCI_INTEGRATION_ID)
                 self.logger.info(u"{}: Updated cciIntegrationID property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_COMPONENT, None):
-                self.update_device_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_COMPONENT])
-                self.remove_device_property(dev, PROP_COMPONENT)
+                self.update_plugin_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_COMPONENT])
+                self.remove_plugin_property(dev, PROP_COMPONENT)
                 self.logger.info(u"{}: Updated cciCompoment property to componentID".format(dev.name))
                 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.ccis[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_CCO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCO_INTEGRATION_ID])
-                self.remove_device_property(dev, PROP_CCO_INTEGRATION_ID)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCO_INTEGRATION_ID])
+                self.remove_plugin_property(dev, PROP_CCO_INTEGRATION_ID)
                 self.logger.info(u"{}: Updated ccoIntegrationID property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.ccos[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
 
             ccoType = dev.pluginProps[PROP_CCO_TYPE]
             if ccoType == "momentary":
                 dev.updateStateOnServer(ONOFF, False)
             else:
-                self.update_device_property(dev, PROP_SUPPORTS_STATUS_REQUEST, new_value = True)
+                self.update_plugin_property(dev, PROP_SUPPORTS_STATUS_REQUEST, new_value = True)
             
         elif dev.deviceTypeId == DEV_PICO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
-                self.update_device_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_PICO_INTEGRATION_ID])
-                self.remove_device_property(dev, PROP_PICO_INTEGRATION_ID)
+                self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_PICO_INTEGRATION_ID])
+                self.remove_plugin_property(dev, PROP_PICO_INTEGRATION_ID)
                 self.logger.info(u"{}: Updated picoIntegrationID property to IntegrationID".format(dev.name))
 
             if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
-                self.update_device_property(dev, PROP_ISBUTTON, new_value = "True")
+                self.update_plugin_property(dev, PROP_ISBUTTON, new_value = "True")
                 self.logger.info(u"{}: Added isButton property".format(dev.name))
                 
             if dev.pluginProps.get(PROP_PICOBUTTON, None):
-                self.update_device_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_PICOBUTTON])
-                self.remove_device_property(dev, PROP_PICOBUTTON)
+                self.update_plugin_property(dev, PROP_COMPONENT_ID, dev.pluginProps[PROP_PICOBUTTON])
+                self.remove_plugin_property(dev, PROP_PICOBUTTON)
                 self.logger.info(u"{}: Updated keypadButton property to componentID".format(dev.name))
                 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.picos[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_TIMECLOCKEVENT:
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:Event.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_EVENT])
             self.events[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_GROUP:
 
             if dev.pluginProps.get(PROP_GATEWAY, None) == None:
-                self.update_device_property(dev, PROP_GATEWAY, self.newGateway)
+                self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             # fix device properties to show correct UI in Indigo client, matches Devices.xml
@@ -849,7 +836,7 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:Group.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_GROUP])
             self.groups[address] = dev
-            self.update_device_property(dev, "address", address)
+            self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_LINKEDDEVICE:
         
@@ -949,29 +936,6 @@ class Plugin(indigo.PluginBase):
         except:
             pass
 
-########################################
-# 
-#     def didDeviceCommPropertyChange(self, origDev, newDev):
-#     
-#         if newDev.deviceTypeId == DEV_SERIAL_GATEWAY:
-#             if origDev.pluginProps.get('serialPort', None) != newDev.pluginProps.get('serialPort', None):
-#                 return True           
-# 
-#         elif newDev.deviceTypeId == DEV_IP_GATEWAY:
-#             if origDev.pluginProps.get('serialPort', None) != newDev.pluginProps.get('serialPort', None):
-#                 return True           
-# 
-#         return False
-#       
-########################################
-
-#     prevent deviceStartComm/deviceStopComm on property changes
-#     def didDeviceCommPropertyChange(self, origDev, newDev):
-#         if origDev.deviceTypeId != newDev.deviceTypeId:
-#             return True
-#         else:
-#             return False      
-
               
     def validateDeviceConfigUi(self, valuesDict, typeId, devId):
         self.logger.debug(u"validateDeviceConfigUi: typeId = {}, devId = {}".format(typeId, devId))
@@ -1018,18 +982,6 @@ class Plugin(indigo.PluginBase):
     def queryAllDevices(self):
         for dev in indigo.devices.iter("self"):
             indigo.device.statusRequest(dev)
-
-
-# plugin configuration validation
-    def validatePrefsConfigUi(self, valuesDict):
-
-        self.logger.debug(u"validatePrefsConfigUi called")
-        errorsDict = indigo.Dict()
-
-        if len(errorsDict) > 0:
-            return (False, valuesDict, errorsDict)
-        return (True, valuesDict)
-
 
     def closedPrefsConfigUi(self, valuesDict, userCancelled):
         if userCancelled:
@@ -1234,7 +1186,7 @@ class Plugin(indigo.PluginBase):
                     self.logger.debug(keypadid)
 
             if action == '3': # Check for triggers and linked devices
-                self.buttonTriggerCheck(id, button)
+                self.buttonTriggerCheck(id, button, gatewayID)
                 
 
         if keypadid in self.picos:
@@ -1246,7 +1198,7 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer(ONOFF, True)
 
             if action == '3': # Check for triggers and linked devices
-                self.buttonTriggerCheck(id, button)
+                self.buttonTriggerCheck(id, button, gatewayID)
 
         if keypadid in self.ccis:
             self.logger.debug(u"Received a CCI status message: " + cmd)
@@ -1302,28 +1254,22 @@ class Plugin(indigo.PluginBase):
                     thermo.updateStateOnServer("hvacFanMode", indigo.kFanMode.AlwaysOn)
 
     def _cmdTimeClock(self, cmd, gatewayID):
-        self.logger.debug(u"Received a TimeClock message: " + cmd)
+        self.logger.debug(u"Received a TimeClock message: {}".format(cmd))
         cmdArray = cmd.split(',')
-        id = "{}:Event.{}".format(gatewayID, cmdArray[1])
-        action = cmdArray[2]
-        event = cmdArray[3]
-        self.eventTriggerCheck(event)
+        self.eventTriggerCheck(cmdArray[3], gatewayID)
 
     def _cmdGroup(self, cmd, gatewayID):
-        self.logger.debug(u"Received a Group message  " + cmd)
+        self.logger.debug(u"Received a Group message:  {}".format(cmd))
         cmdArray = cmd.split(',')
-        id = "{}:Group.{}".format(gatewayID, cmdArray[1])
-        action = cmdArray[2]
-        status = cmdArray[3]
+        self.groupTriggerCheck(cmdArray[1], gatewayID, cmdArray[3])
 
-        self.groupTriggerCheck(id, status)
-
-        group = self.groups.get(id, None)
+        address = "{}:Group.{}".format(gatewayID, cmdArray[1])
+        group = self.groups.get(address, None)
         if not group:
             return
-        if status == "3":
+        if cmdArray[3] == "3":
             group.updateStateOnServer(ONOFF, True)
-        elif status == "4":
+        elif cmdArray[3] == "4":
             group.updateStateOnServer(ONOFF, False)
 
     ########################################
@@ -1578,7 +1524,7 @@ class Plugin(indigo.PluginBase):
             if dev.deviceTypeId == DEV_FAN:
                 sendCmd = "#OUTPUT,{},1,0".format(dev.pluginProps[PROP_INTEGRATION_ID])
                 if dev.states[ACTUALSPEED] > 0:
-                    self.update_device_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
+                    self.update_plugin_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
                 dev.updateStateOnServer(ACTUALSPEED, 0)
                 dev.updateStateOnServer(ONOFF, False)
                 dev.updateStateOnServer(SPEEDINDEX, "0")
@@ -1592,7 +1538,7 @@ class Plugin(indigo.PluginBase):
                 if int(dev.states[ACTUALSPEED]) > 0:      # turn Off
                     sendCmd = "#OUTPUT,{},1,0".format(dev.pluginProps[PROP_INTEGRATION_ID])
                     if dev.states[ACTUALSPEED] > 0:
-                        self.update_device_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
+                        self.update_plugin_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
                     dev.updateStateOnServer(ACTUALSPEED, 0)
                     dev.updateStateOnServer(ONOFF, False)
                     dev.updateStateOnServer(SPEEDINDEX, "0")
@@ -1617,19 +1563,19 @@ class Plugin(indigo.PluginBase):
                     dev.updateStateOnServer(ACTUALSPEED, 0)
                 elif newSpeedIndex == 1:
                     sendCmd = "#OUTPUT,{},1,25".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "25")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "25")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 1)
                     dev.updateStateOnServer(ACTUALSPEED, 25)
                 elif newSpeedIndex == 2:
                     sendCmd = "#OUTPUT,{},1,75".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "75")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "75")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 2)
                     dev.updateStateOnServer(ACTUALSPEED, 75)
                 elif newSpeedIndex == 3:
                     sendCmd = "#OUTPUT,{},1,100".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "100")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "100")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 3)
                     dev.updateStateOnServer(ACTUALSPEED, 100)
@@ -1646,7 +1592,7 @@ class Plugin(indigo.PluginBase):
                 sendCmd = "#OUTPUT,{},1,{}".format(dev.pluginProps[PROP_INTEGRATION_ID], action.actionValue)
                 dev.updateStateOnServer(ACTUALSPEED, action.actionValue)
                 if dev.states[ACTUALSPEED] > 0:
-                    self.update_device_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
+                    self.update_plugin_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
 
                 if newSpeedLevel == 0:
                     dev.updateStateOnServer(ONOFF, False)
@@ -1673,24 +1619,24 @@ class Plugin(indigo.PluginBase):
                 
                 if newSpeedIndex == 0:
                     sendCmd = "#OUTPUT,{},1,0".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
+                    self.update_plugin_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
                     dev.updateStateOnServer(ONOFF, False)
                     dev.updateStateOnServer(SPEEDINDEX, 0)
                 elif newSpeedIndex == 1:
                     sendCmd = "#OUTPUT,{},1,25".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "25")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "25")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 1)
                     dev.updateStateOnServer(ACTUALSPEED, 25)
                 elif newSpeedIndex == 2:
                     sendCmd = "#OUTPUT,{},1,75".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "75")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "75")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 2)
                     dev.updateStateOnServer(ACTUALSPEED, 75)
                 elif newSpeedIndex == 3:
                     sendCmd = "#OUTPUT,{},1,100".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "100")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "100")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 3)
                     dev.updateStateOnServer(ACTUALSPEED, 100)
@@ -1709,24 +1655,24 @@ class Plugin(indigo.PluginBase):
 
                 if newSpeedIndex == 0:
                     sendCmd = "#OUTPUT,{},1,0".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
+                    self.update_plugin_property(dev, PROP_LASTSPEED, dev.states[ACTUALSPEED])
                     dev.updateStateOnServer(ONOFF, False)
                     dev.updateStateOnServer(SPEEDINDEX, 0)
                 elif newSpeedIndex == 1:
                     sendCmd = "#OUTPUT,{},1,25".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "25")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "25")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 1)
                     dev.updateStateOnServer(ACTUALSPEED, 25)
                 elif newSpeedIndex == 2:
                     sendCmd = "#OUTPUT,{},1,75".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "75")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "75")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 2)
                     dev.updateStateOnServer(ACTUALSPEED, 75)
                 elif newSpeedIndex == 3:
                     sendCmd = "#OUTPUT,{},1,100".format(dev.pluginProps[PROP_INTEGRATION_ID])
-                    self.update_device_property(dev, PROP_LASTSPEED, "100")
+                    self.update_plugin_property(dev, PROP_LASTSPEED, "100")
                     dev.updateStateOnServer(ONOFF, True)
                     dev.updateStateOnServer(SPEEDINDEX, 3)
                     dev.updateStateOnServer(ACTUALSPEED, 100)
@@ -1947,9 +1893,10 @@ class Plugin(indigo.PluginBase):
         self.logger.threaddebug(u"pickEvent, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
         for dev in indigo.devices.iter("self.ra2TimeClockEvent"):
-            event = dev.pluginProps[PROP_EVENT]
-            self.logger.threaddebug(u"pickEvent adding: {}".format(event))         
-            retList.append((event, dev.name))
+            if dev.pluginProps[PROP_GATEWAY] == valuesDict[PROP_GATEWAY]:
+                event = dev.pluginProps[PROP_EVENT]
+                self.logger.threaddebug(u"pickEvent adding: {}".format(event))         
+                retList.append((event, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
@@ -1957,9 +1904,10 @@ class Plugin(indigo.PluginBase):
         self.logger.threaddebug(u"pickGroup, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
         for dev in indigo.devices.iter("self.ra2Group"):
-            group = dev.pluginProps[PROP_GROUP]
-            self.logger.threaddebug(u"pickGroup adding: {}".format(group))         
-            retList.append((group, dev.name))
+            if dev.pluginProps[PROP_GATEWAY] == valuesDict[PROP_GATEWAY]:
+                group = dev.pluginProps[PROP_GROUP]
+                self.logger.threaddebug(u"pickGroup adding: {}".format(group))         
+                retList.append((group, dev.name))
         retList.sort(key=lambda tup: tup[1])
         return retList
 
@@ -2655,7 +2603,7 @@ class Plugin(indigo.PluginBase):
                     return dev
                 else:
                     self.logger.debug("Adding ROOM property to existing device: '{}' ({})".format(name, address))            
-                    self.update_device_property(dev, PROP_ROOM, new_value = room)
+                    self.update_plugin_property(dev, PROP_ROOM, new_value = room)
                     return dev
             
         # Pick the folder for this device, create it if necessary
