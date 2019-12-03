@@ -19,6 +19,7 @@ import requests
 import xml.etree.ElementTree as ET
 import threading
 
+
 # Indigo Custom Device Types
 DEV_IP_GATEWAY = "ipGateway"
 DEV_SERIAL_GATEWAY = "serialGateway"
@@ -79,7 +80,7 @@ PROP_BUTTON = "button"
 
 # delay amount for detecting double/triple clicks, timeout for single/double/triple only detection
 CLICK_DELAY = 1.0
-CLICK_TIMEOUT = 0.4
+CLICK_TIMEOUT = 0.5
 
 ########################################
 class IPGateway:
@@ -328,15 +329,18 @@ class Plugin(indigo.PluginBase):
         self.picos = {}
         self.events = {}
         self.groups = {}
+        self.roomButtonTree = {}
                 
         self.eventTriggers = { }
         self.groupTriggers = { }
-        self.buttonTriggers = { }
+        self.buttonPressTriggers = { }
+        self.buttonMultiPressTriggers = { }        
         
-        self.roomButtonTree = {}
         self.lastKeyTime = time.time()
         self.lastKeyAddress = ""
-        self.key_taps = 0
+        self.lastKeyTaps = 0
+        self.newKeyPress = False        
+
         
         self.threadLock = threading.Lock()  # for background data fetch
 
@@ -346,9 +350,9 @@ class Plugin(indigo.PluginBase):
         savedList = indigo.activePlugin.pluginPrefs.get(u"linkedDevices", None)
         if savedList:
             self.linkedDeviceList = json.loads(savedList)
+            self.logLinkedDevices()
         else:
             self.linkedDeviceList = {}        
-        self.logLinkedDevices()
 
         indigo.devices.subscribeToChanges()
 
@@ -449,35 +453,44 @@ class Plugin(indigo.PluginBase):
     def triggerStartProcessing(self, trigger):
         self.logger.threaddebug("Starting Trigger '{}', pluginProps = {}".format(trigger.name, trigger.pluginProps))
                         
-        # add the default gateway if not already in props
-                                
-        gateway = trigger.pluginProps.get(PROP_GATEWAY, None) 
-        if not gateway:
-             self.update_plugin_property(trigger, PROP_GATEWAY, self.defaultGateway)
-             self.logger.info(u"{}: Added default Gateway ({})".format(trigger.name, self.defaultGateway))
-
         # based on trigger type, do property adjustments and add to trigger list
         
         if  trigger.pluginTypeId == "keypadButtonPress":
-            clicks = trigger.pluginProps.get("clicks", "1")
         
             buttonID = trigger.pluginProps.get("buttonID", None)
             if not buttonID:
                 self.logger.error("keypadButtonPress Trigger  {} ({}) missing buttonID: {}".format(trigger.name, trigger.id, str(trigger.pluginProps)))
                 return
 
-            self.logger.debug("Adding Button Trigger '{}', buttonID = {}, clicks = {}".format(trigger.name, buttonID, clicks))
-            self.buttonTriggers[trigger.id] = trigger
+            self.logger.debug("Adding keypadButtonPress Trigger '{}', buttonID = {}".format(trigger.name, buttonID))
+            self.buttonPressTriggers[trigger.id] = trigger
+
+        elif  trigger.pluginTypeId == "keypadMultiButtonPress":
+        
+            buttonID = trigger.pluginProps.get("buttonID", None)
+            if not buttonID:
+                self.logger.error("keypadMultiButtonPress Trigger  {} ({}) missing buttonID: {}".format(trigger.name, trigger.id, str(trigger.pluginProps)))
+                return
+
+            self.logger.debug("Adding keypadMultiButtonPress Trigger '{}', buttonID = {}".format(trigger.name, buttonID))
+            self.buttonMultiPressTriggers[trigger.id] = trigger
 
 
         elif trigger.pluginTypeId == "timeClockEvent":
 
             event = trigger.pluginProps.get(PROP_EVENT, None)
             if not event:
-                self.logger.error(u"Timeclock Event Trigger {} ({}) does not contain event: {}".format(trigger.name, trigger.id, trigger.pluginProps))
+                self.logger.error(u"timeClockEvent Trigger {} ({}) does not contain event: {}".format(trigger.name, trigger.id, trigger.pluginProps))
                 return
 
-            self.logger.debug("Adding Event Trigger {}, event = {}, gateway = {}".format(trigger.name, event, gateway))
+            # add the default gateway if not already in props
+                                
+            gateway = trigger.pluginProps.get(PROP_GATEWAY, None) 
+            if not gateway:
+                 self.update_plugin_property(trigger, PROP_GATEWAY, self.defaultGateway)
+                 self.logger.info(u"{}: Added default Gateway ({})".format(trigger.name, self.defaultGateway))
+
+            self.logger.debug("Adding timeClockEvent Trigger {}, event = {}, gateway = {}".format(trigger.name, event, gateway))
             self.eventTriggers[trigger.id] = trigger
         
         elif trigger.pluginTypeId == "groupEvent":
@@ -487,18 +500,27 @@ class Plugin(indigo.PluginBase):
                 self.logger.error(u"Group Trigger {} ({}) does not contain group: {}".format(trigger.name, trigger.id, trigger.pluginProps))
                 return
         
+            # add the default gateway if not already in props
+                                
+            gateway = trigger.pluginProps.get(PROP_GATEWAY, None) 
+            if not gateway:
+                 self.update_plugin_property(trigger, PROP_GATEWAY, self.defaultGateway)
+                 self.logger.info(u"{}: Added default Gateway ({})".format(trigger.name, self.defaultGateway))
+
             self.logger.debug("Adding Group Trigger {}, group = {}, gateway = {}".format(trigger.name, group, gateway))
             self.groupTriggers[trigger.id] = trigger
         
         else:
-            self.logger.error(u"triggerStartProcessing: Trigger '{}' is unknown type: {}" % (trigger.name, trigger.pluginTypeId))
+            self.logger.error(u"triggerStartProcessing: Trigger {} ({}) is unknown type: {}".format(trigger.name, trigger.id, trigger.pluginTypeId))
                       
                       
     def triggerStopProcessing(self, trigger):
 
         self.logger.debug(u"Removing Trigger {} ({})".format(trigger.name, trigger.id))
         if  trigger.pluginTypeId == "keypadButtonPress":
-            del self.buttonTriggers[trigger.id]
+            del self.buttonPressTriggers[trigger.id]
+        elif  trigger.pluginTypeId == "keypadMultiButtonPress":
+            del self.buttonMultiPressTriggers[trigger.id]
         elif  trigger.pluginTypeId == "timeClockEvent":
             del self.eventTriggers[trigger.id]
         elif  trigger.pluginTypeId == "groupEvent":
@@ -512,9 +534,9 @@ class Plugin(indigo.PluginBase):
 
         self.logger.debug(u"eventTriggerCheck: event {}, gateway: {}".format(eventID, gatewayID))
 
-        for triggerId, trigger in self.eventTriggers.iteritems():
+        for trigger in self.eventTriggers.values():
 
-            if eventID == trigger.pluginProps[PROP_EVENT] and gatewayID == trigger.pluginProps[PROP_GATEWAY]:
+            if (eventID == trigger.pluginProps[PROP_EVENT]) and (gatewayID == trigger.pluginProps[PROP_GATEWAY]):
                 self.logger.debug(u"eventTriggerCheck: Executing Trigger {} ({})".format(trigger.name, trigger.id))
                 indigo.trigger.execute(trigger)
             else:
@@ -524,7 +546,7 @@ class Plugin(indigo.PluginBase):
 
         self.logger.debug(u"groupTriggerCheck: group: {}, gateway: {}, status: {}".format(groupID, gatewayID, status))
 
-        for triggerId, trigger in self.groupTriggers.iteritems():
+        for trigger in self.groupTriggers.values():
 
             if (trigger.pluginProps[PROP_GROUP] == groupID) and (trigger.pluginProps[PROP_GATEWAY] == gatewayID) and (trigger.pluginProps["occupancyPopUp"] == status):
                 self.logger.debug(u"groupTriggerCheck: Executing Trigger {} ({})".format(trigger.name, trigger.id))
@@ -540,7 +562,7 @@ class Plugin(indigo.PluginBase):
        
         # check for linked devices
         
-        for linkID, linkItem in self.linkedDeviceList.iteritems():
+        for linkItem in self.linkedDeviceList.values():
             controlledDevice = indigo.devices[int(linkItem["controlledDevice"])]
             buttonAddress = linkItem["buttonAddress"]
             if buttonAddress == keypadid:
@@ -550,36 +572,75 @@ class Plugin(indigo.PluginBase):
         # and check for multiple taps
         
         if (keypadid == self.lastKeyAddress) and (time.time() < (self.lastKeyTime + CLICK_DELAY)):
-            self.key_taps += 1
+            self.lastKeyTaps += 1
         else:
-            self.key_taps = 1
+            self.lastKeyTaps = 1
             
         self.lastKeyAddress = keypadid
         self.lastKeyTime = time.time()
-            
-        # Look for triggers that match this button
+        self.newKeyPress = True        
+        
+        # Look for old-style triggers that match this button
 
-        for triggerId, trigger in self.buttonTriggers.iteritems():
+        for trigger in self.buttonPressTriggers.values():
 
-            buttonID = trigger.pluginProps["buttonID"]
-            buttonAddress = indigo.devices[int(buttonID)].address
-            parts1 = buttonAddress.split(".")
-            parts2 = parts1[0].split(":")
-            t_gatewayID = parts2[0]
-            t_deviceID = parts2[1]
-            t_componentID = parts1[1]
+            try:
+                buttonID = trigger.pluginProps["buttonID"]
+                buttonAddress = indigo.devices[int(buttonID)].address
+            except:
+                self.logger.error(u"buttonTriggerCheck: invalid or missing buttonID {} in trigger '{}'".format(buttonID, trigger.name))
+                return
 
-            if not (deviceID == t_deviceID) and (componentID == t_deviceID) and (gatewayID == t_gatewayID):
-                self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger '{}', wrong keypad button: {}, {}".format(trigger.name, deviceID, componentID))
+            if keypadid != buttonAddress:
+                self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger '{}', wrong keypad button: {}".format(trigger.name, keypadid))
                 continue
                 
-            if self.key_taps != int(trigger.pluginProps["clicks"]):
-                self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger {}, wrong click count: {}".format(trigger.name, self.key_taps))
+            clicks = int(trigger.pluginProps.get("clicks", "1"))
+            if self.lastKeyTaps != int(trigger.pluginProps["clicks"]):
+                self.logger.threaddebug(u"buttonTriggerCheck: Skipping Trigger {}, wrong click count: {}".format(trigger.name, self.lastKeyTaps))
                 continue
 
-            self.logger.debug(u"buttonTriggerCheck: Executing Trigger '{}', keypad button: {}:{}.{}".format(trigger.name, gatewayID, deviceID, componentID))
+            self.logger.debug(u"buttonTriggerCheck: Executing Trigger '{}', keypad button: ".format(trigger.name, buttonAddress))
             indigo.trigger.execute(trigger)
+    
+    # called from the main run look to process queued keypresses for triggers    
+    
+    def buttonMultiPressCheck(self):
+
+        if self.newKeyPress:
         
+            # if last key press hasn't timed out yet, don't do anything
+            if time.time() < (self.lastKeyTime + CLICK_TIMEOUT):
+                return  
+            
+            self.logger.debug(u"buttonMultiPressCheck: Timeout reached for keypadid = {}, presses = {}".format(self.lastKeyAddress, self.lastKeyTaps))
+
+            # Look for new-style triggers that match this button
+
+            for trigger in self.buttonMultiPressTriggers.values():
+
+                try:
+                    buttonID = trigger.pluginProps["buttonID"]
+                    buttonAddress = indigo.devices[int(buttonID)].address
+                except:
+                    self.logger.error(u"buttonMultiPressCheck: invalid or missing buttonID {} in trigger '{}'".format(buttonID, trigger.name))
+                    return
+                
+                if buttonAddress != self.lastKeyAddress:
+                    self.logger.threaddebug(u"buttonMultiPressCheck: Skipping Trigger '{}', wrong keypad button: {}".format(trigger.name, self.lastKeyAddress))
+                    continue
+                
+                clicks = int(trigger.pluginProps.get("clicks", "1"))
+                if self.lastKeyTaps != int(trigger.pluginProps["clicks"]):
+                    self.logger.threaddebug(u"buttonMultiPressCheck: Skipping Trigger {}, wrong click count: {}".format(trigger.name, self.lastKeyTaps))
+                    continue
+
+                self.logger.debug(u"buttonMultiPressCheck: Executing Trigger '{}', keypad button: {}".format(trigger.name, self.lastKeyAddress))
+                indigo.trigger.execute(trigger)
+                
+            # all done, reset the flag
+            self.newKeyPress = False
+            
             
     ####################
 
@@ -961,7 +1022,6 @@ class Plugin(indigo.PluginBase):
         if self.pluginPrefs.get(u"queryAtStartup", False):
             self.queryAllDevices()
 
-
         try:
             while True:
                         
@@ -970,7 +1030,8 @@ class Plugin(indigo.PluginBase):
                         cmd = gateway.poll()
                         if cmd:
                             self._processCommand(cmd.rstrip(), gatewayID)
-                    
+                            
+                self.buttonMultiPressCheck()                    
                 self.sleep(0.1)
                 
         except self.StopThread:
@@ -979,6 +1040,7 @@ class Plugin(indigo.PluginBase):
 #########################################
 # Poll registered devices for status
 #########################################
+
     def queryAllDevices(self):
         for dev in indigo.devices.iter("self"):
             indigo.device.statusRequest(dev)
@@ -993,19 +1055,19 @@ class Plugin(indigo.PluginBase):
             self.logLevel = logLevel
             self.indigo_log_handler.setLevel(self.logLevel)
             self.logger.debug(u"New logLevel = {}".format(self.logLevel))
-                    
-        return
-           
+                               
 
     ########################################
 
     def _sendCommand(self, cmd, gateway):
-    
-        self.gateways[int(gateway)].send(cmd)
-
+        try:    
+            self.gateways[int(gateway)].send(cmd)
+        except KeyError:
+            self.logger.error(u"Unable to send cmd {} to gateway {}.  Possible disabled gateway device.".format(cmd, gateway))
+            
 
     def _processCommand(self, cmd, gatewayID):
-#        self.logger.debug(u"Received command: {} from Gateway {}".format(cmd, gatewayID))
+        self.logger.threaddebug(u"Received command: {} from Gateway {}".format(cmd, gatewayID))
                 
         if len(cmd) > 0:
             if "~OUTPUT" in cmd:
@@ -1177,9 +1239,9 @@ class Plugin(indigo.PluginBase):
                 if keypadid in self.keypads:
                     keypad = self.keypads[keypadid]
                     self.logger.debug(u"Updating button status with state of LED ({}) for keypadID {}".format(status, keypadid))
-                    if int(status) == 0:
+                    if status == '0':
                         keypad.updateStateOnServer(ONOFF, False)
-                    elif int(status) == 1:
+                    elif status == '1':
                         keypad.updateStateOnServer(ONOFF, True)
                 else:
                     self.logger.error("WARNING: Invalid ID ({}) specified for LED.   Must be ID of button + 80.  Please correct and reload the plugin.".format(keypadid))
@@ -1493,8 +1555,8 @@ class Plugin(indigo.PluginBase):
 
         if len(sendCmd):
             gateway = dev.pluginProps['gateway']
+            self.logger.debug(u"{}: actionControlDimmerRelay sending: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
             self._sendCommand(sendCmd, gateway)
-            self.logger.debug(u"{}: actionControlDimmerRelay sent: '{}' to gateway {}".format(dev.name, sendCmd, gateway))
 
     ######################
     # Sensor Action callback

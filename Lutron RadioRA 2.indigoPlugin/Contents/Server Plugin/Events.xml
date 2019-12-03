@@ -36,7 +36,7 @@
         </ConfigUI>
 	</Event>
 	<Event id="keypadButtonPress">
-        <Name>Keypad Button Press</Name>
+        <Name>Button Presses</Name>
  		<ConfigUI>
             <Field type="menu" id="clicks" defaultValue="1">
                 <Label>Presses:</Label>
@@ -44,6 +44,33 @@
                     <Option value="1">First Press</Option>
                     <Option value="2">Second Press</Option>
                     <Option value="3">Third Press</Option>
+                </List>
+            </Field>            
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="room" type="menu">
+                <Label>Room:</Label>
+                <List class="self" filter="" method="roomListGenerator"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+            <Field id="buttonID" type="menu">
+                <Label>Button:</Label>
+                <List class="self" filter="" method="pickKeypadButton"  dynamicReload="true"/>
+            </Field>            
+ 		</ConfigUI>
+	</Event>
+	<Event id="keypadMultiButtonPress">
+        <Name>Button Multi-Presses</Name>
+ 		<ConfigUI>
+            <Field type="menu" id="clicks" defaultValue="1">
+                <Label>Presses:</Label>
+                <List>
+                    <Option value="1">Single Press</Option>
+                    <Option value="2">Double Press</Option>
+                    <Option value="3">Triple Press</Option>
                 </List>
             </Field>            
             <Field id="gateway" type="menu">
