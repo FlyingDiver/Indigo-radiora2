@@ -5,7 +5,7 @@
     	<Name>Network Connected Gateway</Name>
         <ConfigUI>
  		    <Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
-			<Field id="address" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
+			<Field id="host" type="textfield"  defaultValue="" tooltip="Enter IP address or Hostname of gateway.">
 				<Label>IP Address or Hostname:</Label>
 			</Field>
 			<Field id="port" type="textfield" defaultValue="23" tooltip="Port number for gateway.">

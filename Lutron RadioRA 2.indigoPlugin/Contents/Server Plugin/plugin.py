@@ -99,14 +99,14 @@ class IPGateway:
     def start(self):
         self.logger.info(u"{}: Running IP Start".format(self.dev.name))
 
-        host = self.dev.pluginProps["address"]
-        port = int(self.dev.pluginProps["port"])
+        self.host = self.dev.pluginProps["host"]
+        self.port = int(self.dev.pluginProps["port"])
 
         self.timeout = 35   # Under some conditions Smart Bridge Pro takes a long time to connect
         
         try:
-            self.logger.info(u"{}: Connecting via IP to {}:{}".format(self.dev.name, host, port))
-            self.connIP = telnetlib.Telnet(host, port, self.timeout)
+            self.logger.info(u"{}: Connecting via IP to {}:{}".format(self.dev.name, self.host, self.port))
+            self.connIP = telnetlib.Telnet(self.host, self.port, self.timeout)
         except socket.timeout:
             self.logger.error(u"{}: Unable to connect to Lutron gateway. Timed out.".format(self.dev.name))
             self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
@@ -200,11 +200,9 @@ class IPGateway:
                 
     def fetchXML(self):
 
-        host = self.dev.pluginProps["address"]
-
         s = requests.Session()
-        r = s.get('http://' + host + '/login?login=lutron&password=lutron')
-        r = s.get('http://' + host + '/DbXmlInfo.xml')
+        r = s.get('http://' + self.host + '/login?login=lutron&password=lutron')
+        r = s.get('http://' + self.host + '/DbXmlInfo.xml')
         
         return r.text
 
@@ -371,14 +369,15 @@ class Plugin(indigo.PluginBase):
 
             IP = indigo.activePlugin.pluginPrefs.get(u"IP", "None")
             if IP:
-                address = self.pluginPrefs["ip_address"]
+                address = "{}:{}".format(self.pluginPrefs["ip_address"], self.pluginPrefs["ip_port"])
                 name = "Lutron IP Gateway"
                 props = {
+                    "host" :     self.pluginPrefs["ip_address"], 
                     "port" :     self.pluginPrefs["ip_port"], 
                     "username" : self.pluginPrefs["ip_username"], 
                     "password" : self.pluginPrefs["ip_password"] 
                 }
-                self.logger.info("Creating new IP Gateway device @ {}:{}".format(address, self.pluginPrefs["ip_port"]))
+                self.logger.info("Creating new IP Gateway device @ {}".format(address))
                 try:
                     newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_IP_GATEWAY, props=props)
                 except Exception, e:
@@ -408,8 +407,7 @@ class Plugin(indigo.PluginBase):
                     
             self.defaultGateway = newDevice.id            
             indigo.activePlugin.pluginPrefs[u"Converted"] = str(self.defaultGateway)
-            self.logger.info("Conversion Step 1 done, default gateway = {} ({})".format(newDevice.name, self.defaultGateway))
-            self.sleep(1.0)
+            indigo.activePlugin.savePluginPrefs()
             
     def shutdown(self):
         self.logger.info(u"Shutting down Lutron")
@@ -655,12 +653,14 @@ class Plugin(indigo.PluginBase):
         newProps = object.pluginProps
         newProps.update( {propertyname : new_value} )
         object.replacePluginPropsOnServer(newProps)
+        self.sleep(0.01)
         return None
 
     def remove_plugin_property(self, object, propertyname):
         newProps = object.pluginProps
         del newProps[propertyname]
         object.replacePluginPropsOnServer(newProps)
+        self.sleep(0.01)
         return None
 
     def deviceStartComm(self, dev):
