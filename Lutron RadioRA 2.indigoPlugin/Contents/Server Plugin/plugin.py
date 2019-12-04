@@ -383,6 +383,9 @@ class Plugin(indigo.PluginBase):
                     newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_IP_GATEWAY, props=props)
                 except Exception, e:
                     self.logger.error("Error in indigo.device.create(): {}".format(e.message))
+                    return
+                    
+                self.logger.info("IP Gateway device complete")
                                 
             else:
                 address = self.pluginPrefs["serialPort_uiAddress"]
@@ -399,10 +402,14 @@ class Plugin(indigo.PluginBase):
                     newDevice = indigo.device.create(indigo.kProtocol.Plugin, address=address, name=name, deviceTypeId=DEV_SERIAL_GATEWAY, props=props)
                 except Exception, e:
                     self.logger.error("Error in indigo.device.create(): {}".format(e.message))
+                    return
+
+                self.logger.info("Serial Gateway device complete")
                     
             self.defaultGateway = newDevice.id            
             indigo.activePlugin.pluginPrefs[u"Converted"] = str(self.defaultGateway)
-            self.logger.info("Conversion complete, default gateway = {}".format(self.defaultGateway))
+            self.logger.info("Conversion Step 1 done, default gateway = {} ({})".format(newDevice.name, self.defaultGateway))
+            self.sleep(1.0)
             
     def shutdown(self):
         self.logger.info(u"Shutting down Lutron")
