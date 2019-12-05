@@ -66,6 +66,7 @@
     <Device type="sensor" id="ra2Group">
     	<Name>Lutron Room Group</Name>
         <ConfigUI>
+ 		    <Field id="SupportsOnState" type="checkbox" defaultValue="false" hidden="true" />
             <Field id="gateway" type="menu">
                 <Label>Gateway:</Label>
                 <List class="self" method="get_gateway_list" dynamicReload="true"/>
