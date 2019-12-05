@@ -78,10 +78,6 @@ PROP_PICOBUTTON = "picoButton"
 PROP_COMPONENT = "component"
 PROP_BUTTON = "button"
 
-# delay amount for detecting double/triple clicks, timeout for single/double/triple only detection
-CLICK_DELAY = 1.0
-CLICK_TIMEOUT = 0.5
-
 ########################################
 class IPGateway:
 ########################################
@@ -354,6 +350,10 @@ class Plugin(indigo.PluginBase):
 
         indigo.devices.subscribeToChanges()
 
+        # global Timeouts
+        self.click_delay = float(self.pluginPrefs.get(u"click_delay", "1.0"))
+        self.click_timeout = float(self.pluginPrefs.get(u"click_timeout", "0.5"))
+
         ################################################################################
         # convert to device-based gateways
         ################################################################################
@@ -576,7 +576,7 @@ class Plugin(indigo.PluginBase):
 
         # and check for multiple taps
         
-        if (keypadid == self.lastKeyAddress) and (time.time() < (self.lastKeyTime + CLICK_DELAY)):
+        if (keypadid == self.lastKeyAddress) and (time.time() < (self.lastKeyTime + self.click_delay)):
             self.lastKeyTaps += 1
         else:
             self.lastKeyTaps = 1
@@ -615,7 +615,7 @@ class Plugin(indigo.PluginBase):
         if self.newKeyPress:
         
             # if last key press hasn't timed out yet, don't do anything
-            if time.time() < (self.lastKeyTime + CLICK_TIMEOUT):
+            if time.time() < (self.lastKeyTime + self.click_timeout):
                 return  
             
             self.logger.debug(u"buttonMultiPressCheck: Timeout reached for keypadid = {}, presses = {}".format(self.lastKeyAddress, self.lastKeyTaps))
@@ -900,11 +900,11 @@ class Plugin(indigo.PluginBase):
             newProps["SupportsOnState"] = True
             newProps["SupportsSensorValue"] = False
             newProps["SupportsStatusRequest"] = False
-            dev.replacePluginPropsOnServer(newProps)
 
             address = u"{}:Group.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_GROUP])
+            newProps["address"] = address
+            dev.replacePluginPropsOnServer(newProps)
             self.groups[address] = dev
-            self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_LINKEDDEVICE:
         

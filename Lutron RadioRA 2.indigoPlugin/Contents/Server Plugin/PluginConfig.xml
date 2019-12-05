@@ -2,15 +2,28 @@
 <PluginConfig>
     <Field id="configDone" type="checkbox" defaultValue="false" hidden="true"/>
     <Field id="infoLabel1" type="label">
-        <Label>Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
+        <Label>Original Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
     </Field>
     <Field id="infoLabel2" type="label">
-        <Label>IP connectivity portions by Sylvain Beaudry and vic13.</Label>
+        <Label>Original IP connectivity portions by Sylvain Beaudry and vic13.</Label>
     </Field>
     <Field id="infoLabel3" type="label">
-        <Label>Enhancements by Joe Keenan (FlyingDiver).</Label>
+        <Label>Enhancements and maintenance by Joe Keenan (FlyingDiver).</Label>
     </Field>
     <Field id="simpleSeparator1" type="separator"/>
+    <Field id="click_delay" type="textField" defaultValue="1.0">
+        <Label>Click Delay:</Label>
+    </Field>
+    <Field id="click_delay_note" type="label" fontSize="small" fontColor="darkgray">
+        <Label>Allowable delay between keypresses for First/Second/Third type triggers.</Label>
+    </Field>
+    <Field id="click_timeout" type="textField" defaultValue="0.5">
+        <Label>Click Timeout:</Label>
+    </Field>
+    <Field id="click_timeout_note" type="label" fontSize="small" fontColor="darkgray">
+        <Label>Timeout after keypress(s) for Single/Double/Triple type triggers.</Label>
+    </Field>
+    <Field id="simpleSeparator2" type="separator"/>
     <Field id="logLevel" type="menu" defaultValue="30">
         <Label>Event Logging Level:</Label>
         <List>
