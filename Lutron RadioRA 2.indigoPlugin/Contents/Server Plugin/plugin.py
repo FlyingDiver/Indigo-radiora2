@@ -1862,8 +1862,8 @@ class Plugin(indigo.PluginBase):
 
         fanSpeed =  pluginAction.props["fanSpeed"]
         sendCmd = "#OUTPUT,{},1,{}".format(dev.address, fanSpeed)
-        self.logger.debug(u"{}: Sending set fan speed {} to {}".format(dev.name, fanSpeed, gateway))
         self._sendCommand(sendCmd, gateway)
+        self.logger.debug(u"{}: Set fan speed {} to {}".format(dev.name, fanSpeed, gateway))
 
     def fadeDimmer(self, pluginAction, dev):
 
@@ -1875,13 +1875,13 @@ class Plugin(indigo.PluginBase):
 
         m, s = divmod(int(fadeTime), 60)
         sendCmd = ("#OUTPUT,{},1,{},{:02}:{:02}".format(zone, brightness, m, s))
-        self.logger.info(u"{}: Set brightness to {} with fade {}".format(dimmerDevice.name, brightness, fadeTime))
         self._sendCommand(sendCmd)
+        self.logger.info(u"{}: Set brightness to {} with fade {}".format(dev.name, brightness, fadeTime))
 
     def startRaising(self, pluginAction, shadeDevice):
         sendCmd = ("#OUTPUT," + zone + ",1," + str(brightness) + "," + str(fadeTime))
-        self.logger.debug(u"{}: Sending set brightness {} with fade {} to {}".format(dev.name, brightness, fadeTime, gateway))
         self._sendCommand(sendCmd, gateway)
+        self.logger.debug(u"{}: Set brightness {} with fade {} to {}".format(dev.name, brightness, fadeTime, gateway))
 
     def startRaising(self, pluginAction, dev):
 
@@ -1890,8 +1890,8 @@ class Plugin(indigo.PluginBase):
         zone = shadeDevice.address
 
         sendCmd = ("#OUTPUT," + zone + ",2")
-        self.logger.info(u"{}: Start Raising".format(dev.name))
         self._sendCommand(sendCmd, gateway)
+        self.logger.info(u"{}: Start Raising".format(dev.name))
 
     def startLowering(self, pluginAction, dev):
 
@@ -1900,8 +1900,8 @@ class Plugin(indigo.PluginBase):
         zone = shadeDevice.address
 
         sendCmd = ("#OUTPUT," + zone + ",3")
-        self.logger.info(u"{}: Start Lowering".format(dev.name))
         self._sendCommand(sendCmd, gateway)
+        self.logger.info(u"{}: Start Lowering".format(dev.name))
 
     def stopRaiseLower(self, pluginAction, dev):
 
@@ -1910,15 +1910,15 @@ class Plugin(indigo.PluginBase):
         zone = dev.address
 
         sendCmd = ("#OUTPUT," + zone + ",4")
-        self.logger.info(u"{}: Stop Raising/Lowering".format(dev.name))
         self._sendCommand(sendCmd, gateway)
+        self.logger.info(u"{}: Stop Raising/Lowering".format(dev.name))
 
     def sendRawCommand(self, pluginAction):
 
         gateway = pluginAction.pluginProps['gateway']
         sendCmd =  indigo.activePlugin.substitute(pluginAction.props["commandString"])
-        self.logger.debug(u"Sending Raw Command: '{}'".formatsendCmd)
         self._sendCommand(sendCmd, gateway)
+        self.logger.debug(u"Sent Raw Command: '{}'".formatsendCmd)
         
     ########################################
 
