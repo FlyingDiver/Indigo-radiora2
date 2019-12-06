@@ -1878,11 +1878,6 @@ class Plugin(indigo.PluginBase):
         self._sendCommand(sendCmd)
         self.logger.info(u"{}: Set brightness to {} with fade {}".format(dev.name, brightness, fadeTime))
 
-    def startRaising(self, pluginAction, shadeDevice):
-        sendCmd = ("#OUTPUT," + zone + ",1," + str(brightness) + "," + str(fadeTime))
-        self._sendCommand(sendCmd, gateway)
-        self.logger.debug(u"{}: Set brightness {} with fade {} to {}".format(dev.name, brightness, fadeTime, gateway))
-
     def startRaising(self, pluginAction, dev):
 
         gateway = dev.pluginProps['gateway']
