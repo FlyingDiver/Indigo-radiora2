@@ -1875,14 +1875,13 @@ class Plugin(indigo.PluginBase):
 
         m, s = divmod(int(fadeTime), 60)
         sendCmd = ("#OUTPUT,{},1,{},{:02}:{:02}".format(zone, brightness, m, s))
-        self._sendCommand(sendCmd)
+        self._sendCommand(sendCmd, gateway)
         self.logger.info(u"{}: Set brightness to {} with fade {}".format(dev.name, brightness, fadeTime))
 
     def startRaising(self, pluginAction, dev):
 
         gateway = dev.pluginProps['gateway']
-
-        zone = shadeDevice.address
+        zone = dev.address
 
         sendCmd = ("#OUTPUT," + zone + ",2")
         self._sendCommand(sendCmd, gateway)
@@ -1891,8 +1890,7 @@ class Plugin(indigo.PluginBase):
     def startLowering(self, pluginAction, dev):
 
         gateway = dev.pluginProps['gateway']
-
-        zone = shadeDevice.address
+        zone = dev.address
 
         sendCmd = ("#OUTPUT," + zone + ",3")
         self._sendCommand(sendCmd, gateway)
@@ -1901,7 +1899,6 @@ class Plugin(indigo.PluginBase):
     def stopRaiseLower(self, pluginAction, dev):
 
         gateway = dev.pluginProps['gateway']
-
         zone = dev.address
 
         sendCmd = ("#OUTPUT," + zone + ",4")
