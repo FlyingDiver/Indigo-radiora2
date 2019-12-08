@@ -703,7 +703,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.phantomButtons[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_DIMMER:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -717,7 +718,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.dimmers[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_SHADE:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -731,8 +733,9 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.shades[address] = dev
-            self.update_plugin_property(dev, "address", address)
-            dev.updateStateImageOnServer( indigo.kStateImageSel.None)
+            dev.updateStateImageOnServer(indigo.kStateImageSel.None)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_SWITCH:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -746,7 +749,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.switches[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_FAN:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -760,7 +764,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.fans[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_THERMO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -774,7 +779,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.thermos[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_KEYPAD:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -796,12 +802,13 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
-            self.update_plugin_property(dev, "address", address)
+            self.keypads[address] = dev
             if int(dev.pluginProps[PROP_COMPONENT_ID]) > 80:
                 self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
             else:
                 self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = False)
-            self.keypads[address] = dev
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_SENSOR:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -815,7 +822,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.sensors[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_CCI:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -834,7 +842,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.ccis[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_CCO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -848,13 +857,13 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
             self.ccos[address] = dev
-            self.update_plugin_property(dev, "address", address)
-
             ccoType = dev.pluginProps[PROP_CCO_TYPE]
             if ccoType == "momentary":
                 dev.updateStateOnServer(ONOFF, False)
             else:
                 self.update_plugin_property(dev, PROP_SUPPORTS_STATUS_REQUEST, new_value = True)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
             
         elif dev.deviceTypeId == DEV_PICO:
             if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
@@ -877,7 +886,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
             self.picos[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_TIMECLOCKEVENT:
 
@@ -887,7 +897,8 @@ class Plugin(indigo.PluginBase):
 
             address = u"{}:Event.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_EVENT])
             self.events[address] = dev
-            self.update_plugin_property(dev, "address", address)
+            if dev.address != address:
+                self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_GROUP:
 
