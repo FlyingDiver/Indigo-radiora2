@@ -1858,59 +1858,61 @@ class Plugin(indigo.PluginBase):
 
     def setFanSpeed(self, pluginAction, dev):
 
-        gateway = dev.pluginProps['gateway']
-
+        gateway = dev.pluginProps[PROP_GATEWAY]
+        integrationID = dev.pluginProps[PROP_INTEGRATION_ID]
+        
         fanSpeed =  pluginAction.props["fanSpeed"]
-        sendCmd = "#OUTPUT,{},1,{}".format(dev.address, fanSpeed)
+        sendCmd = "#OUTPUT,{},1,{}".format(integrationID, fanSpeed)
         self._sendCommand(sendCmd, gateway)
         self.logger.debug(u"{}: Set fan speed {} to {}".format(dev.name, fanSpeed, gateway))
 
     def fadeDimmer(self, pluginAction, dev):
 
-        gateway = dev.pluginProps['gateway']
+        gateway = dev.pluginProps[PROP_GATEWAY]
+        integrationID = dev.pluginProps[PROP_INTEGRATION_ID]
 
         brightness =  indigo.activePlugin.substitute(pluginAction.props["brightness"])
         fadeTime =  indigo.activePlugin.substitute(pluginAction.props["fadeTime"])
-        zone = dev.address
 
         m, s = divmod(int(fadeTime), 60)
-        sendCmd = ("#OUTPUT,{},1,{},{:02}:{:02}".format(zone, brightness, m, s))
+        sendCmd = ("#OUTPUT,{},1,{},{:02}:{:02}".format(integrationID, brightness, m, s))
         self._sendCommand(sendCmd, gateway)
         self.logger.info(u"{}: Set brightness to {} with fade {}".format(dev.name, brightness, fadeTime))
 
     def startRaising(self, pluginAction, dev):
 
-        gateway = dev.pluginProps['gateway']
-        zone = dev.address
+        gateway = dev.pluginProps[PROP_GATEWAY]
+        integrationID = dev.pluginProps[PROP_INTEGRATION_ID]
 
-        sendCmd = ("#OUTPUT," + zone + ",2")
+        sendCmd = ("#OUTPUT," + integrationID + ",2")
         self._sendCommand(sendCmd, gateway)
         self.logger.info(u"{}: Start Raising".format(dev.name))
 
     def startLowering(self, pluginAction, dev):
 
-        gateway = dev.pluginProps['gateway']
-        zone = dev.address
+        gateway = dev.pluginProps[PROP_GATEWAY]
+        integrationID = dev.pluginProps[PROP_INTEGRATION_ID]
 
-        sendCmd = ("#OUTPUT," + zone + ",3")
+        sendCmd = ("#OUTPUT," + integrationID + ",3")
         self._sendCommand(sendCmd, gateway)
         self.logger.info(u"{}: Start Lowering".format(dev.name))
 
     def stopRaiseLower(self, pluginAction, dev):
 
-        gateway = dev.pluginProps['gateway']
-        zone = dev.address
+        gateway = dev.pluginProps[PROP_GATEWAY]
+        integrationID = dev.pluginProps[PROP_INTEGRATION_ID]
 
-        sendCmd = ("#OUTPUT," + zone + ",4")
+        sendCmd = ("#OUTPUT," + integrationID + ",4")
         self._sendCommand(sendCmd, gateway)
         self.logger.info(u"{}: Stop Raising/Lowering".format(dev.name))
 
     def sendRawCommand(self, pluginAction):
 
-        gateway = pluginAction.pluginProps['gateway']
+        gateway = pluginAction.props[PROP_GATEWAY]
         sendCmd =  indigo.activePlugin.substitute(pluginAction.props["commandString"])
+        
         self._sendCommand(sendCmd, gateway)
-        self.logger.debug(u"Sent Raw Command: '{}'".formatsendCmd)
+        self.logger.debug(u"Sent Raw Command: '{}' to gateway {}".format(sendCmd, gateway))
         
     ########################################
 
