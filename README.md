@@ -1,11 +1,13 @@
-# Lutron RadioRA 2 / Caséta Plugin
-Indigo plugin for Lutron RadioRa 2 and  Caséta
+# Lutron RadioRA 2 / Homeworks QS / Caséta Plugin
+Indigo plugin for Lutron systems, including RadioRa 2 , RRa2 Select, Homeworks QS, and  Caséta
 
 ## Requirements
 
 1. For RadioRa2, a Main Repeater (RR-MAIN-REP-WH) with ethernet or serial connection to the Indigo server.
 
 2. For RadioRa2 Select, a Main Repeater (RR-SEL-REP2) with ethernet.
+
+3. For Homeworks QS, a HQP6-1 or HQP6-2 Processor.
 
 3. For Caséta, a Wireless Smart Bridge Pro (L-BDGPRO2) with ethernet.
 
@@ -16,7 +18,7 @@ Indigo plugin for Lutron RadioRa 2 and  Caséta
 
 2. For RadioRa 2, you can connect to the main repeater either via Ethernet or a Serial using a USB to serial adapter.
 
-3. For Caséta or RadioRa2 Select, only Ethernet is supported.
+3. For Homeworks QS, Caséta, or RadioRa2 Select, only Ethernet is supported.
 
 4. The initial configuration dialog will prompt you to specify a serial port or IP connection. If you check the option for IP, you must enter a valid username and password. For Caseta systems, this is the telnet login, not the login you use for the Caseta app.  Foe Caseta, be sure to enable telnet support in the Advanced settings in the mobile app.
 
@@ -26,7 +28,7 @@ Indigo plugin for Lutron RadioRa 2 and  Caséta
 
 ## Usage
 
-1. Starting with version 7.2.0, this Plugin will automatically created Indigo devices to match your existing RadioRa2 and Caséta installation.  See the Wiki for more details.  This works for switches, dimmers, keypads, motion sensors, VCRX, and HVAC interfaces.
+1. Starting with version 7.2.0, this Plugin will automatically created Indigo devices to match your existing Lutron installation.  See the Wiki for more details.  This works for switches, dimmers, keypads, motion sensors, VCRX, and HVAC interfaces.
 
 2. The Plugin will also create Indigo Devices to represent Room Groups and Timeclock Events.  You can also have it automatically create Triggers for these devices.
 
