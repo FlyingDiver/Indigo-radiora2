@@ -2526,7 +2526,7 @@ class Plugin(indigo.PluginBase):
                     # Create a Group (Room) device for every room that has a motion sensors
                     
                     name = u"Group {:03} - {}".format( int(room.attrib['IntegrationID']), room.attrib['Name'])
-                    address = gatewayID + ":" + room.attrib['IntegrationID']
+                    address = gatewayID + ":Group." + room.attrib['IntegrationID']
                     props = {
                         PROP_GATEWAY: gatewayID,
                         'group': room.attrib['IntegrationID'] 
