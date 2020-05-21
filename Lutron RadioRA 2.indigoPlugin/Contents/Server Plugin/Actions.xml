@@ -49,6 +49,11 @@
         <Name>Send Raw Command</Name>
         <CallbackMethod>sendRawCommand</CallbackMethod>
         <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
             <Field id="commandString" type="textfield" >
                 <Label>Command String:</Label>
             </Field>

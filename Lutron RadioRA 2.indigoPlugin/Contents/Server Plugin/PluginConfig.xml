@@ -2,29 +2,26 @@
 <PluginConfig>
     <Field id="configDone" type="checkbox" defaultValue="false" hidden="true"/>
     <Field id="infoLabel1" type="label">
-        <Label>Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
+        <Label>Original Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
     </Field>
     <Field id="infoLabel2" type="label">
-        <Label>IP connectivity portions by Sylvain Beaudry and vic13.</Label>
+        <Label>Original IP connectivity portions by Sylvain Beaudry and vic13.</Label>
     </Field>
     <Field id="infoLabel3" type="label">
-        <Label>Enhancements by Joe Keenan (FlyingDiver).</Label>
+        <Label>Enhancements and maintenance by Joe Keenan (FlyingDiver).</Label>
     </Field>
     <Field id="simpleSeparator1" type="separator"/>
-    <Field type="checkbox" id="IP" defaultValue="false">
-        <Label>Enable IP communications (Checked = IP; Unchecked = Serial)</Label>
+    <Field id="click_delay" type="textField" defaultValue="1.0">
+        <Label>Click Delay:</Label>
     </Field>
-    <Field id="ip_address" type="textfield"  defaultValue="" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP address of Lutron gateway.">
-        <Label>IP Address or Hostname:</Label>
+    <Field id="click_delay_note" type="label" fontSize="small" fontColor="darkgray">
+        <Label>Allowable delay between keypresses for First/Second/Third type triggers.</Label>
     </Field>
-    <Field id="ip_port" type="textfield" defaultValue="23" visibleBindingId="IP" visibleBindingValue="true" tooltip="Port number for Lutron gateway.">
-        <Label>Port:</Label>
+    <Field id="click_timeout" type="textField" defaultValue="0.5">
+        <Label>Click Timeout:</Label>
     </Field>
-    <Field id="ip_username" type="textfield" defaultValue="lutron" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP User Name for Lutron gateway.">
-        <Label>Username:</Label>
-    </Field>
-    <Field id="ip_password" type="textfield" defaultValue="integration" visibleBindingId="IP" visibleBindingValue="true" tooltip="Enter IP Password for Lutron gateway.">
-        <Label>Password:</Label>
+    <Field id="click_timeout_note" type="label" fontSize="small" fontColor="darkgray">
+        <Label>Timeout after keypress(s) for Single/Double/Triple type triggers.</Label>
     </Field>
     <Field id="simpleSeparator2" type="separator"/>
     <Field id="logLevel" type="menu" defaultValue="30">
@@ -38,8 +35,6 @@
         </List>
     </Field>            
     <Field type="checkbox" id="queryAtStartup" defaultValue="false">
-        <Label>Send status request for all devices at startup:</Label>
+        <Label>Request status for all devices at startup:</Label>
     </Field>
-    <Field id="simpleSeparator3" type="separator"/>
-    <Field type="serialport" id="devicePort"/>
 </PluginConfig>

@@ -60,6 +60,12 @@
 				<Label>Warning:  This procedure creates new devices and makes changes to your existing devices.  Backing up your Indigo database before proceeding is highly recommended!</Label>
 			</Field>
     		<Field id="separator0" type="separator" />
+            <Field id="gateway" type="menu">
+                <Label>RadioRa2 Repeater:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+    		<Field id="separator1" type="separator" />
 			<Field id="group_by" type="menu" defaultValue="Type">
 				<Label>Group New Devices By:</Label>
 				<List>
@@ -83,13 +89,16 @@
 			<Field id="create_group_triggers" type="checkbox" defaultValue="false">
 				<Label>Create Triggers for all Room Groups:</Label>
 			</Field>            
-			<Field type="checkbox" id="showDeveloper" defaultValue="false">
-        		<Label>Show Developer Options:</Label>
+    		<Field id="separator2" type="separator" />
+			<Field id="local_note" type="label">
+				<Label>To use an existing XML file instead of downloading the XML data from the repeater, check this box and enter the path/name of the file. 
+You MUST have a repeater selected above.
+This is the only way to auto-create devices for serial-connected repeaters.</Label>
 			</Field>
-			<Field id="use_local" type="checkbox" defaultValue="false" visibleBindingId="showDeveloper" visibleBindingValue="true">
+			<Field id="use_local" type="checkbox" defaultValue="false">
 				<Label>Use XML file:</Label>
 			</Field>            
-			<Field id="xmlFileName" type="textfield" defaultValue="~/DbXmlInfo.xml" visibleBindingId="showDeveloper" visibleBindingValue="true">
+			<Field id="xmlFileName" type="textfield" defaultValue="~/DbXmlInfo.xml">
 				<Label>File Name:</Label>
 			</Field>            
         </ConfigUI>
@@ -106,6 +115,12 @@
 				<Label>Generate a Lutron Integration Report using the Advanced Settings in the mobile application.  Copy and paste the body of the emailed report into the text field below.</Label>
 			</Field>
     		<Field id="separator0" type="separator" />
+            <Field id="gateway" type="menu">
+                <Label>Smart Bridge Pro Hub:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+    		<Field id="separator1" type="separator" />
 			<Field id="group_by" type="menu" defaultValue="Type">
 				<Label>Group New Devices By:</Label>
 				<List>
