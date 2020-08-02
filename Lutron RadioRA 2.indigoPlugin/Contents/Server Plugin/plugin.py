@@ -341,7 +341,7 @@ class Plugin(indigo.PluginBase):
     def startup(self):
         self.logger.info(u"Starting up Lutron")
 
-        savedList = indigo.activePlugin.pluginPrefs.get(u"linkedDevices", None)
+        savedList = self.pluginPrefs.get(u"linkedDevices", None)
         if savedList:
             self.linkedDeviceList = json.loads(savedList)
             self.logLinkedDevices()
@@ -358,17 +358,17 @@ class Plugin(indigo.PluginBase):
         # convert to device-based gateways
         ################################################################################
     
-        converted = indigo.activePlugin.pluginPrefs.get(u"Converted", False)
+        converted = self.pluginPrefs.get(u"Converted", False)
         if converted:
 
             self.logger.debug("Previously converted, default gateway ID = {}".format(converted))
             self.defaultGateway = int(converted)            
 
-        else:
+        elif self.pluginPrefs.get(u"IP", None) or self.pluginPrefs.get(u"serialPort_uiAddress", None):
+            
             self.logger.info("Converting to multiple gateway system")
 
-            IP = indigo.activePlugin.pluginPrefs.get(u"IP", "None")
-            if IP:
+            if  self.pluginPrefs.get(u"IP", None):
                 address = "{}:{}".format(self.pluginPrefs["ip_address"], self.pluginPrefs["ip_port"])
                 name = "Lutron IP Gateway"
                 props = {
@@ -406,8 +406,9 @@ class Plugin(indigo.PluginBase):
                 self.logger.info("Serial Gateway device complete")
                     
             self.defaultGateway = newDevice.id            
-            indigo.activePlugin.pluginPrefs[u"Converted"] = str(self.defaultGateway)
-            indigo.activePlugin.savePluginPrefs()
+            self.pluginPrefs[u"Converted"] = str(self.defaultGateway)
+            self.savePluginPrefs()
+                    
             
     def shutdown(self):
         self.logger.info(u"Shutting down Lutron")
