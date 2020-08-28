@@ -187,8 +187,8 @@ class IPGateway:
         except Exception, e:
             self.logger.warning(u"{}: Error sending IP command, resetting connection:  {}".format(self.dev.name, e.message))
             self.connected = False
-            self.dev.updateStateOnServer(key="status", value="Connected")
-            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+            self.dev.updateStateOnServer(key="status", value="Disconnected")
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOff)
             try:
                 self.connIP.close()
             except:
