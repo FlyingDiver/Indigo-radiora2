@@ -107,6 +107,10 @@ class IPGateway:
             self.logger.error(u"{}: Unable to connect to Lutron gateway. Timed out.".format(self.dev.name))
             self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
             return
+        except Exception, e:
+            self.logger.warning(u"{}: Error connecting to Telnet socket: {}".format(self.dev.name, e.message))
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            return
                     
         txt = self.connIP.read_until(" ", self.timeout)
         self.logger.debug(u"{}: self.connIP.read: {}".format(self.dev.name, txt))
