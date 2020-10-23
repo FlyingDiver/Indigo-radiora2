@@ -159,11 +159,16 @@ class IPGateway:
             input = self.connIP.read_eager()            
         except EOFError, e:
             self.logger.error(u"{}: EOFError: {}".format(self.dev.name, e.message))
-            if ('telnet connection closed' in e.message):
-                self.connected = False
-                self.dev.updateStateOnServer(key="status", value="Disconnected")
-                self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
-                return None
+            self.connected = False
+            self.dev.updateStateOnServer(key="status", value="Disconnected")
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            return None
+        except Exception, e:
+            self.logger.error(u"{}: Unknown Error: {}".format(self.dev.name, e.message))
+            self.connected = False
+            self.dev.updateStateOnServer(key="status", value="Disconnected")
+            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            return None
                 
         if len(input):
             self.logger.threaddebug(u"{}: {} characters read:\n{}".format(self.dev.name, len(input), input))
@@ -1915,6 +1920,7 @@ class Plugin(indigo.PluginBase):
 
     ########################################
     # Plugin Actions object callbacks (pluginAction is an Indigo plugin action instance)
+    ########################################
 
     def setFanSpeed(self, pluginAction, dev):
 
