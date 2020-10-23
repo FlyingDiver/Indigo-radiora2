@@ -333,7 +333,7 @@ class Plugin(indigo.PluginBase):
         self.picos = {}
         self.events = {}
         self.groups = {}
-        self.roomButtonTree = {}
+        self.roomList = []
                 
         self.eventTriggers = { }
         self.groupTriggers = { }
@@ -813,7 +813,7 @@ class Plugin(indigo.PluginBase):
                 self.logger.info(u"{}: Added Gateway property".format(dev.name))
 
             address = u"{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
-            self.keypads[address] = dev
+            self.keypads[address] = dev.id
             if int(dev.pluginProps[PROP_COMPONENT_ID]) > 80:
                 self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value = dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
             else:
@@ -948,19 +948,14 @@ class Plugin(indigo.PluginBase):
         else:
             self.logger.error(u"{}: deviceStartComm: Unknown device type: {}".format(dev.name, dev.deviceTypeId))
             return
+
+        # Make sure we have a complete list of rooms that have button devices in them
         
-        if (dev.pluginProps.get(PROP_ISBUTTON, None)):      # it's a button, so put it in the tree
-            try:
-                roomName = dev.pluginProps[PROP_ROOM]
-            except:
-                roomName = u"Unknown"
-            try:
-                room = self.roomButtonTree[roomName]
-            except:
-                room = {}
-                self.roomButtonTree[roomName] = room
-            self.roomButtonTree[roomName][dev.id] = dev.name
-        
+        if (dev.pluginProps.get(PROP_ISBUTTON, None)):
+            roomName = dev.pluginProps.get(PROP_ROOM, u"Unknown")
+            if roomName not in self.roomList:
+                self.roomList.append(roomName)
+
         dev.stateListOrDisplayStateIdChanged()
 
     def deviceStopComm(self, dev):
@@ -1262,7 +1257,7 @@ class Plugin(indigo.PluginBase):
 
         if keypadid in self.keypads:
             self.logger.debug(u"Received a keypad button/LED status message: " + cmd)
-            dev = self.keypads[keypadid]
+            dev = indigo.devices[self.keypads[keypadid]]
             if status == '0':
                 dev.updateStateOnServer(ONOFF, False)
             elif status == '1':
@@ -1272,7 +1267,7 @@ class Plugin(indigo.PluginBase):
             
                 keypadid = "{}:{}.{}".format(gatewayID, id, int(button)-80)  # Convert LED ID to button ID
                 if keypadid in self.keypads:
-                    keypad = self.keypads[keypadid]
+                    keypad = indigo.devices[self.keypads[keypadid]]
                     self.logger.debug(u"Updating button status with state of LED ({}) for keypadID {}".format(status, keypadid))
                     if status == '0':
                         keypad.updateStateOnServer(ONOFF, False)
@@ -2018,7 +2013,7 @@ class Plugin(indigo.PluginBase):
     def roomListGenerator(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         self.logger.threaddebug(u"roomListGenerator, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         retList = []
-        for room in self.roomButtonTree:
+        for room in self.roomList:
             self.logger.threaddebug(u"roomListGenerator adding: {} {}".format(room, room))         
             retList.append((room, room))
         
@@ -2034,10 +2029,12 @@ class Plugin(indigo.PluginBase):
             return retList
         if len(room) == 0:
             return retList
-            
-        for buttonId in self.roomButtonTree[room]:
-            self.logger.threaddebug(u"pickKeypadButton adding: {} ({})".format(buttonId, self.roomButtonTree[room][buttonId]))         
-            retList.append((buttonId, self.roomButtonTree[room][buttonId]))
+
+        for buttonId, devID in self.keypads.iteritems():
+            buttonDev = indigo.devices[devID]
+            if buttonDev.pluginProps.get(PROP_ISBUTTON, None) and (buttonDev.pluginProps.get(PROP_ROOM, None) == room):
+                self.logger.threaddebug(u"pickKeypadButton adding: {} ({})".format(buttonId, buttonDev.name))         
+                retList.append((buttonId, buttonDev.name))
          
         retList.sort(key=lambda tup: tup[1])
         return retList
