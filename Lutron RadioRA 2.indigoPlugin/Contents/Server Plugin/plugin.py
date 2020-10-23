@@ -1102,6 +1102,8 @@ class Plugin(indigo.PluginBase):
                 self._cmdHvacChange(cmd, gatewayID)
             elif "~GROUP" in cmd:
                 self._cmdGroup(cmd, gatewayID)
+            elif "~SHADEGRP" in cmd:
+                self._cmdShadeGroup(cmd, gatewayID)
             elif "~TIMECLOCK" in cmd:
                 self._cmdTimeClock(cmd, gatewayID)
             elif "~MONITORING" in cmd:
@@ -1318,7 +1320,7 @@ class Plugin(indigo.PluginBase):
         battery = (cmdArray[5] == "1")
         batteryLow = (cmdArray[6] == "2")
         
-        self.logger.threaddebug(u"Received a Battery update: {}, battery = {}, batteryLow = {}".format(id, battery, batteryLow))
+        self.logger.threaddebug(u"Received a Battery update, IntergrationID = {}, battery = {}, batteryLow = {}".format(id, battery, batteryLow))
         if not battery:    # External power
             return
             
@@ -1394,6 +1396,10 @@ class Plugin(indigo.PluginBase):
             group.updateStateOnServer(ONOFF, True)
         elif cmdArray[3] == "4":
             group.updateStateOnServer(ONOFF, False)
+
+    def _cmdShadeGroup(self, cmd, gatewayID):
+        self.logger.debug(u"Received a Shade Group message:  {}".format(cmd))
+
 
     ########################################
     # Relay / Dimmer / Shade / CCO / CCI Action callback
@@ -2592,7 +2598,7 @@ class Plugin(indigo.PluginBase):
                     
                     # Create a Group (Room) device for every room that has a motion sensors
                     
-                    name = u"Group {:03} - {}".format( int(room.attrib['IntegrationID']), room.attrib['Name'])
+                    name = u"Room Group {:03} - {}".format( int(room.attrib['IntegrationID']), room.attrib['Name'])
                     address = gatewayID + ":Group." + room.attrib['IntegrationID']
                     props = {
                         PROP_GATEWAY: gatewayID,
@@ -2602,7 +2608,7 @@ class Plugin(indigo.PluginBase):
                         self.createLutronDevice(DEV_GROUP, name, address, props, room.attrib['Name'])
                    
                     if self.create_group_triggers:
-                        self.logger.debug("Creating Group triggers for: {} ({})".format(name, address))
+                        self.logger.debug("Creating Room Group triggers for: {} ({})".format(name, address))
 
                         if "Lutron" in indigo.triggers.folders:
                             theFolder = indigo.triggers.folders["Lutron"].id
@@ -2617,11 +2623,11 @@ class Plugin(indigo.PluginBase):
                                 break
 
                         if trigger_exists:
-                            self.logger.debug("Skipping existing group trigger: {}, {}".format(trigger.pluginProps[PROP_GROUP], trigger.pluginProps["occupancyPopUp"]))
+                            self.logger.debug("Skipping existing room group trigger: {}, {}".format(trigger.pluginProps[PROP_GROUP], trigger.pluginProps["occupancyPopUp"]))
                 
                         else:
                             triggerName = u"{} Occupied".format(name)
-                            self.logger.info("Creating groupEvent trigger: '{}' ({})".format(triggerName, address))
+                            self.logger.info("Creating Room Group Event trigger: '{}' ({})".format(triggerName, address))
                             indigo.pluginEvent.create(name=triggerName, 
                                 description="", 
                                 folder=theFolder,
@@ -2637,11 +2643,11 @@ class Plugin(indigo.PluginBase):
                                 break
 
                         if trigger_exists:
-                            self.logger.debug("Skipping existing group trigger: {}, {}".format(trigger.pluginProps[PROP_GROUP], trigger.pluginProps["occupancyPopUp"]))
+                            self.logger.debug("Skipping existing room group trigger: {}, {}".format(trigger.pluginProps[PROP_GROUP], trigger.pluginProps["occupancyPopUp"]))
                 
                         else:
                             triggerName = u"{} Unoccupied".format(name)
-                            self.logger.info("Creating groupEvent trigger: '{}' ({})".format(triggerName, address))
+                            self.logger.info("Creating Room Group Event trigger: '{}' ({})".format(triggerName, address))
                             indigo.pluginEvent.create(name=triggerName, 
                                 description="", 
                                 folder=theFolder,
