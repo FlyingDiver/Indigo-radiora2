@@ -53,6 +53,7 @@ PROP_SUPPORTS_STATUS_REQUEST = "SupportsStatusRequest"
 PROP_BUTTONTYPE = "ButtonType"
 PROP_OUTPUTTYPE = "OutputType"
 PROP_LASTSPEED = "LastSpeed"
+PROP_SUPPORTS_BATTERY = "SupportsBatteryLevel"
 
 # device state keys
 ACTUALSPEED = "ActualSpeed"
@@ -1225,7 +1226,12 @@ class Plugin(indigo.PluginBase):
         id = cmdArray[1]
         button = cmdArray[2]
         action = cmdArray[3]
-        if action == '2':               # this is a motion sensor
+
+        if action == '22':              # battery status report
+            self._doBatteryUpdate(gatewayID, cmdArray)
+            return
+            
+        elif action == '2':               # this is a motion sensor
             if cmdArray[4] == '3':
                 status = '1'
             elif cmdArray[4] == '4':
@@ -1238,7 +1244,6 @@ class Plugin(indigo.PluginBase):
             status = cmdArray[4]
 
         keypadid = "{}:{}.{}".format(gatewayID, id, button)
-
 
         if keypadid in self.phantomButtons:
             self.logger.debug(u"Received a phantom button status message: " + cmd)
@@ -1295,9 +1300,11 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer(ONOFF, True)
                 self.logger.info(u"Received: CCI {} {}".format(dev.name, "Closed"))
 
-        if id in self.sensors:
+        sensorid = "{}:{}".format(gatewayID, id)
+
+        if sensorid in self.sensors:
             self.logger.debug(u"Received a sensor status message: " + cmd)
-            dev = self.sensors[id]
+            dev = self.sensors[sensorid]
             if status == '0':
                 dev.updateStateOnServer(ONOFF, False)
                 self.logger.info(u"Received: Motion Sensor {} {}".format(dev.name, "vacancy detected"))
@@ -1305,6 +1312,37 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer(ONOFF, True)
                 self.logger.info(u"Received: Motion Sensor {} {}".format(dev.name, "motion detected"))
 
+    def _doBatteryUpdate(self, gatewayID, cmdArray):
+        id = cmdArray[1]
+        button = cmdArray[2]
+        battery = (cmdArray[5] == "1")
+        batteryLow = (cmdArray[6] == "2")
+        
+        self.logger.threaddebug(u"Received a Battery update: {}, battery = {}, batteryLow = {}".format(id, battery, batteryLow))
+        if not battery:    # External power
+            return
+            
+        devAddress = "{}:{}.{}".format(gatewayID, id, button)
+        if devAddress in self.picos:
+            device = self.picos[devAddress]
+
+        devAddress = "{}:{}".format(gatewayID, id)
+        if devAddress in self.sensors:
+            device = self.sensors[devAddress]
+        
+        devAddress = "{}:{}".format(gatewayID, id)
+        if devAddress in self.shades:
+            device = self.shades[devAddress]
+
+        if battery and not device.pluginProps.get(PROP_SUPPORTS_BATTERY, False):
+            self.update_plugin_property(device, PROP_SUPPORTS_BATTERY, True)
+        if batteryLow:
+            device.updateStateOnServer('batteryLevel', 10)
+        else:
+            device.updateStateOnServer('batteryLevel', 90)
+       
+      
+            
     # IP comm has not yet been tested with _cmdHvacChange().  Currently left as is -vic13
     def _cmdHvacChange(self, cmd, gatewayID):
         self.logger.debug(u"Received an HVAC message: " + cmd)
@@ -1929,6 +1967,30 @@ class Plugin(indigo.PluginBase):
         
         self._sendCommand(sendCmd, gateway)
         self.logger.debug(u"Sent Raw Command: '{}' to gateway {}".format(sendCmd, gateway))
+        
+    def getBatteryLevels(self, pluginAction):
+
+        gateway = pluginAction.props[PROP_GATEWAY]
+        self.logger.debug(u"Getting Battery Status for gateway {}".format(gateway))
+        
+        for sensorid in self.sensors:
+            device = self.sensors[sensorid]
+            integrationID = device.pluginProps[PROP_INTEGRATION_ID]
+            sendCmd = ("?DEVICE,{},1,22".format(integrationID))
+            self._sendCommand(sendCmd, gateway)
+
+        for shadeid in self.shades:
+            device = self.shades[shadeid]
+            integrationID = device.pluginProps[PROP_INTEGRATION_ID]
+            sendCmd = ("?DEVICE,{},1,22".format(integrationID))
+            self._sendCommand(sendCmd, gateway)
+
+        for buttonid in self.picos:
+            device = self.picos[buttonid]
+            integrationID = device.pluginProps[PROP_INTEGRATION_ID]
+            componentID = device.pluginProps[PROP_COMPONENT_ID]
+            sendCmd = ("?DEVICE,{},{},22".format(integrationID, componentID))
+            self._sendCommand(sendCmd, gateway)
         
     ########################################
 

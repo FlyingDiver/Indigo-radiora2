@@ -45,6 +45,17 @@
 		<Name>Stop Shade Raising/Lowering</Name>
 		<CallbackMethod>stopRaiseLower</CallbackMethod>
 	</Action>
+	<Action id="getBatteryLevels">
+		<Name>Poll Devices for Battery Status</Name>
+		<CallbackMethod>getBatteryLevels</CallbackMethod>
+        <ConfigUI>
+            <Field id="gateway" type="menu">
+                <Label>Gateway:</Label>
+                <List class="self" method="get_gateway_list" dynamicReload="true"/>
+                <CallbackMethod>menuChanged</CallbackMethod>
+            </Field>
+        </ConfigUI>
+	</Action>
     <Action id="sendRawCommand">
         <Name>Send Raw Command</Name>
         <CallbackMethod>sendRawCommand</CallbackMethod>
