@@ -2002,7 +2002,7 @@ class Plugin(indigo.PluginBase):
     ########################################
 
     def get_gateway_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        self.logger.threaddebug("get_gateway_list: typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
+        self.logger.threaddebug(u"get_gateway_list: typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
         gateways = [
             (gateway.dev.id, indigo.devices[gateway.dev.id].name)
             for gateway in self.gateways.values()
