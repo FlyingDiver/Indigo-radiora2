@@ -2324,7 +2324,7 @@ class Plugin(indigo.PluginBase):
             for output in room.findall('Outputs/Output'):
                 self.logger.debug("Output: {} ({}) {}".format(output.attrib['Name'], output.attrib['IntegrationID'], output.attrib['OutputType']))
 
-                if output.attrib['OutputType'] == "INC" or output.attrib['OutputType'] == "MLV" or output.attrib['OutputType'] == "AUTO_DETECT":
+                if output.attrib['OutputType'] in ["INC", "MLV", "ELV", "AUTO_DETECT"]:
                     address = gatewayID + ":" + output.attrib['IntegrationID']
                     name = u"{} - Dimmer {} - {}".format(room.attrib['Name'], output.attrib['IntegrationID'], output.attrib['Name'])
                     props = {
