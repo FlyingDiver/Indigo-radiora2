@@ -2,7 +2,7 @@
 <PluginConfig>
     <Field id="configDone" type="checkbox" defaultValue="false" hidden="true"/>
     <Field id="infoLabel1" type="label">
-        <Label>Original Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
+        <Label>Original Lutron RadioRA 2 / Caséta Plugin by Jim Lombardo.</Label>
     </Field>
     <Field id="infoLabel2" type="label">
         <Label>Original IP connectivity portions by Sylvain Beaudry and vic13.</Label>
