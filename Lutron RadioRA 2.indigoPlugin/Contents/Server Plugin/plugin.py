@@ -161,7 +161,8 @@ class IPGateway:
             self.start()
 
         try:
-            data = self.connIP.read_eager()
+            data = self.connIP.read_until(b'\n', 0.5)
+#            data = self.connIP.read_lazy()
         except EOFError as e:
             self.logger.error(f"{device.name}: EOFError: {e.message}")
             self.connected = False
@@ -2002,25 +2003,25 @@ class Plugin(indigo.PluginBase):
     ########################################
 
     def get_gateway_list(self, filter="", valuesDict=None, typeId="", targetId=0):
-        self.logger.threaddebug(u"get_gateway_list: typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
+        self.logger.threaddebug(f"get_gateway_list: typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
         gateways = [
-            (gateway.dev.id, indigo.devices[gateway.dev.id].name)
+            (gateway.devId, indigo.devices[gateway.devId].name)
             for gateway in self.gateways.values()
         ]
         return gateways
 
     def roomListGenerator(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        self.logger.threaddebug(u"roomListGenerator, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
+        self.logger.threaddebug(f"roomListGenerator, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
         retList = []
         for room in self.roomList:
-            self.logger.threaddebug(u"roomListGenerator adding: {} {}".format(room, room))
+            self.logger.threaddebug(f"roomListGenerator adding: {room} {room}")
             retList.append((room, room))
 
         retList.sort(key=lambda tup: tup[1])
         return retList
 
     def pickKeypadButton(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        self.logger.threaddebug(u"pickKeypadButton, typeId = {}, targetId = {}, valuesDict = {}".format(typeId, targetId, valuesDict))
+        self.logger.threaddebug(f"pickKeypadButton, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
         retList = []
         try:
             room = valuesDict["room"]
@@ -2251,24 +2252,22 @@ class Plugin(indigo.PluginBase):
 
         if bool(valuesDict["use_local"]):
             self.logger.info(
-                u"Creating Devices from file: %s, Grouping = %s, Create unprogrammed keypad buttons = %s, Create unprogrammed phantom buttons = %s" % \
-                (valuesDict["xmlFileName"], self.group_by, self.create_unused_keypad, self.create_unused_phantom))
+                f"Creating Devices from file: {valuesDict['xmlFileName']}, Grouping = {self.group_by}, Create unprogrammed keypad buttons = {self.create_unused_keypad}, Create unprogrammed phantom buttons = {self.create_unused_phantom}")
 
             xmlFile = os.path.expanduser(valuesDict["xmlFileName"])
             try:
                 root = ET.parse(xmlFile).getroot()
             except:
-                self.logger.error(u"Unable to parse XML file: {}".format(xmlFile))
+                self.logger.error(f"Unable to parse XML file: {xmlFile}")
                 self.threadLock.release()
                 return
 
-            self.logger.info(u"Creating Devices file read completed, parsing data...")
+            self.logger.info("Creating Devices file read completed, parsing data...")
 
         else:
 
             self.logger.info(
-                u"Creating RRA2 Devices from gateway {}, Grouping = {}, Create unprogrammed keypad buttons = {}, Create unprogrammed phantom buttons = {}".format(
-                    gatewayID, self.group_by, self.create_unused_keypad, self.create_unused_phantom))
+                f"Creating RRA2 Devices from gateway {gatewayID}, Grouping = {self.group_by}, Create unprogrammed keypad buttons = {self.create_unused_keypad}, Create unprogrammed phantom buttons = {self.create_unused_phantom}")
             self.logger.info(u"Creating Devices - starting data fetch...")
 
             try:
