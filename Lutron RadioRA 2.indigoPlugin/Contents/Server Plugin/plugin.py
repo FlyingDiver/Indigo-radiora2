@@ -723,7 +723,7 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
 
-            address = "{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
+            address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.dimmers[address] = dev
             if dev.address != address:
                 self.update_plugin_property(dev, "address", address)
@@ -754,7 +754,7 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
 
-            address = "{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
+            address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.switches[address] = dev
             if dev.address != address:
                 self.update_plugin_property(dev, "address", address)
@@ -784,7 +784,7 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
 
-            address = "{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
+            address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.thermos[address] = dev
             if dev.address != address:
                 self.update_plugin_property(dev, "address", address)
@@ -827,7 +827,7 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
 
-            address = "{}:{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID])
+            address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.sensors[address] = dev
             if dev.address != address:
                 self.update_plugin_property(dev, "address", address)
@@ -847,7 +847,7 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
 
-            address = "{}:{}.{}".format(dev.pluginProps[PROP_GATEWAY], dev.pluginProps[PROP_INTEGRATION_ID], dev.pluginProps[PROP_COMPONENT_ID])
+            address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}.{dev.pluginProps[PROP_COMPONENT_ID]}"
             self.ccis[address] = dev
             if dev.address != address:
                 self.update_plugin_property(dev, "address", address)
@@ -933,7 +933,7 @@ class Plugin(indigo.PluginBase):
             controlledDeviceId = int(dev.pluginProps["controlledDevice"])
             buttonAddress = dev.pluginProps["buttonAddress"]
 
-            linkID = "{}-{}".format(buttonDeviceId, controlledDeviceId)
+            linkID = f"{buttonDeviceId}-{controlledDeviceId}"
             linkItem = {"name": linkID, "buttonDevice": buttonDeviceId, "buttonLEDDevice": buttonLEDDeviceId, "controlledDevice": controlledDeviceId,
                         "buttonAddress": buttonAddress}
             self.logger.debug(f"Adding linkItem {linkID}: {linkItem}")
@@ -1260,9 +1260,12 @@ class Plugin(indigo.PluginBase):
             elif status == '1':
                 dev.updateStateOnServer(ONOFF, True)
 
-            if dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]:  # Also display this LED state on its corresponding button
+            self.logger.debug(f"PROP_KEYPADBUT_DISPLAY_LED_STATE = {dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]}")
+            self.logger.debug(f"bool() = {bool(dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])}")
+            
+            if bool(dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]):  # Also display this LED state on its corresponding button
 
-                keypadid = "{}:{}.{}".format(gatewayID, id, int(button) - 80)  # Convert LED ID to button ID
+                keypadid = f"{gatewayID}:{id}.{int(button) - 80}"  # Convert LED ID to button ID
                 if keypadid in self.keypads:
                     keypad = indigo.devices[self.keypads[keypadid]]
                     self.logger.debug(f"Updating button status with state of LED ({status}) for keypadID {keypadid}")
@@ -1298,7 +1301,7 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer(ONOFF, True)
                 self.logger.info(f"Received: CCI {dev.name} {'Closed'}")
 
-        sensorid = "{}:{}".format(gatewayID, id)
+        sensorid = f"{gatewayID}:{id}"
 
         if sensorid in self.sensors:
             self.logger.debug(f"Received a sensor status message: {cmd}")
@@ -2090,12 +2093,12 @@ class Plugin(indigo.PluginBase):
         parts = buttonAddress.split(".")
         deviceID = parts[0]
         componentID = parts[1]
-        buttonLEDAddress = "{}.{}".format(deviceID, int(componentID) + 80)
+        buttonLEDAddress = f"{deviceID}.{int(componentID) + 80}"
         try:
             buttonLEDDeviceId = unicode(self.keypads[buttonLEDAddress].id)
         except:
             buttonLEDDeviceId = "0"
-        linkID = "{}-{}".format(buttonDeviceId, controlledDeviceId)
+        linkID = f"{buttonDeviceId}-{controlledDeviceId}"
         if len(linkName) == 0:
             linkName = linkID
         linkItem = {"name": linkName, "buttonDevice": buttonDeviceId, "buttonLEDDevice": buttonLEDDeviceId, "controlledDevice": controlledDeviceId,
@@ -2112,7 +2115,7 @@ class Plugin(indigo.PluginBase):
     def deleteLinkedDevices(self, valuesDict, typeId=None, devId=None):
 
         for item in valuesDict["linkedDeviceList"]:
-            self.logger.info("deleting device {}".format(item))
+            self.logger.info(f"deleting device {item}")
             del self.linkedDeviceList[item]
 
         self.logLinkedDevices()
@@ -2292,7 +2295,7 @@ class Plugin(indigo.PluginBase):
                             if not self.create_unused_phantom and assignments == 0:
                                 continue
 
-                            name = "Phantom Button {:03}.{:03}".format(int(device.attrib['IntegrationID']), int(component.attrib['ComponentNumber']))
+                            name = f"Phantom Button {int(device.attrib['IntegrationID']):03}.{int(component.attrib['ComponentNumber']):03}"
                             try:
                                 engraving = component.find("Button").attrib['Engraving']
                                 name = name + " - " + engraving
@@ -2457,7 +2460,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID: device.attrib['IntegrationID'],
                                 PROP_COMPONENT_ID: component.attrib['ComponentNumber'],
-                                PROP_KEYPADBUT_DISPLAY_LED_STATE: "false",
+                                PROP_KEYPADBUT_DISPLAY_LED_STATE: "False",
                                 PROP_BUTTONTYPE: buttonType,
                                 PROP_ISBUTTON: "True"
                             }
@@ -2515,7 +2518,7 @@ class Plugin(indigo.PluginBase):
                                 PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID: device.attrib['IntegrationID'],
                                 PROP_COMPONENT_ID: component.attrib['ComponentNumber'],
-                                PROP_KEYPADBUT_DISPLAY_LED_STATE: "false",
+                                PROP_KEYPADBUT_DISPLAY_LED_STATE: "False",
                                 PROP_BUTTONTYPE: buttonType,
                                 PROP_ISBUTTON: "True"
                             }
