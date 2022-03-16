@@ -656,16 +656,16 @@ class Plugin(indigo.PluginBase):
 
     ####################
 
-    def update_plugin_property(self, obj, propertyname, new_value=""):
+    def update_plugin_property(self, obj, property_name, new_value):
         newProps = obj.pluginProps
-        newProps.update({propertyname: new_value})
+        newProps.update({property_name: new_value})
         obj.replacePluginPropsOnServer(newProps)
         self.sleep(0.01)
         return None
 
-    def remove_plugin_property(self, obj, propertyname):
+    def remove_plugin_property(self, obj, property_name):
         newProps = obj.pluginProps
-        del newProps[propertyname]
+        del newProps[property_name]
         obj.replacePluginPropsOnServer(newProps)
         self.sleep(0.01)
         return None
@@ -813,7 +813,7 @@ class Plugin(indigo.PluginBase):
             if int(dev.pluginProps[PROP_COMPONENT_ID]) > 80:
                 self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value=dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])
             else:
-                self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value="False")
+                self.update_plugin_property(dev, PROP_KEYPADBUT_DISPLAY_LED_STATE, new_value=False)
             if dev.address != address:
                 self.update_plugin_property(dev, "address", address)
 
@@ -1259,11 +1259,8 @@ class Plugin(indigo.PluginBase):
                 dev.updateStateOnServer(ONOFF, False)
             elif status == '1':
                 dev.updateStateOnServer(ONOFF, True)
-
-            self.logger.debug(f"PROP_KEYPADBUT_DISPLAY_LED_STATE = {dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]}")
-            self.logger.debug(f"bool() = {bool(dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE])}")
             
-            if bool(dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]):  # Also display this LED state on its corresponding button
+            if dev.pluginProps[PROP_KEYPADBUT_DISPLAY_LED_STATE]:  # Also display this LED state on its corresponding button
 
                 keypadid = f"{gatewayID}:{id}.{int(button) - 80}"  # Convert LED ID to button ID
                 if keypadid in self.keypads:
