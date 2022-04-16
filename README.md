@@ -1,6 +1,14 @@
 # Lutron RadioRA 2 / Homeworks QS / Caséta Plugin
 Indigo plugin for Lutron systems, including RadioRa 2 , RRa2 Select, Homeworks QS, and  Caséta
 
+| Requirement            |                     |   |
+|------------------------|---------------------|---|
+| Minimum Indigo Version | 2022.1              |   |
+| Python Library (API)   | Official            |   |
+| Requires Local Network | Optional            |   |
+| Requires Internet      | No                  |   |
+| Hardware Interface     | Optional Serial     |   |
+
 ## Requirements
 
 1. For RadioRa2, a Main Repeater (RR-MAIN-REP-WH) with ethernet or serial connection to the Indigo server.
