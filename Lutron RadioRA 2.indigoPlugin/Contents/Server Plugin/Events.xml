@@ -58,7 +58,7 @@
             </Field>
             <Field id="buttonID" type="menu">
                 <Label>Button:</Label>
-                <List class="self" filter="" method="pickKeypadButton"  dynamicReload="true"/>
+                <List class="self" filter="" method="pickButton"  dynamicReload="true"/>
             </Field>            
  		</ConfigUI>
 	</Event>
@@ -85,7 +85,7 @@
             </Field>
             <Field id="buttonID" type="menu">
                 <Label>Button:</Label>
-                <List class="self" filter="" method="pickKeypadButton"  dynamicReload="true"/>
+                <List class="self" filter="" method="pickButton"  dynamicReload="true"/>
             </Field>            
  		</ConfigUI>
 	</Event>

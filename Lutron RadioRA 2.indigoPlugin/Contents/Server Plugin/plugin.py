@@ -633,13 +633,7 @@ class Plugin(indigo.PluginBase):
 
             for trigger in self.buttonMultiPressTriggers.values():
 
-                buttonID = trigger.pluginProps["buttonID"]
-                try:
-                    buttonAddress = indigo.devices[int(buttonID)].address
-                except(Exception,):
-                    self.logger.error(f"buttonMultiPressCheck: invalid or missing buttonID {buttonID} in trigger '{trigger.name}'")
-                    continue
-                if buttonAddress != self.lastKeyAddress:
+                if trigger.pluginProps["buttonID"] != self.lastKeyAddress:
                     self.logger.threaddebug(f"buttonMultiPressCheck: Skipping Trigger '{trigger.name}', wrong keypad button: {self.lastKeyAddress}")
                     continue
 
@@ -2030,6 +2024,32 @@ class Plugin(indigo.PluginBase):
                 retList.append((buttonId, buttonDev.name))
 
         retList.sort(key=lambda tup: tup[1])
+        return retList
+
+    def pickButton(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.threaddebug(f"pickButton, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
+        retList = []
+        try:
+            room = valuesDict["room"]
+        except:
+            return retList
+        if len(room) == 0:
+            return retList
+
+        for buttonId, devID in self.keypads.items():
+            buttonDev = indigo.devices[devID]
+            if buttonDev.pluginProps.get(PROP_ISBUTTON, None) and (buttonDev.pluginProps.get(PROP_ROOM, None) == room):
+                self.logger.threaddebug(f"pickButton adding: {buttonId} ({buttonDev.name})")
+                retList.append((buttonId, buttonDev.name))
+
+        for buttonId, devID in self.picos.items():
+            buttonDev = indigo.devices[devID]
+            if buttonDev.pluginProps.get(PROP_ISBUTTON, None) and (buttonDev.pluginProps.get(PROP_ROOM, None) == room):
+                self.logger.threaddebug(f"pickButton adding: {buttonId} ({buttonDev.name})")
+                retList.append((buttonId, buttonDev.name))
+
+        retList.sort(key=lambda tup: tup[1])
+        self.logger.threaddebug(f"pickButton, retList = {retList}")
         return retList
 
     def pickEvent(self, filter=None, valuesDict=None, typeId=0, targetId=0):
