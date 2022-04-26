@@ -627,6 +627,7 @@ class Plugin(indigo.PluginBase):
                 return
 
             self.logger.debug(f"buttonMultiPressCheck: Timeout reached for keypadid = {self.lastKeyAddress}, presses = {self.lastKeyTaps}")
+            self.newKeyPress = False
 
             # Look for new-style triggers that match this button
 
@@ -637,8 +638,7 @@ class Plugin(indigo.PluginBase):
                     buttonAddress = indigo.devices[int(buttonID)].address
                 except(Exception,):
                     self.logger.error(f"buttonMultiPressCheck: invalid or missing buttonID {buttonID} in trigger '{trigger.name}'")
-                    return
-
+                    continue
                 if buttonAddress != self.lastKeyAddress:
                     self.logger.threaddebug(f"buttonMultiPressCheck: Skipping Trigger '{trigger.name}', wrong keypad button: {self.lastKeyAddress}")
                     continue
@@ -650,9 +650,6 @@ class Plugin(indigo.PluginBase):
 
                 self.logger.debug(f"buttonMultiPressCheck: Executing Trigger '{trigger.name}', keypad button: {self.lastKeyAddress}")
                 indigo.trigger.execute(trigger)
-
-            # all done, reset the flag
-            self.newKeyPress = False
 
     ####################
 
