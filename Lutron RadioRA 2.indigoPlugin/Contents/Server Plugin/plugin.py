@@ -596,14 +596,9 @@ class Plugin(indigo.PluginBase):
         # Look for old-style triggers that match this button
 
         for trigger in self.buttonPressTriggers.values():
+            self.logger.threaddebug(f"buttonTriggerCheck: Trigger: {trigger}")
 
-            buttonID = trigger.pluginProps["buttonID"]
-            try:
-                buttonAddress = indigo.devices[int(buttonID)].address
-            except(Exception, ):
-                self.logger.error(f"buttonTriggerCheck: invalid or missing buttonID {buttonID} in trigger '{trigger.name}'")
-                return
-
+            buttonAddress = trigger.pluginProps["buttonID"]
             if keypadid != buttonAddress:
                 self.logger.threaddebug(f"buttonTriggerCheck: Skipping Trigger '{trigger.name}', wrong keypad button: {keypadid}")
                 continue
