@@ -433,7 +433,7 @@ class Plugin(indigo.PluginBase):
     def deviceDeleted(self, delDevice):
         indigo.PluginBase.deviceDeleted(self, delDevice)
 
-        for linkID in self.linkedDeviceList.keys():
+        for linkID in list(self.linkedDeviceList.keys()):
             linkItem = self.linkedDeviceList[linkID]
             if (delDevice.id == int(linkItem["buttonDevice"])) or (delDevice.id == int(linkItem["buttonLEDDevice"])) or (
                     delDevice.id == int(linkItem["controlledDevice"])):
@@ -2087,30 +2087,27 @@ class Plugin(indigo.PluginBase):
     # This is the method that's called by the Add Linked Device button in the config dialog.
     ########################################
     def addLinkedDevice(self, valuesDict, typeId=None, devId=None):
+        self.logger.debug(f"addLinkedDevice: valuesDict: {valuesDict}")
 
-        buttonDeviceId = valuesDict["buttonDevice"]
+        buttonAddress = valuesDict["buttonDevice"]
         controlledDeviceId = valuesDict["controlledDevice"]
         linkName = valuesDict["linkName"]
+        buttonDeviceID = self.keypads[buttonAddress]
 
-        try:
-            buttonDevice = indigo.devices[int(buttonDeviceId)]
-            buttonAddress = buttonDevice.address
-        except:
-            self.logger.debug(f"addLinkedDevice: buttonDevice not found: {valuesDict['buttonDevice']}")
-            return
-
-        parts = buttonAddress.split(".")
+        parts = buttonAddress.split(":")
+        gatewayID = parts[0]
+        parts = parts[1].split(".")
         deviceID = parts[0]
         componentID = parts[1]
-        buttonLEDAddress = f"{deviceID}.{int(componentID) + 80}"
+        buttonLEDAddress = f"{gatewayID}:{deviceID}.{int(componentID) + 80}"
         try:
-            buttonLEDDeviceId = unicode(self.keypads[buttonLEDAddress].id)
+            buttonLEDDeviceId = self.keypads[buttonLEDAddress]
         except:
             buttonLEDDeviceId = "0"
-        linkID = f"{buttonDeviceId}-{controlledDeviceId}"
+        linkID = f"{buttonDeviceID}-{controlledDeviceId}"
         if len(linkName) == 0:
             linkName = linkID
-        linkItem = {"name": linkName, "buttonDevice": buttonDeviceId, "buttonLEDDevice": buttonLEDDeviceId, "controlledDevice": controlledDeviceId,
+        linkItem = {"name": linkName, "buttonDevice": buttonDeviceID, "buttonLEDDevice": buttonLEDDeviceId, "controlledDevice": controlledDeviceId,
                     "buttonAddress": buttonAddress}
         self.logger.debug(f"Adding linkItem {linkID}: {linkItem}")
         self.linkedDeviceList[linkID] = linkItem
