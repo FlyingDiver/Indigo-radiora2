@@ -2254,6 +2254,7 @@ class Plugin(indigo.PluginBase):
         self.create_unused_phantom = bool(valuesDict["create_unused_phantom"])
         self.create_event_triggers = bool(valuesDict["create_event_triggers"])
         self.create_group_triggers = bool(valuesDict["create_group_triggers"])
+        self.rename_devices = bool(valuesDict["rename_devices"])
 
         if bool(valuesDict["use_local"]):
             self.logger.info(
@@ -2758,14 +2759,18 @@ class Plugin(indigo.PluginBase):
         # If it does exist, update with the new properties
 
         for dev in indigo.devices.iter("self"):
-            if dev.address == address:
-                if dev.pluginProps.get(PROP_ROOM, None):
-                    self.logger.debug(f"Skipping existing device: '{name}' ({address})")
-                    return dev
-                else:
+            if dev.address == address:      # existing device
+
+                if not dev.pluginProps.get(PROP_ROOM, None):
                     self.logger.debug(f"Adding ROOM property to existing device: '{name}' ({address})")
                     self.update_plugin_property(dev, PROP_ROOM, new_value=room)
-                    return dev
+
+                if self.rename_devices and dev.name != name:
+                    self.logger.debug(f"Renaming '{dev.name}' to '{name}'")
+                    dev.name = name
+                    dev.replaceOnServer()
+
+                return dev
 
         # Pick the folder for this device, create it if necessary
 

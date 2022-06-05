@@ -90,6 +90,10 @@
 				<Label>Create Triggers for all Room Groups:</Label>
 			</Field>            
     		<Field id="separator2" type="separator" />
+			<Field id="rename_devices" type="checkbox" defaultValue="false">
+				<Label>Force rename existing devices:</Label>
+			</Field>
+    		<Field id="separator3" type="separator" />
 			<Field id="local_note" type="label">
 				<Label>To use an existing XML file instead of downloading the XML data from the repeater, check this box and enter the path/name of the file. 
 You MUST have a repeater selected above.
