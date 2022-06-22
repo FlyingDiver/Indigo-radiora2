@@ -53,7 +53,7 @@
             </Field>
             <Field id="room" type="menu">
                 <Label>Room:</Label>
-                <List class="self" filter="" method="roomListGenerator"/>
+                <List class="self" filter="" method="room_list"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="buttonID" type="menu">
@@ -80,7 +80,7 @@
             </Field>
             <Field id="room" type="menu">
                 <Label>Room:</Label>
-                <List class="self" filter="" method="roomListGenerator"/>
+                <List class="self" filter="" method="room_list"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="buttonID" type="menu">

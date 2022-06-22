@@ -2033,6 +2033,21 @@ class Plugin(indigo.PluginBase):
             self._sendCommand(sendCmd, gateway)
 
     ########################################
+           #
+           #  <Field id="room_list" type="menu" defaultValue="" >
+           #      <Label>Room Location:</Label>
+           #      <List class="self" method="room_list" dynamicReload="true"/>
+           # </Field>
+           #  <Field id="add_room_text" type="textField" defaultValue="" visibleBindingId="room_list" visibleBindingValue="--add--">
+           #      <Label>Add Room:</Label>
+           #  </Field>
+           #   <Field id="add_room" type="button" visibleBindingId="room_list" visibleBindingValue="--add--">
+           #      <Label/>
+           #      <Title>AddRoom</Title>
+           #      <CallbackMethod>do_add_room</CallbackMethod>
+           #  </Field>
+           #  <Field id="notes" type="textField"
+           #
 
     def get_gateway_list(self, filter="", valuesDict=None, typeId="", targetId=0):
         self.logger.threaddebug(f"get_gateway_list: typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
@@ -2042,11 +2057,31 @@ class Plugin(indigo.PluginBase):
         ]
         return gateways
 
-    def roomListGenerator(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        self.logger.threaddebug(f"roomListGenerator, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
+    def room_list_add(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.threaddebug(f"room_list_add, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
         retList = []
         for room in self.roomList:
-            self.logger.threaddebug(f"roomListGenerator adding: {room} {room}")
+            self.logger.threaddebug(f"room_list_add adding: {room}")
+            retList.append((room, room))
+
+        retList.sort(key=lambda tup: tup[1])
+        retList.append(("--add--", "-- Add a room --"))
+        return retList
+
+    def do_add_room(self, valuesDict, typeId=None, devId=None):
+        self.logger.debug(f"do_add_room: valuesDict: {valuesDict}")
+        if valuesDict['add_room_name'] in self.roomList:
+            self.logger.debug(f"do_add_room not adding duplicate room name '{valuesDict['add_room_name']}'")
+        else:
+            self.roomList.append(valuesDict['add_room_name'])
+            valuesDict['room'] = valuesDict['add_room_name']
+            return valuesDict
+
+    def room_list(self, filter=None, valuesDict=None, typeId=0, targetId=0):
+        self.logger.threaddebug(f"room_list, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
+        retList = []
+        for room in self.roomList:
+            self.logger.threaddebug(f"room_list adding: {room}")
             retList.append((room, room))
 
         retList.sort(key=lambda tup: tup[1])

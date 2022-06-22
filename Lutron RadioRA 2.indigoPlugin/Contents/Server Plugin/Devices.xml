@@ -1,6 +1,5 @@
 <?xml version="1.0"?>
 <Devices>
-
     <Device type="custom" id="ipGateway">
     	<Name>Network Connected Gateway</Name>
         <ConfigUI>
@@ -27,7 +26,6 @@
         </States>
         <UiDisplayStateId>status</UiDisplayStateId>
     </Device>
-
     <Device type="custom" id="serialGateway">
     	<Name>Serial Port Connected Gateway</Name>
         <ConfigUI>
@@ -45,7 +43,6 @@
         </States>
         <UiDisplayStateId>status</UiDisplayStateId>
     </Device>
-
     <Device type="custom" id="ra2TimeClockEvent">
     	<Name>Lutron Time Clock Event</Name>
         <ConfigUI>
@@ -62,11 +59,11 @@
             </Field>
         </ConfigUI>
     </Device>
-    
     <Device type="sensor" id="ra2Group">
     	<Name>Lutron Room Group</Name>
         <ConfigUI>
  		    <Field id="SupportsOnState" type="checkbox" defaultValue="true" hidden="true" />
+            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
             <Field id="gateway" type="menu">
                 <Label>Gateway:</Label>
                 <List class="self" method="get_gateway_list" dynamicReload="true"/>
@@ -78,7 +75,6 @@
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
-            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         </ConfigUI>
     </Device>
     
@@ -97,6 +93,18 @@
             <Field id="componentID" type="textField" defaultValue="">
                 <Label>Button Number (101-200):</Label>
             </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
+            </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
@@ -114,6 +122,18 @@
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
             </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
+            </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
@@ -130,6 +150,18 @@
             </Field>
             <Field id="integrationID"   type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
+            </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
             </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
@@ -159,7 +191,19 @@
             <Field id="componentID" type="textField" defaultValue="">>
                 <Label>Button ID (1-17) or LED ID (81-97):</Label>
             </Field>
-            <Field id="keypadButtonDisplayLEDState" type="checkbox" defaultValue="false" visibleBindingId="listType" visibleBindingValue="LED">
+             <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
+            </Field>
+           <Field id="keypadButtonDisplayLEDState" type="checkbox" defaultValue="false" visibleBindingId="listType" visibleBindingValue="LED">
                 <Label>Display LED state instead of button press status:</Label>
             </Field>
             <Field id="LEDhelp" type="label" enabledBindingId="keypadButtonDisplayLEDState" alignWithControl="keypadButtonDisplayLEDState" visibleBindingId="keypadButtonDisplayLEDState" visibleBindingValue="true" fontColor="orange">
@@ -178,6 +222,18 @@
             </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
+            </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
             </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
@@ -204,7 +260,19 @@
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Thermostat Integration ID:</Label>
             </Field>
-            <Field id="notes" type="textField" defaultValue="">
+             <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
+            </Field>
+           <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
         </ConfigUI>
@@ -221,6 +289,18 @@
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Sensor Integration ID:</Label>
             </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
+            </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
@@ -230,6 +310,7 @@
     
     <Device id="ra2CCO" type="relay">
         <Name>Lutron CCO</Name>
+            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         <ConfigUI>
             <Field id="gateway" type="menu">
                 <Label>Gateway:</Label>
@@ -246,16 +327,28 @@
                     <Option value="sustained">Sustained</Option>
                 </List>
             </Field>
-            <Field id="notes" type="textField" defaultValue="">
+             <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
+            </Field>
+           <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
-            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         </ConfigUI>
     </Device>
     
     <Device id="ra2CCI" type="sensor">
         <Name>Lutron CCI</Name>
         <ConfigUI>
+            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
             <Field id="gateway" type="menu">
                 <Label>Gateway:</Label>
                 <List class="self" method="get_gateway_list" dynamicReload="true"/>
@@ -267,10 +360,21 @@
             <Field id="componentID" type="textField" defaultValue="32">>
                 <Label>Component Number (input 1 is 32, input 2 is 33):</Label>
             </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
+            </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
             </Field>
-            <Field id="SupportsStatusRequest" type="textfield" hidden="true" defaultValue="False"/>
         </ConfigUI>
     </Device>
     
@@ -284,6 +388,18 @@
             </Field>
             <Field id="integrationID" type="textField" defaultValue="">
                 <Label>Integration ID:</Label>
+            </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
             </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
@@ -305,6 +421,18 @@
             </Field>
             <Field id="componentID" type="textField" defaultValue="2">
                 <Label>Button Number (2-4 and 5=raise 6=lower for most Picos, 8-11 for 4-button Pico):</Label>
+            </Field>
+            <Field id="room" type="menu" defaultValue="" >
+                <Label>Room Location:</Label>
+                <List class="self" method="room_list_add" dynamicReload="true"/>
+           </Field>
+            <Field id="add_room_name" type="textField" defaultValue="" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label>Add Room:</Label>
+            </Field>
+             <Field id="add_room" type="button" visibleBindingId="room" visibleBindingValue="--add--" alwaysUseInDialogHeightCalc="true">
+                <Label/>
+                <Title>Add Room</Title>
+                <CallbackMethod>do_add_room</CallbackMethod>
             </Field>
             <Field id="notes" type="textField" defaultValue="">
                 <Label>Notes:</Label>
