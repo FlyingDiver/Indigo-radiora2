@@ -677,7 +677,8 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_REPEATER])
                 self.remove_plugin_property(dev, PROP_REPEATER)
                 self.logger.info(f"{dev.name}: Updated repeater property to IntegrationID")
-            elif dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+
+            elif not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, "1")
                 self.logger.info(f"{dev.name}: Added IntegrationID property")
 
@@ -686,13 +687,21 @@ class Plugin(indigo.PluginBase):
                 self.remove_plugin_property(dev, PROP_BUTTON)
                 self.logger.info(f"{dev.name}: Updated button property to componentID")
 
-            if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
+            if not dev.pluginProps.get(PROP_ISBUTTON, None):
                 self.update_plugin_property(dev, PROP_ISBUTTON, "True")
                 self.logger.info(f"{dev.name}: Added isButton property")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
+
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}.{dev.pluginProps[PROP_COMPONENT_ID]}"
             self.phantomButtons[address] = dev
@@ -700,14 +709,18 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_DIMMER:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_ZONE])
                 self.remove_plugin_property(dev, PROP_ZONE)
                 self.logger.info(f"{dev.name}: Updated zone property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.dimmers[address] = dev
@@ -715,14 +728,18 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_SHADE:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SHADE])
                 self.remove_plugin_property(dev, PROP_SHADE)
                 self.logger.info(f"{dev.name}: Updated zone property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.shades[address] = dev
@@ -731,14 +748,18 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_SWITCH:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SWITCH])
                 self.remove_plugin_property(dev, PROP_SWITCH)
                 self.logger.info(f"{dev.name}: Updated switch property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.switches[address] = dev
@@ -746,14 +767,18 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_FAN:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_FAN])
                 self.remove_plugin_property(dev, PROP_FAN)
                 self.logger.info(f"{dev.name}: Updated fan property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.fans[address] = dev
@@ -761,14 +786,18 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_THERMO:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_THERMO])
                 self.remove_plugin_property(dev, PROP_THERMO)
                 self.logger.info(f"{dev.name}: Updated thermo property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.thermos[address] = dev
@@ -776,7 +805,7 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_KEYPAD:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_KEYPAD])
                 self.remove_plugin_property(dev, PROP_KEYPAD)
                 self.logger.info(f"{dev.name}: Updated keypad property to IntegrationID")
@@ -786,13 +815,18 @@ class Plugin(indigo.PluginBase):
                 self.remove_plugin_property(dev, PROP_KEYPADBUT)
                 self.logger.info(f"{dev.name}: Updated keypadButton property to componentID")
 
-            if (dev.pluginProps.get(PROP_ISBUTTON, None) == None) and (int(dev.pluginProps[PROP_COMPONENT_ID]) < 80):
-                self.update_plugin_property(dev, PROP_ISBUTTON, new_value="True")
-                self.logger.info(f"{dev.name}: Added isButton property")
+            if not dev.pluginProps.get(PROP_ISBUTTON, None):
+                if (int(dev.pluginProps[PROP_COMPONENT_ID]) < 80):
+                    self.update_plugin_property(dev, PROP_ISBUTTON, new_value="True")
+                    self.logger.info(f"{dev.name}: Added isButton property")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}.{dev.pluginProps[PROP_COMPONENT_ID]}"
             self.keypads[address] = dev.id
@@ -804,14 +838,18 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_SENSOR:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_SENSOR])
                 self.remove_plugin_property(dev, PROP_SENSOR)
                 self.logger.info(f"{dev.name}: Updated sensor property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.sensors[address] = dev
@@ -819,7 +857,7 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_CCI:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCI_INTEGRATION_ID])
                 self.remove_plugin_property(dev, PROP_CCI_INTEGRATION_ID)
                 self.logger.info(f"{dev.name}: Updated cciIntegrationID property to IntegrationID")
@@ -829,9 +867,13 @@ class Plugin(indigo.PluginBase):
                 self.remove_plugin_property(dev, PROP_COMPONENT)
                 self.logger.info(f"{dev.name}: Updated cciCompoment property to componentID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}.{dev.pluginProps[PROP_COMPONENT_ID]}"
             self.ccis[address] = dev
@@ -839,14 +881,18 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_CCO:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_CCO_INTEGRATION_ID])
                 self.remove_plugin_property(dev, PROP_CCO_INTEGRATION_ID)
                 self.logger.info(f"{dev.name}: Updated ccoIntegrationID property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}"
             self.ccos[address] = dev
@@ -859,12 +905,12 @@ class Plugin(indigo.PluginBase):
                 self.update_plugin_property(dev, "address", address)
 
         elif dev.deviceTypeId == DEV_PICO:
-            if dev.pluginProps.get(PROP_INTEGRATION_ID, None) == None:
+            if not dev.pluginProps.get(PROP_INTEGRATION_ID, None):
                 self.update_plugin_property(dev, PROP_INTEGRATION_ID, dev.pluginProps[PROP_PICO_INTEGRATION_ID])
                 self.remove_plugin_property(dev, PROP_PICO_INTEGRATION_ID)
                 self.logger.info(f"{dev.name}: Updated picoIntegrationID property to IntegrationID")
 
-            if dev.pluginProps.get(PROP_ISBUTTON, None) == None:
+            if not dev.pluginProps.get(PROP_ISBUTTON, None):
                 self.update_plugin_property(dev, PROP_ISBUTTON, new_value="True")
                 self.logger.info(f"{dev.name}: Added isButton property")
 
@@ -873,9 +919,13 @@ class Plugin(indigo.PluginBase):
                 self.remove_plugin_property(dev, PROP_PICOBUTTON)
                 self.logger.info(f"{dev.name}: Updated keypadButton property to componentID")
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
+
+            if not dev.pluginProps.get(PROP_ROOM, None):
+                self.update_plugin_property(dev, PROP_ROOM, new_value="Unknown")
+                self.logger.info(f"{dev.name}: Added Room = 'Unknown' property")
 
             address = f"{dev.pluginProps[PROP_GATEWAY]}:{dev.pluginProps[PROP_INTEGRATION_ID]}.{dev.pluginProps[PROP_COMPONENT_ID]}"
             self.picos[address] = dev
@@ -884,7 +934,7 @@ class Plugin(indigo.PluginBase):
 
         elif dev.deviceTypeId == DEV_TIMECLOCKEVENT:
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
 
@@ -895,7 +945,7 @@ class Plugin(indigo.PluginBase):
 
         elif dev.deviceTypeId == DEV_GROUP:
 
-            if dev.pluginProps.get(PROP_GATEWAY, None) == None:
+            if not dev.pluginProps.get(PROP_GATEWAY, None):
                 self.update_plugin_property(dev, PROP_GATEWAY, self.defaultGateway)
                 self.logger.info(f"{dev.name}: Added Gateway property")
 
