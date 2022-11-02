@@ -6,7 +6,7 @@
         <ConfigUI>
             <Field id="room" type="menu">
                 <Label>Controlling Keypad Room:</Label>
-                <List class="self" filter="" method="roomListGenerator"/>
+                <List class="self" filter="" method="room_list_add"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="buttonDevice" type="menu">
