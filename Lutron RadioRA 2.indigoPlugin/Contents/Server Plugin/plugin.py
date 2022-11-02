@@ -2087,25 +2087,6 @@ class Plugin(indigo.PluginBase):
         retList.sort(key=lambda tup: tup[1])
         return retList
 
-    def pickKeypadButton(self, filter=None, valuesDict=None, typeId=0, targetId=0):
-        self.logger.threaddebug(f"pickKeypadButton, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
-        retList = []
-        try:
-            room = valuesDict["room"]
-        except:
-            return retList
-        if len(room) == 0:
-            return retList
-
-        for buttonId, devID in self.keypads.items():
-            buttonDev = indigo.devices[devID]
-            if buttonDev.pluginProps.get(PROP_ISBUTTON, None) and (buttonDev.pluginProps.get(PROP_ROOM, None) == room):
-                self.logger.threaddebug(f"pickKeypadButton adding: {buttonId} ({buttonDev.name})")
-                retList.append((buttonId, buttonDev.name))
-
-        retList.sort(key=lambda tup: tup[1])
-        return retList
-
     def pickButton(self, filter=None, valuesDict=None, typeId=0, targetId=0):
         self.logger.threaddebug(f"pickButton, typeId = {typeId}, targetId = {targetId}, valuesDict = {valuesDict}")
         retList = []

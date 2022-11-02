@@ -10,8 +10,8 @@
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>
             <Field id="buttonDevice" type="menu">
-                <Label>Controlling Keypad Button:</Label>
-                <List class="self" filter="" method="pickKeypadButton"  dynamicReload="true"/>
+                <Label>Controlling Button:</Label>
+                <List class="self" filter="" method="pickButton"  dynamicReload="true"/>
                 <CallbackMethod>menuChanged</CallbackMethod>
             </Field>            
 			<Field id="controlledDevice" type="menu">
