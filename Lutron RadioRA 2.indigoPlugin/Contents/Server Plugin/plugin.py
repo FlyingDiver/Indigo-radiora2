@@ -2525,9 +2525,11 @@ class Plugin(indigo.PluginBase):
 
                             # create button LED, if needed for the button
 
-                            if ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum > 6):
+                            if ((keypadType == "SEETOUCH_KEYPAD") or (keypadType == "HYBRID_SEETOUCH_KEYPAD")) and (buttonNum > 7):
+                                self.logger.debug(f"Invalid button number {buttonNum} for Integration ID: {device.attrib['IntegrationID']}")
                                 continue
                             if (keypadType == "SEETOUCH_TABLETOP_KEYPAD") and (buttonNum > 17):
+                                self.logger.debug(f"Invalid button number {buttonNum} for Integration ID: {device.attrib['IntegrationID']}")
                                 continue
 
                             name = name + " LED"
