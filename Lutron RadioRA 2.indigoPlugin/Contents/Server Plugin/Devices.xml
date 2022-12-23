@@ -172,12 +172,11 @@
     <Device type="relay" id="ra2Keypad">
         <Name>Lutron Keypad</Name>
         <ConfigUI>
-            <Field id="isButton" type="checkbox" defaultValue="True" hidden="true"/>
-            <Field id="listType" type="menu"     defaultValue="button">
+            <Field id="isButton" type="menu" defaultValue="true">
                <Label>Type:</Label>
                 <List>
-                    <Option value="button">Keypad Button</Option>
-                    <Option value="LED">Keypad LED</Option>
+                    <Option value="true">Keypad Button</Option>
+                    <Option value="false">Keypad LED</Option>
                 </List>
             </Field>
             <Field id="gateway" type="menu">
@@ -203,10 +202,10 @@
                 <Title>Add Room</Title>
                 <CallbackMethod>do_add_room</CallbackMethod>
             </Field>
-           <Field id="keypadButtonDisplayLEDState" type="checkbox" defaultValue="false" visibleBindingId="listType" visibleBindingValue="LED">
+           <Field id="keypadButtonDisplayLEDState" type="checkbox" defaultValue="false" visibleBindingId="isButton" visibleBindingValue="false"  alwaysUseInDialogHeightCalc="true">
                 <Label>Display LED state instead of button press status:</Label>
             </Field>
-            <Field id="LEDhelp" type="label" enabledBindingId="keypadButtonDisplayLEDState" alignWithControl="keypadButtonDisplayLEDState" visibleBindingId="keypadButtonDisplayLEDState" visibleBindingValue="true" fontColor="orange">
+            <Field id="LEDhelp" type="label" enabledBindingId="keypadButtonDisplayLEDState" alignWithControl="keypadButtonDisplayLEDState" visibleBindingId="keypadButtonDisplayLEDState" visibleBindingValue="true" fontColor="orange" alwaysUseInDialogHeightCalc="true">
                 <Label>Display LED state option selected.  Please make sure a button corresponding to this LED has also been defined in Indigo.  For example, if you added LED 81, make sure you also added Button 1.  LED 82 corresponds to Button 2, etc.</Label>
             </Field>
         </ConfigUI>

@@ -46,7 +46,6 @@ PROP_ROOM = "room"
 PROP_EVENT = "event"
 PROP_GROUP = "group"
 PROP_CCO_TYPE = "ccoType"
-PROP_LIST_TYPE = "listType"
 PROP_KEYPADBUT_DISPLAY_LED_STATE = "keypadButtonDisplayLEDState"
 PROP_SUPPORTS_STATUS_REQUEST = "SupportsStatusRequest"
 PROP_BUTTONTYPE = "ButtonType"
@@ -2241,7 +2240,6 @@ class Plugin(indigo.PluginBase):
 
                     props = {
                         PROP_ROOM: areaName,
-                        PROP_LIST_TYPE: "button",
                         PROP_GATEWAY: gatewayID,
                         PROP_INTEGRATION_ID: str(device["ID"]),
                         PROP_COMPONENT_ID: str(button["Number"]),
@@ -2513,7 +2511,6 @@ class Plugin(indigo.PluginBase):
                                 buttonType = "Unknown"
                             props = {
                                 PROP_ROOM: room.attrib['Name'],
-                                PROP_LIST_TYPE: "button",
                                 PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID: device.attrib['IntegrationID'],
                                 PROP_COMPONENT_ID: component.attrib['ComponentNumber'],
@@ -2537,7 +2534,6 @@ class Plugin(indigo.PluginBase):
                             address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + keypadLED
                             props = {
                                 PROP_ROOM: room.attrib['Name'],
-                                PROP_LIST_TYPE: "LED",
                                 PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID: device.attrib['IntegrationID'],
                                 PROP_COMPONENT_ID: keypadLED,
@@ -2573,7 +2569,6 @@ class Plugin(indigo.PluginBase):
                                 buttonType = "Unknown"
                             props = {
                                 PROP_ROOM: room.attrib['Name'],
-                                PROP_LIST_TYPE: "button",
                                 PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID: device.attrib['IntegrationID'],
                                 PROP_COMPONENT_ID: component.attrib['ComponentNumber'],
@@ -2590,7 +2585,6 @@ class Plugin(indigo.PluginBase):
                             address = gatewayID + ":" + device.attrib['IntegrationID'] + "." + keypadLED
                             props = {
                                 PROP_ROOM: room.attrib['Name'],
-                                PROP_LIST_TYPE: "LED",
                                 PROP_GATEWAY: gatewayID,
                                 PROP_INTEGRATION_ID: device.attrib['IntegrationID'],
                                 PROP_COMPONENT_ID: keypadLED,
