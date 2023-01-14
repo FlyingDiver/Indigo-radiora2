@@ -325,7 +325,6 @@ class Plugin(indigo.PluginBase):
         self.keypads = {}
         self.dimmers = {}
         self.switches = {}
-        self.lastBrightness = {}
         self.fans = {}
         self.thermos = {}
         self.sensors = {}
@@ -1453,12 +1452,10 @@ class Plugin(indigo.PluginBase):
             elif dev.deviceTypeId == DEV_DIMMER:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = f"#OUTPUT,{integration_id},1,100"
-                self.lastBrightness[zone] = 100
 
             elif dev.deviceTypeId == DEV_SHADE:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = f"#OUTPUT,{integration_id},1,100"
-                self.lastBrightness[shade] = 100
 
             elif dev.deviceTypeId == DEV_SWITCH:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
@@ -1500,12 +1497,10 @@ class Plugin(indigo.PluginBase):
             elif dev.deviceTypeId == DEV_DIMMER:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = f"#OUTPUT,{integration_id},1,0"
-                self.lastBrightness[integration_id] = 0
 
             elif dev.deviceTypeId == DEV_SHADE:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
                 sendCmd = f"#OUTPUT,{integration_id},1,0"
-                self.lastBrightness[integration_id] = 0
 
             elif dev.deviceTypeId == DEV_SWITCH:
                 integration_id = dev.pluginProps[PROP_INTEGRATION_ID]
