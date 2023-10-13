@@ -9,6 +9,12 @@ Indigo plugin for Lutron systems, including RadioRa 2 , RRa2 Select, Homeworks Q
 | Requires Internet      | No                  |
 | Hardware Interface     | Optional Serial     |
 
+## Warning
+
+This plugin is now Legacy status.  It will continue to be supported for Indigo changes, if needed, but no new features will be added.  The RRA2 and Homeworks devices supported by this plugin are no longer available from Lutron.  All other
+devices are supported by the new Lutron Leap plugin.
+
+
 ## Requirements
 
 1. For RadioRa2, a Main Repeater (RR-MAIN-REP-WH) with ethernet or serial connection to the Indigo server.
