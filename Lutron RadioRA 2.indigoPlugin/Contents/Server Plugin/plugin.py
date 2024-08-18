@@ -239,20 +239,20 @@ class SerialGateway:
         try:
             self.connSerial = indigo.activePlugin.openSerial("Lutron Gateway", serialUrl, 9600, stopbits=1, timeout=2, writeTimeout=1)
             if self.connSerial is None:
-                self.logger.error(f"{self.dev.name}: Failed to open serial port")
-                self.dev.updateStateOnServer(key="status", value="Failed")
-                self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+                self.logger.error(f"{device.name}: Failed to open serial port")
+                device.updateStateOnServer(key="status", value="Failed")
+                device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
                 return
 
         except Exception as e:
-            self.logger.error(f"{self.dev.name}: Failed to open serial port")
-            self.dev.updateStateOnServer(key="status", value="Failed")
-            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            self.logger.error(f"{device.name}: Failed to open serial port")
+            device.updateStateOnServer(key="status", value="Failed")
+            device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
             return
 
         self.connected = True
-        self.dev.updateStateOnServer(key="status", value="Connected")
-        self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
+        device.updateStateOnServer(key="status", value="Connected")
+        device.updateStateImageOnServer(indigo.kStateImageSel.SensorOn)
 
         # Disable main repeater terminal prompt
         self.send("#MONITORING,12,2")
@@ -270,17 +270,18 @@ class SerialGateway:
             self.connected = False
         self.connSerial = None
 
+    @property
     def poll(self):
 
         if not self.connected:
             self.start()
 
         try:
-            s = self.connSerial.read()
+            s = self.connSerial.read().decode('ascii')
         except (Exception,):
-            self.logger.error(f"{self.dev.name}: Error reading from serial port")
-            self.dev.updateStateOnServer(key="status", value="Failed")
-            self.dev.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
+            self.logger.error(f"{device.name}: Error reading from serial port")
+            device.updateStateOnServer(key="status", value="Failed")
+            device.updateStateImageOnServer(indigo.kStateImageSel.SensorTripped)
             self.connected = False
             return
 
