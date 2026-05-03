@@ -11,7 +11,6 @@ import serial
 import socket
 import telnetlib
 import time
-import select  # was getting errors on the select.error exception in runConcurrentThread
 import logging
 import json
 import os
